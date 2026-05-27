@@ -279,7 +279,7 @@ function togglePwd(){
     <div class="table-card">
       <h3 id="commCompanyTitle">📋 Empresas por Vendedor</h3>
       <div class="info-note">ℹ️ <strong>Nota:</strong> Os dados detalhados por empresa (GMV · Receita · Comissão) são extraídos das abas <strong>Pedido de Carga Completo</strong> e <strong>Pedido Externo</strong> do Excel. Serão carregados na próxima atualização automática do dashboard.</div>
-      <div class="table-scroll"><table><thead><tr><th>Empresa</th><th>Origem</th><th>GMV</th><th>Receita</th><th>Comissão</th></tr></thead><tbody id="commCompanyBody"></tbody></table></div>
+      <div class="table-scroll"><table><thead><tr><th>Empresa</th><th style='text-align:right'>GMV</th><th style='text-align:right'>Receita</th><th style='text-align:right'>Comissão</th></tr></thead><tbody id="commCompanyBody"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -850,22 +850,22 @@ function applyComm(){
     compSection.style.display='block';
     document.getElementById('commCompanyTitle').textContent='📋 Empresas — '+vendor+' ('+months[cFrom_c]+' a '+months[cTo_c]+')';
     const compBody=document.getElementById('commCompanyBody');
-    // Dados por empresa extraídos do Excel (Pedido de Carga Completo + Pedido Externo)
-    const compData=commCompanyData[vendor]||[];
-    const filtered=compData.filter(r=>r.mesIdx>=cFrom_c&&r.mesIdx<=cTo_c);
-    if(filtered.length===0){
-      compBody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Dados detalhados por empresa serão carregados na próxima extração do Excel</td></tr>`;
+    // Dados por empresa via VD (extraídos do Excel)
+    const vdEmps=(VD[vendor]||[]);
+    const vdRows=vdEmps.map(c=>({
+      empresa:c[0],cnpj:c[1],
+      gmv:c[2].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0),
+      rec:c[3].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0),
+      comm:c[4].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0)
+    })).filter(r=>r.gmv>0||r.comm>0).sort((a,b)=>b.gmv-a.gmv);
+    if(!vdRows.length){
+      compBody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">Sem pedidos no período selecionado</td></tr>`;
     } else {
-      // Agrupa por empresa
-      const byEmp={};
-      filtered.forEach(r=>{
-        if(!byEmp[r.empresa])byEmp[r.empresa]={empresa:r.empresa,origem:r.origem,gmv:0,receita:0,comissao:0};
-        byEmp[r.empresa].gmv+=r.gmv;byEmp[r.empresa].receita+=r.receita;byEmp[r.empresa].comissao+=r.comissao;
-      });
+      const fv=v=>v>=1e6?'R$ '+(v/1e6).toFixed(1)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(0)+'K':v>0?'R$ '+Math.round(v):'—';
       compBody.innerHTML='';
-      Object.values(byEmp).sort((a,b)=>b.comissao-a.comissao).forEach(e=>{
+      vdRows.forEach(r=>{
         const row=document.createElement('tr');
-        row.innerHTML=`<td><strong>${e.empresa}</strong></td><td><span class="pill ${e.origem==='VT'?'ativo':'risco'}">${e.origem}</span></td><td>${fmt(e.gmv)}</td><td>${fmt(e.receita)}</td><td style="color:${C.amber};font-weight:600;">R$ ${e.comissao.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td>`;
+        row.innerHTML=`<td><strong>${r.empresa}</strong><br><span style="color:#64748b;font-size:10px">${r.cnpj}</span></td><td style="text-align:right">${fv(r.gmv)}</td><td style="text-align:right">${fv(r.rec)}</td><td style="text-align:right;color:#fbbf24;font-weight:700">${r.comm>0?'R$ '+r.comm.toFixed(2):'—'}</td>`;
         compBody.appendChild(row);
       });
     }
