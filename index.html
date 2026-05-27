@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Motiva Benefícios 2025–2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
+    --accent: #5b6af0; --accent2: #22d3ee; --accent3: #f59e0b;
+    --accent4: #10b981; --text: #e2e8f0; --muted: #94a3b8; --danger: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+  .header { background: linear-gradient(135deg,#1a1d27,#20243a); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .logo { width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:white; }
+  .header h1 { font-size:20px;font-weight:700; }
+  .header p { color:var(--muted);font-size:13px;margin-top:2px; }
+  .badge { background:var(--accent);color:white;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600; }
+  .tabs { display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border);background:var(--card);overflow-x:auto; }
+  .tab { padding:10px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:all .2s;white-space:nowrap; }
+  .tab:hover { color:var(--text);background:var(--card2); }
+  .tab.active { color:var(--accent2);border-color:var(--border);background:var(--bg);font-weight:600; }
+  .content { padding:24px 32px;display:none; }
+  .content.active { display:block; }
+  .kpi-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-bottom:24px; }
+  .kpi { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden; }
+  .kpi::before { content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent); }
+  .kpi.green::before { background:var(--accent4); } .kpi.amber::before { background:var(--accent3); }
+  .kpi.red::before { background:var(--danger); } .kpi.cyan::before { background:var(--accent2); }
+  .kpi.purple::before { background:#a78bfa; }
+  .kpi-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
+  .kpi-value { font-size:22px;font-weight:700; }
+  .kpi-sub { font-size:11px;color:var(--muted);margin-top:3px; }
+  .kpi-pct { font-size:12px;font-weight:700;margin-top:5px;padding:2px 7px;border-radius:5px;display:inline-block; }
+  .kpi-pct.blue { background:rgba(91,106,240,.18);color:#818cf8; }
+  .kpi-pct.cyan { background:rgba(34,211,238,.18);color:#22d3ee; }
+  .kpi-pct.green { background:rgba(16,185,129,.18);color:#10b981; }
+  .kpi-pct.amber { background:rgba(245,158,11,.18);color:#f59e0b; }
+  .kpi-delta { font-size:11px;font-weight:600;margin-top:5px; }
+  .kpi-delta.up { color:var(--accent4); } .kpi-delta.down { color:var(--danger); }
+  .kpi-yoy { display:flex;flex-direction:column;gap:2px;margin-top:6px; }
+  .kpi-yoy span { font-size:11px;font-weight:600; }
+  .chart-grid { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px; }
+  .chart-grid.full { grid-template-columns:1fr; }
+  .chart-grid.thirds { grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:24px; }
+  .chart-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px; }
+  .chart-card h3 { font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text); }
+  .chart-card .chart-sub { font-size:11px;color:var(--muted);margin-bottom:10px;margin-top:-10px; }
+  .chart-wrap { position:relative;height:260px; }
+  .filter-bar { display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px; }
+  .filter-bar label { font-size:12px;color:var(--muted);font-weight:500; }
+  select { background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:7px;font-size:12px;cursor:pointer;outline:none; }
+  select:focus { border-color:var(--accent); }
+  .filter-btn { background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;transition:all .15s; }
+  .filter-btn:hover { color:var(--text);border-color:var(--accent); }
+  .table-card { background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px; }
+  .table-card h3 { font-size:14px;font-weight:600;padding:14px 18px;border-bottom:1px solid var(--border); }
+  table { width:100%;border-collapse:collapse; }
+  th { text-align:left;padding:9px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--card2);font-weight:500; }
+  td { padding:9px 14px;font-size:12px;border-top:1px solid var(--border); }
+  tr:hover td { background:rgba(255,255,255,.02); }
+  .pill { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600; }
+  .pill.diamante { background:rgba(147,51,234,.2);color:#a78bfa; } .pill.ouro { background:rgba(245,158,11,.2);color:#fbbf24; }
+  .pill.prata { background:rgba(148,163,184,.2);color:#cbd5e1; } .pill.bronze-p { background:rgba(180,83,9,.2);color:#fb923c; }
+  .pill.bronze-pp { background:rgba(71,85,105,.2);color:#94a3b8; } .pill.ativo { background:rgba(16,185,129,.2);color:#34d399; }
+  .pill.risco { background:rgba(245,158,11,.2);color:#fbbf24; } .pill.inativo { background:rgba(248,113,113,.2);color:#f87171; }
+  .progress { background:var(--border);border-radius:99px;height:5px;overflow:hidden;margin-top:4px; }
+  .progress-fill { height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+  .table-scroll { overflow-x:auto; }
+  .info-note { background:rgba(91,106,240,.08);border:1px solid rgba(91,106,240,.25);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:14px; }
+  .info-note strong { color:var(--accent2); }
+  @media(max-width:768px){ .chart-grid,.chart-grid.thirds{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">M</div>
+    <div><h1>Motiva Benefícios</h1><p>Dashboard Financeiro · Jan/25 – Abr/26</p></div>
+  </div>
+  <span class="badge">Lorena · 2025–2026</span>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('gmv',event)">📊 GMV</div>
+  <div class="tab" onclick="showTab('receitas',event)">💰 Receitas</div>
+  <div class="tab" onclick="showTab('clientes',event)">👥 Clientes</div>
+  <div class="tab" onclick="showTab('comissoes',event)">🏆 Comissões</div>
+</div>
+
+<!-- ===== GMV ===== -->
+<div class="content active" id="tab-gmv">
+  <div class="filter-bar">
+    <label>📅 Período GMV:</label>
+    <select id="gFrom" onchange="applyGmv()"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="gTo" onchange="applyGmv()"></select>
+    <button class="filter-btn" onclick="resetGmv()">Limpar</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi cyan"><div class="kpi-label" id="g-tot-lbl">GMV Total</div><div class="kpi-value" id="g-tot-val">—</div><div class="kpi-sub">VT + PAT</div><div class="kpi-delta" id="g-tot-d"></div></div>
+    <div class="kpi"><div class="kpi-label" id="g-vt-lbl">GMV VT</div><div class="kpi-value" id="g-vt-val">—</div><div class="kpi-sub">Vale Transporte</div><div class="kpi-pct blue" id="g-vt-pct"></div><div class="kpi-delta" id="g-vt-d"></div></div>
+    <div class="kpi green"><div class="kpi-label" id="g-pat-lbl">GMV PAT</div><div class="kpi-value" id="g-pat-val">—</div><div class="kpi-sub">Alimentação</div><div class="kpi-pct cyan" id="g-pat-pct"></div><div class="kpi-delta" id="g-pat-d"></div></div>
+    <div class="kpi amber"><div class="kpi-label">Acumulado 2025</div><div class="kpi-value">R$ 133M</div><div class="kpi-sub">Jan a Dez/25</div></div>
+    <div class="kpi purple"><div class="kpi-label">YoY — GMV</div><div class="kpi-value" id="g-yoy-val">—</div><div class="kpi-sub" id="g-yoy-sub"></div><div class="kpi-yoy"><span id="g-yoy-vt"></span><span id="g-yoy-pat"></span></div></div>
+  </div>
+  <div class="info-note">ℹ️ <strong>Nota:</strong> Pedidos "SEM SK" do Pedido Externo excluídos do GMV PAT — já contabilizados no GMV VT via Pedido de Carga Completo.</div>
+  <div class="chart-grid full"><div class="chart-card"><h3>GMV Mensal — VT vs PAT</h3><p class="chart-sub">Evolução mês a mês em R$ milhões</p><div class="chart-wrap"><canvas id="gmvLineChart"></canvas></div></div></div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Composição do GMV por TIPO — Take Rate (%)</h3><p class="chart-sub">Taxa sobre o valor total de VT e PAT · Receita ÷ GMV</p><div class="chart-wrap"><canvas id="takeRateLineChart"></canvas></div></div></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Take Rate — VT (Detalhamento)</h3><p class="chart-sub">Tx Adm + Tx Sucesso + Tx Entrega em R$ mil · linha = TR% médio</p><div class="chart-wrap"><canvas id="vtTaxBreakdownChart"></canvas></div></div>
+    <div class="chart-card"><h3>Receita Total — Evolução Mensal</h3><p class="chart-sub">Receita VT + PAT em R$ mil</p><div class="chart-wrap"><canvas id="receitaLineChart"></canvas></div></div>
+  </div>
+  <div class="table-card"><h3>📋 Detalhe Mensal GMV</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>GMV VT</th><th>% VT</th><th>GMV PAT</th><th>% PAT</th><th>GMV Total</th><th>TR VT</th><th>TR PAT</th></tr></thead><tbody id="gmvTbody"></tbody></table></div></div>
+</div>
+
+<!-- ===== RECEITAS ===== -->
+<div class="content" id="tab-receitas">
+  <div class="filter-bar">
+    <label>📅 Período Receitas:</label>
+    <select id="rFrom" onchange="applyRec()"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="rTo" onchange="applyRec()"></select>
+    <button class="filter-btn" onclick="resetRec()">Limpar</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="kpi-label" id="r-tot-lbl">Receita Total</div><div class="kpi-value" id="r-tot-val">—</div><div class="kpi-sub">VT + PAT</div><div class="kpi-delta" id="r-tot-d"></div></div>
+    <div class="kpi"><div class="kpi-label" id="r-vt-lbl">Receita VT</div><div class="kpi-value" id="r-vt-val">—</div><div class="kpi-sub">Taxa adm + operação</div><div class="kpi-delta" id="r-vt-d"></div></div>
+    <div class="kpi cyan"><div class="kpi-label" id="r-pat-lbl">Receita PAT</div><div class="kpi-value" id="r-pat-val">—</div><div class="kpi-sub">Alimentação</div><div class="kpi-delta" id="r-pat-d"></div></div>
+    <div class="kpi amber"><div class="kpi-label">Acumulado 2025</div><div class="kpi-value">R$ 2,4M</div><div class="kpi-sub">Jan a Dez/25</div></div>
+    <div class="kpi purple"><div class="kpi-label">YoY — Receita</div><div class="kpi-value" id="r-yoy-val">—</div><div class="kpi-sub" id="r-yoy-sub"></div><div class="kpi-yoy"><span id="r-yoy-vt"></span><span id="r-yoy-pat"></span></div></div>
+  </div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Receita Mensal — VT vs PAT</h3><p class="chart-sub">Evolução em R$ mil</p><div class="chart-wrap"><canvas id="recLineChart"></canvas></div></div></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Margem sobre GMV (%)</h3><p class="chart-sub">Receita ÷ GMV por mês</p><div class="chart-wrap"><canvas id="margemChart"></canvas></div></div>
+    <div class="chart-card"><h3>Composição Receita</h3><p class="chart-sub" id="r-pie-sub">Último mês</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
+  </div>
+  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>Rec. VT</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+</div>
+
+<!-- ===== CLIENTES ===== -->
+<div class="content" id="tab-clientes">
+  <div class="kpi-grid">
+    <div class="kpi green"><div class="kpi-label">Clientes Ativos (Abr/26)</div><div class="kpi-value">525</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta down">↓ -6 vs Mar/26</div></div>
+    <div class="kpi amber"><div class="kpi-label">Em Risco 30–90d (Abr/26)</div><div class="kpi-value">24</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta down">↓ -3 vs Mar/26</div></div>
+    <div class="kpi red"><div class="kpi-label">Inativos +90d (Abr/26)</div><div class="kpi-value">462</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta down">↑ +19 vs Mar/26</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Base Total (Abr/26)</div><div class="kpi-value">1.011</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta up">↑ +10 vs Mar/26</div></div>
+    <div class="kpi purple"><div class="kpi-label">Concentração da Base</div><div class="kpi-value">Bronze-PP</div><div class="kpi-sub">Segmento dominante</div><div class="kpi-pct amber">46,0% da base</div></div>
+    <div class="kpi"><div class="kpi-label">Maior Segmento em Vol.</div><div class="kpi-value">Bronze-P</div><div class="kpi-sub">331 clientes (32,5%)</div><div class="kpi-pct blue">R$ 1K–5K/mês</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Crescimento da Base de Clientes</h3><p class="chart-sub">Total acumulado por mês</p><div class="chart-wrap"><canvas id="clientsLineChart"></canvas></div></div>
+    <div class="chart-card"><h3>Novos Clientes por Mês</h3><p class="chart-sub">Quantidade de novos cadastros</p><div class="chart-wrap"><canvas id="newClientsChart"></canvas></div></div>
+  </div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Base Total — Ativos vs Inativos por Mês</h3><p class="chart-sub">Clientes ativos (≤30d) e inativos (+90d) — Jan/25 a Abr/26</p><div class="chart-wrap"><canvas id="ativoInativoChart"></canvas></div></div></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Status de Atividade (Abr/26)</h3><p class="chart-sub">Distribuição atual dos 1.011 clientes</p><div class="chart-wrap"><canvas id="statusChart"></canvas></div></div>
+    <div class="chart-card"><h3>Segmentação por GMV — Detalhes</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="segTable"></div></div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Detalhes de Inatividade</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="inactiveTable"></div></div></div>
+    <div class="chart-card"><h3>Segmentação — Composição</h3><p class="chart-sub">Share atual da base por segmento</p><div class="chart-wrap"><canvas id="segPieChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== COMISSÕES ===== -->
+<div class="content" id="tab-comissoes">
+  <div class="kpi-grid">
+    <div class="kpi amber"><div class="kpi-label">Comissão Total (Abr/26)</div><div class="kpi-value">R$ 1.781</div><div class="kpi-sub">Todos os vendedores</div><div class="kpi-delta down">↓ -7,1% vs Mar/26</div></div>
+    <div class="kpi green"><div class="kpi-label">Maior Comissão (Abr/26)</div><div class="kpi-value">Karine</div><div class="kpi-sub">R$ 1.730 · 97,2% do total</div></div>
+    <div class="kpi"><div class="kpi-label">Comissão Acumulada 2025</div><div class="kpi-value">R$ 16.616</div><div class="kpi-sub">Jan–Dez/25</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Equipe Atual</div><div class="kpi-value">2 ativos</div><div class="kpi-sub">Karine + André</div></div>
+  </div>
+  <div class="chart-grid full"><div class="chart-card"><h3>Evolução de Comissões — por Vendedor</h3><p class="chart-sub">Comissão mensal em R$</p><div class="chart-wrap" style="height:300px;"><canvas id="commLineChart"></canvas></div></div></div>
+  <div class="chart-grid">
+    <div class="chart-card"><h3>Comissão Total Acumulada por Vendedor</h3><p class="chart-sub">Jan/25 – Abr/26</p><div class="chart-wrap"><canvas id="commBarChart"></canvas></div></div>
+    <div class="chart-card"><h3>Tabela de Comissões</h3><div class="table-scroll" style="margin-top:8px;"><table id="commTable"><thead><tr><th>Vendedor</th><th>Status</th><th>Acumulado</th><th>Último mês</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+</div>
+
+<script>
+// ===================== DADOS — 16 meses: Jan/25 – Abr/26 =====================
+const months = ['Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
+const gmvVT    = [3750309,3849420,3791696,3759588,3900582,3974325,4118794,4077965,4102352,3625259,3766626,3610548,3799822,3705194,3229324,3945232];
+const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,7429489,7244888,7297424,7678535,7587766,8066394,9028648,7550483,11946729];
+const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,11507454,11347241,10922683,11445161,11198315,11866217,12733842,10779807,15891961];
+const recVT    = [137579,127311,125375,136054,157638,164853,176992,163723,166104,157607,159160,168521,175801,167950,136394,175758];
+const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056];
+const recTotal = recVT.map((v,i)=>v+recPAT[i]);
+const vtTxAdm     = [67276,66875,63522,61032,73448,85273,93763,82047,82661,71313,78260,69474,73696,69886,62403,76989];
+const vtTxSucesso = [90203,74622,79758,80267,100153,97709,101153,98141,96765,98757,92287,109463,112305,106742,82996,110361];
+const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225];
+const qtdClients  = [781,801,832,871,904,915,927,944,949,966,975,976,989,997,1001,1011];
+const qtdNew      = [9,20,31,39,33,11,12,17,5,17,9,1,13,8,4,10];
+// Ativos (≤30d), Em risco (30-90d), Inativos (+90d) — calculados da aba Clientes
+const qtdAtivos   = [555,563,578,601,611,576,555,564,560,560,562,548,549,540,531,525];
+const qtdRisco    = [10,11,12,9,14,52,73,36,15,24,23,19,22,23,27,24];
+const qtdInativos = [216,227,242,261,279,287,299,344,374,382,390,409,418,434,443,462];
+const commTotal   = [524,643,1130,781,1011,1130,1041,1704,1894,2551,1858,1645,2053,1985,1917,1781];
+const commKarine  = [109,479,544,608,461,998,957,1579,1775,2107,1691,1603,1898,1928,1820,1730];
+const commCarol   = [0,0,0,0,0,10,24,46,54,374,107,0,0,0,0,0];
+const commLysandra= [66,65,514,44,93,53,0,0,0,0,0,0,0,0,0,0];
+const commVanessa = [313,82,51,110,401,34,0,0,0,3,0,0,0,0,0,0];
+const commPedro   = [31,17,21,19,57,35,60,79,65,67,60,42,65,41,40,0];
+const commAndre   = [0,0,0,0,0,0,0,0,0,0,0,0,90,16,57,51];
+
+// Segmentação (snapshot atual Abr/26)
+const segData = {Diamante:20,Ouro:88,Prata:111,'Bronze-P':331,'Bronze-PP':468};
+const segTotal = Object.values(segData).reduce((a,b)=>a+b,0);
+
+// YoY: offset de 12 meses (Jan/26=idx12 vs Jan/25=idx0 … Abr/26=idx15 vs Abr/25=idx3)
+const YOY_OFFSET = 12;
+
+// ===================== HELPERS =====================
+const C = {blue:'#5b6af0',cyan:'#22d3ee',green:'#10b981',amber:'#f59e0b',red:'#f87171',purple:'#a78bfa',orange:'#fb923c',slate:'#94a3b8'};
+Chart.defaults.color='#94a3b8'; Chart.defaults.font.family='Segoe UI,sans-serif'; Chart.defaults.font.size=12;
+const grid={color:'rgba(255,255,255,0.06)'};const noLegend={display:false};
+
+function fmt(n,short=false){
+  if(short){if(n>=1e6)return'R$ '+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'R$ '+(n/1e3).toFixed(0)+'K';return'R$ '+n.toFixed(0);}
+  return'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:0});
+}
+function pctVal(n,d){return d?((n/d)*100):0;}
+function deltaMoM(cur,prev,prevLabel){
+  if(prev==null||prev===0)return'';
+  const d=((cur-prev)/prev*100).toFixed(1);
+  const cls=d>=0?'up':'down',arrow=d>=0?'↑':'↓';
+  return`<span class="kpi-delta ${cls}">${arrow} ${d>=0?'+':''}${d}% vs ${prevLabel}</span>`;
+}
+function deltaAbs(cur,prev,prevLabel,unit=''){
+  if(prev==null)return'';
+  const d=cur-prev,cls=d>=0?'up':'down',arrow=d>=0?'↑':'↓';
+  return`<span class="kpi-delta ${cls}">${arrow} ${d>=0?'+':''}${d}${unit} vs ${prevLabel}</span>`;
+}
+function yoyArrow(cur,prev){
+  if(!prev)return'—';
+  const d=((cur-prev)/prev*100).toFixed(1);
+  const arrow=d>=0?'↑':'↓',col=d>=0?'#10b981':'#f87171';
+  return`<span style="color:${col}">${arrow} ${d>=0?'+':''}${d}%</span>`;
+}
+
+function showTab(name,e){
+  document.querySelectorAll('.content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(e&&e.target)e.target.classList.add('active');
+}
+
+// ===================== GMV TAB =====================
+const trVT_all  = months.map((_,i)=>parseFloat(pctVal(recVT[i],gmvVT[i]).toFixed(2)));
+const trPAT_all = months.map((_,i)=>parseFloat(pctVal(recPAT[i],gmvPAT[i]).toFixed(2)));
+let gFrom=0, gTo=months.length-1;
+let cGmvLine,cTakeRate,cVtBreak,cReceita;
+
+(function(){
+  const sf=document.getElementById('gFrom'), st=document.getElementById('gTo');
+  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  st.value=months.length-1;
+})();
+function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=months.length-1;applyGmv();}
+
+function applyGmv(){
+  gFrom=parseInt(document.getElementById('gFrom').value);
+  gTo=parseInt(document.getElementById('gTo').value);
+  if(gFrom>gTo){gTo=gFrom;document.getElementById('gTo').value=gTo;}
+  const fl=a=>a.slice(gFrom,gTo+1);
+  const fm=fl(months),fvt=fl(gmvVT),fpat=fl(gmvPAT),ftot=fl(gmvTotal);
+  const frvt=fl(recVT),frpat=fl(recPAT),frtot=fl(recTotal);
+  const ftr_vt=fl(trVT_all),ftr_pat=fl(trPAT_all);
+  const fadm=fl(vtTxAdm),fsuc=fl(vtTxSucesso),fent=fl(vtTxEntrega);
+
+  // KPI
+  const li=gTo,pi=gTo>0?gTo-1:0;
+  const pm=months[pi];
+  document.getElementById('g-tot-lbl').textContent=`GMV Total (${months[li]})`;
+  document.getElementById('g-tot-val').textContent=fmt(gmvTotal[li],true);
+  document.getElementById('g-tot-d').innerHTML=deltaMoM(gmvTotal[li],gmvTotal[pi],pm);
+  document.getElementById('g-vt-lbl').textContent=`GMV VT (${months[li]})`;
+  document.getElementById('g-vt-val').textContent=fmt(gmvVT[li],true);
+  document.getElementById('g-vt-pct').textContent=(gmvVT[li]/gmvTotal[li]*100).toFixed(1)+'%';
+  document.getElementById('g-vt-d').innerHTML=deltaMoM(gmvVT[li],gmvVT[pi],pm);
+  document.getElementById('g-pat-lbl').textContent=`GMV PAT (${months[li]})`;
+  document.getElementById('g-pat-val').textContent=fmt(gmvPAT[li],true);
+  document.getElementById('g-pat-pct').textContent=(gmvPAT[li]/gmvTotal[li]*100).toFixed(1)+'%';
+  document.getElementById('g-pat-d').innerHTML=deltaMoM(gmvPAT[li],gmvPAT[pi],pm);
+
+  // YoY
+  const yoyIdx=li-YOY_OFFSET;
+  if(yoyIdx>=0){
+    const pyear=months[yoyIdx];
+    const totChg=((gmvTotal[li]-gmvTotal[yoyIdx])/gmvTotal[yoyIdx]*100).toFixed(1);
+    const totColor=totChg>=0?'#10b981':'#f87171';
+    document.getElementById('g-yoy-val').innerHTML=`<span style="color:${totColor}">${totChg>=0?'+':''}${totChg}%</span>`;
+    document.getElementById('g-yoy-sub').textContent=`${months[li]} vs ${pyear}`;
+    document.getElementById('g-yoy-vt').innerHTML=`VT: ${yoyArrow(gmvVT[li],gmvVT[yoyIdx])}`;
+    document.getElementById('g-yoy-pat').innerHTML=`PAT: ${yoyArrow(gmvPAT[li],gmvPAT[yoyIdx])}`;
+  } else {
+    document.getElementById('g-yoy-val').textContent='—';
+    document.getElementById('g-yoy-sub').textContent='Sem dado do ano anterior';
+    document.getElementById('g-yoy-vt').textContent='';document.getElementById('g-yoy-pat').textContent='';
+  }
+
+  // Charts
+  cGmvLine.data.labels=fm;
+  cGmvLine.data.datasets[0].data=fvt.map(v=>v/1e6);
+  cGmvLine.data.datasets[1].data=fpat.map(v=>v/1e6);
+  cGmvLine.data.datasets[2].data=ftot.map(v=>v/1e6);
+  cGmvLine.update();
+
+  cTakeRate.data.labels=fm;
+  cTakeRate.data.datasets[0].data=ftr_vt;
+  cTakeRate.data.datasets[1].data=ftr_pat;
+  cTakeRate.update();
+
+  const avgTR=fadm.reduce((s,v,i)=>s+(v+fsuc[i]+fent[i])/fvt[i]*100,0)/fadm.length;
+  cVtBreak.data.labels=fm;
+  cVtBreak.data.datasets[0].data=fadm.map(v=>v/1e3);
+  cVtBreak.data.datasets[1].data=fsuc.map(v=>v/1e3);
+  cVtBreak.data.datasets[2].data=fent.map(v=>v/1e3);
+  cVtBreak.data.datasets[3].data=fm.map(()=>parseFloat(avgTR.toFixed(2)));
+  cVtBreak.data.datasets[3].label=`Média TR ${avgTR.toFixed(2)}%`;
+  cVtBreak.update();
+
+  cReceita.data.labels=fm;
+  cReceita.data.datasets[0].data=frvt.map(v=>v/1e3);
+  cReceita.data.datasets[1].data=frpat.map(v=>v/1e3);
+  cReceita.data.datasets[2].data=frtot.map(v=>v/1e3);
+  cReceita.update();
+
+  // Tabela
+  const tb=document.getElementById('gmvTbody'); tb.innerHTML='';
+  fm.forEach((m,fi)=>{
+    const gi=gFrom+fi;
+    const pVT=(gmvVT[gi]/gmvTotal[gi]*100).toFixed(1),pPAT=(gmvPAT[gi]/gmvTotal[gi]*100).toFixed(1);
+    const trV=(recVT[gi]/gmvVT[gi]*100).toFixed(2),trP=(recPAT[gi]/gmvPAT[gi]*100).toFixed(2);
+    const row=document.createElement('tr');
+    row.innerHTML=`<td><strong>${m}</strong></td><td>${fmt(gmvVT[gi])}</td><td style="color:#818cf8;font-weight:600;">${pVT}%</td><td>${fmt(gmvPAT[gi])}</td><td style="color:#22d3ee;font-weight:600;">${pPAT}%</td><td>${fmt(gmvTotal[gi])}</td><td style="color:#818cf8;font-weight:600;">${trV}%</td><td style="color:#22d3ee;font-weight:600;">${trP}%</td>`;
+    tb.appendChild(row);
+  });
+}
+
+(function initGmvCharts(){
+  cGmvLine=new Chart(document.getElementById('gmvLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'GMV VT',data:gmvVT.map(v=>v/1e6),borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6},
+      {label:'GMV PAT',data:gmvPAT.map(v=>v/1e6),borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6},
+      {label:'GMV Total',data:gmvTotal.map(v=>v/1e6),borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[6,3],borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(2)}M`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v+'M'}}}}
+  });
+
+  cTakeRate=new Chart(document.getElementById('takeRateLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Take Rate VT (%)',data:trVT_all,borderColor:C.blue,backgroundColor:C.blue+'22',fill:false,tension:.3,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:C.blue,borderWidth:2},
+      {label:'Take Rate PAT (%)',data:trPAT_all,borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:false,tension:.3,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:C.cyan,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:10}},
+        tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex+gFrom,isVT=ctx.datasetIndex===0;const rec=isVT?recVT[i]:recPAT[i],gmv=isVT?gmvVT[i]:gmvPAT[i];return` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%  (R$ ${(rec/1e3).toFixed(0)}K / R$ ${(gmv/1e6).toFixed(1)}M)`;},}},},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>v+'%'},title:{display:true,text:'Take Rate (%)',color:'#94a3b8'}}}}
+  });
+
+  const avgTR_all=vtTxAdm.reduce((s,v,i)=>s+(v+vtTxSucesso[i]+vtTxEntrega[i])/gmvVT[i]*100,0)/vtTxAdm.length;
+  cVtBreak=new Chart(document.getElementById('vtTaxBreakdownChart'),{
+    data:{labels:months,datasets:[
+      {type:'bar',label:'Tx Adm',data:vtTxAdm.map(v=>v/1e3),backgroundColor:C.blue+'cc',borderColor:C.blue,borderWidth:1,stack:'t'},
+      {type:'bar',label:'Tx Sucesso',data:vtTxSucesso.map(v=>v/1e3),backgroundColor:C.cyan+'cc',borderColor:C.cyan,borderWidth:1,stack:'t'},
+      {type:'bar',label:'Tx Entrega',data:vtTxEntrega.map(v=>v/1e3),backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'t'},
+      {type:'line',label:`Média TR ${avgTR_all.toFixed(2)}%`,data:months.map(()=>parseFloat(avgTR_all.toFixed(2))),borderColor:C.green,backgroundColor:'transparent',borderDash:[6,3],borderWidth:2,pointRadius:0,pointHoverRadius:4,yAxisID:'yTR'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{
+          label:ctx=>{if(ctx.datasetIndex===3)return` ${ctx.dataset.label}`;const i=ctx.dataIndex+gFrom;const v=ctx.parsed.y;const p=(v*1000/gmvVT[i]*100).toFixed(2);return` ${ctx.dataset.label}: R$ ${v.toFixed(1)}K (${p}% GMV)`;},
+          footer:items=>{const fi=items[0].dataIndex,gi=fi+gFrom;const tot=(vtTxAdm[gi]+vtTxSucesso[gi]+vtTxEntrega[gi])/1e3;const tr=(tot*1000/gmvVT[gi]*100).toFixed(2);return`Total: R$ ${tot.toFixed(1)}K · Take Rate: ${tr}%`;}
+        }}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid,ticks:{callback:v=>'R$'+v+'K'},title:{display:true,text:'R$ mil',color:'#94a3b8'}},yTR:{position:'right',grid:{display:false},ticks:{callback:v=>v+'%'},title:{display:true,text:'TR %',color:C.green}}}}
+  });
+
+  cReceita=new Chart(document.getElementById('receitaLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Rec. VT',data:recVT.map(v=>v/1e3),borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6},
+      {label:'Rec. PAT',data:recPAT.map(v=>v/1e3),borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6},
+      {label:'Rec. Total',data:recTotal.map(v=>v/1e3),borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[5,3],borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(1)}K`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v+'K'}}}}
+  });
+
+  applyGmv();
+})();
+
+// ===================== RECEITAS TAB =====================
+let rFrom=0, rTo=months.length-1;
+let cRecLine, cMargem, cRecPie;
+
+(function(){
+  const sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
+  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  st.value=months.length-1;
+})();
+function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=months.length-1;applyRec();}
+
+function applyRec(){
+  rFrom=parseInt(document.getElementById('rFrom').value);
+  rTo=parseInt(document.getElementById('rTo').value);
+  if(rFrom>rTo){rTo=rFrom;document.getElementById('rTo').value=rTo;}
+  const fl=a=>a.slice(rFrom,rTo+1);
+  const fm=fl(months),fvt=fl(recVT),fpat=fl(recPAT),ftot=fl(recTotal),fgmv=fl(gmvTotal);
+  const li=rTo,pi=rTo>0?rTo-1:0;const pm=months[pi];
+
+  // KPIs
+  document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
+  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
+  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
+  document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
+  document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
+  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
+  document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
+  document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
+  document.getElementById('r-pat-d').innerHTML=deltaMoM(recPAT[li],recPAT[pi],pm);
+
+  // YoY
+  const yoyIdx=li-YOY_OFFSET;
+  if(yoyIdx>=0){
+    const pyear=months[yoyIdx];
+    const totChg=((recTotal[li]-recTotal[yoyIdx])/recTotal[yoyIdx]*100).toFixed(1);
+    const col=totChg>=0?'#10b981':'#f87171';
+    document.getElementById('r-yoy-val').innerHTML=`<span style="color:${col}">${totChg>=0?'+':''}${totChg}%</span>`;
+    document.getElementById('r-yoy-sub').textContent=`${months[li]} vs ${pyear}`;
+    document.getElementById('r-yoy-vt').innerHTML=`VT: ${yoyArrow(recVT[li],recVT[yoyIdx])}`;
+    document.getElementById('r-yoy-pat').innerHTML=`PAT: ${yoyArrow(recPAT[li],recPAT[yoyIdx])}`;
+  } else {
+    document.getElementById('r-yoy-val').textContent='—';
+    document.getElementById('r-yoy-sub').textContent='Sem dado do ano anterior';
+    ['r-yoy-vt','r-yoy-pat'].forEach(id=>{document.getElementById(id).textContent='';});
+  }
+
+  // Charts
+  cRecLine.data.labels=fm;
+  cRecLine.data.datasets[0].data=fvt.map(v=>v/1e3);
+  cRecLine.data.datasets[1].data=fpat.map(v=>v/1e3);
+  cRecLine.data.datasets[2].data=ftot.map(v=>v/1e3);
+  cRecLine.update();
+
+  const mg=fgmv.map((g,i)=>((ftot[i]/g)*100).toFixed(2));
+  cMargem.data.labels=fm;
+  cMargem.data.datasets[0].data=mg;
+  cMargem.data.datasets[0].backgroundColor=mg.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red);
+  cMargem.update();
+
+  cRecPie.data.datasets[0].data=[fvt[fvt.length-1],fpat[fpat.length-1]];
+  cRecPie.update();
+  document.getElementById('r-pie-sub').textContent=`Último mês: ${fm[fm.length-1]}`;
+
+  // Tabela
+  const tb=document.getElementById('recTbody');tb.innerHTML='';
+  fm.forEach((m,fi)=>{
+    const gi=rFrom+fi;
+    const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
+    const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
+    const row=document.createElement('tr');
+    row.innerHTML=`<td><strong>${m}</strong></td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    tb.appendChild(row);
+  });
+}
+
+(function initRecCharts(){
+  cRecLine=new Chart(document.getElementById('recLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Receita VT',data:recVT.map(v=>v/1e3),borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:4},
+      {label:'Receita PAT',data:recPAT.map(v=>v/1e3),borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:true,tension:.4,pointRadius:4},
+      {label:'Total',data:recTotal.map(v=>v/1e3),borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,borderDash:[6,3],pointRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(1)}K`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v+'K'}}}}
+  });
+
+  const mg0=gmvTotal.map((g,i)=>((recTotal[i]/g)*100).toFixed(2));
+  cMargem=new Chart(document.getElementById('margemChart'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Margem %',data:mg0,backgroundColor:mg0.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y}%`}}},
+      scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  const lastI=months.length-1;
+  cRecPie=new Chart(document.getElementById('recPieChart'),{
+    type:'doughnut',data:{labels:['VT','PAT'],datasets:[{data:[recVT[lastI],recPAT[lastI]],backgroundColor:[C.blue,C.cyan],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: R$ ${(ctx.parsed/1e3).toFixed(1)}K`}}}}
+  });
+
+  applyRec();
+})();
+
+// ===================== CLIENTES TAB =====================
+(function(){
+  // Crescimento base
+  new Chart(document.getElementById('clientsLineChart'),{
+    type:'line',data:{labels:months,datasets:[{label:'Total de Clientes',data:qtdClients,borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} clientes`}}},scales:{x:{grid},y:{grid,min:750}}}
+  });
+
+  // Novos clientes
+  new Chart(document.getElementById('newClientsChart'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Novos Clientes',data:qtdNew,backgroundColor:qtdNew.map(v=>v>=20?C.green:v>=10?C.amber:C.blue),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} novos clientes`}}},scales:{x:{grid:{display:false}},y:{grid}}}
+  });
+
+  // Ativos vs Inativos por mês — barras empilhadas
+  new Chart(document.getElementById('ativoInativoChart'),{
+    type:'bar',data:{labels:months,datasets:[
+      {label:'Ativos (≤30d)',data:qtdAtivos,backgroundColor:C.green+'cc',borderColor:C.green,borderWidth:1,stack:'base'},
+      {label:'Em Risco (30–90d)',data:qtdRisco,backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'base'},
+      {label:'Inativos (+90d)',data:qtdInativos,backgroundColor:C.red+'cc',borderColor:C.red,borderWidth:1,stack:'base'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{footer:items=>{const tot=items.reduce((s,i)=>s+i.parsed.y,0);return`Total: ${tot} clientes`;},label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid,ticks:{stepSize:100}}}}
+  });
+
+  // Status donut
+  new Chart(document.getElementById('statusChart'),{
+    type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[525,24,462],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1011*100).toFixed(1)}%)`}}}}
+  });
+
+  // Segmentação composição donut
+  const segLabels=Object.keys(segData),segVals=Object.values(segData);
+  const segColors=[C.purple,C.amber,C.slate,C.orange,'#475569'];
+  new Chart(document.getElementById('segPieChart'),{
+    type:'doughnut',data:{labels:segLabels,datasets:[{data:segVals,backgroundColor:segColors,borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotal*100).toFixed(1)}%)`}}}}
+  });
+
+  // Segmentation detail
+  const segDiv=document.getElementById('segTable');
+  const segFaixas={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
+  const segCls={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+  segLabels.forEach((k,i)=>{
+    const v=segVals[i],pv=(v/segTotal*100).toFixed(1);
+    segDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segCls[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixas[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColors[i]}"></div></div></div>`;
+  });
+
+  // Inatividade detail
+  const inact=[
+    {label:'Ativos (≤30d)',cls:'ativo',qtd:525},
+    {label:'Em Risco (30–90d)',cls:'risco',qtd:24},
+    {label:'Inativos (+90d)',cls:'inativo',qtd:462},
+  ];
+  const inactDiv=document.getElementById('inactiveTable');
+  inact.forEach(s=>{
+    const pv=(s.qtd/1011*100).toFixed(1);
+    inactDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
+  });
+})();
+
+// ===================== COMISSÕES =====================
+(function(){
+  new Chart(document.getElementById('commLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Karine',data:commKarine,borderColor:C.cyan,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4},
+      {label:'André',data:commAndre,borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4},
+      {label:'Carol',data:commCarol,borderColor:C.purple,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
+      {label:'Lysandra',data:commLysandra,borderColor:C.amber,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
+      {label:'Vanessa',data:commVanessa,borderColor:C.orange,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
+      {label:'Pedro',data:commPedro,borderColor:C.slate,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[2,4]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(2)}`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v}}}}
+  });
+
+  const sellers=[
+    {name:'Karine',status:'Ativo',color:C.cyan,total:commKarine.reduce((a,b)=>a+b,0),last:commKarine[commKarine.length-1]},
+    {name:'André',status:'Ativo',color:C.green,total:commAndre.reduce((a,b)=>a+b,0),last:commAndre[commAndre.length-1]},
+    {name:'Carol',status:'Desligada',color:C.purple,total:commCarol.reduce((a,b)=>a+b,0),last:0},
+    {name:'Lysandra',status:'Desligada',color:C.amber,total:commLysandra.reduce((a,b)=>a+b,0),last:0},
+    {name:'Vanessa',status:'Desligada',color:C.orange,total:commVanessa.reduce((a,b)=>a+b,0),last:0},
+    {name:'Pedro',status:'Desligado',color:C.slate,total:commPedro.reduce((a,b)=>a+b,0),last:0},
+  ].sort((a,b)=>b.total-a.total);
+
+  new Chart(document.getElementById('commBarChart'),{
+    type:'bar',data:{labels:sellers.map(s=>s.name),datasets:[{label:'Comissão Total',data:sellers.map(s=>s.total),backgroundColor:sellers.map(s=>s.color),borderRadius:8}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.x.toFixed(2)}`}}},scales:{x:{grid},y:{grid:{display:false}}}}
+  });
+
+  const tb=document.querySelector('#commTable tbody');
+  sellers.forEach(s=>{
+    const row=document.createElement('tr');
+    const cls=s.status==='Ativo'?'ativo':'inativo';
+    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toFixed(2)}</td><td>R$ ${s.last.toFixed(2)}</td>`;
+    tb.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>
