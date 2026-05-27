@@ -365,7 +365,35 @@ function applyGmv(){
   });
 
   const avgTR_all=vtTxAdm.reduce((s,v,i)=>s+(v+vtTxSucesso[i]+vtTxEntrega[i])/gmvVT[i]*100,0)/vtTxAdm.length;
+
+  // Plugin customizado: mostra valores nas barras do grafico VT Detalhamento
+  const vtBarLabelPlugin = {
+    id:'vtBarLabels',
+    afterDatasetsDraw(chart){
+      const ctx2=chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(di>=3)return; // pula linha TR
+        const meta=chart.getDatasetMeta(di);
+        meta.data.forEach((bar,idx)=>{
+          const val=ds.data[idx];
+          if(!val||val<1)return;
+          const barH=Math.abs(bar.base-bar.y);
+          if(barH<14)return; // barra muito pequena, nao cabe
+          const label='R$'+Math.round(val)+'K';
+          ctx2.save();
+          ctx2.font='bold 9px Segoe UI,sans-serif';
+          ctx2.fillStyle='#ffffff';
+          ctx2.textAlign='center';
+          ctx2.textBaseline='middle';
+          ctx2.fillText(label, bar.x, (bar.y+bar.base)/2);
+          ctx2.restore();
+        });
+      });
+    }
+  };
+
   cVtBreak=new Chart(document.getElementById('vtTaxBreakdownChart'),{
+    plugins:[vtBarLabelPlugin],
     data:{labels:months,datasets:[
       {type:'bar',label:'Tx Adm',data:vtTxAdm.map(v=>v/1e3),backgroundColor:C.blue+'cc',borderColor:C.blue,borderWidth:1,stack:'t'},
       {type:'bar',label:'Tx Sucesso',data:vtTxSucesso.map(v=>v/1e3),backgroundColor:C.cyan+'cc',borderColor:C.cyan,borderWidth:1,stack:'t'},
@@ -373,7 +401,8 @@ function applyGmv(){
       {type:'line',label:`Média TR ${avgTR_all.toFixed(2)}%`,data:months.map(()=>parseFloat(avgTR_all.toFixed(2))),borderColor:C.green,backgroundColor:'transparent',borderDash:[6,3],borderWidth:2,pointRadius:0,pointHoverRadius:4,yAxisID:'yTR'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
+      plugins:{
+        legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
         tooltip:{callbacks:{
           label:ctx=>{if(ctx.datasetIndex===3)return` ${ctx.dataset.label}`;const i=ctx.dataIndex+gFrom;const v=ctx.parsed.y;const p=(v*1000/gmvVT[i]*100).toFixed(2);return` ${ctx.dataset.label}: R$ ${v.toFixed(1)}K (${p}% GMV)`;},
           footer:items=>{const fi=items[0].dataIndex,gi=fi+gFrom;const tot=(vtTxAdm[gi]+vtTxSucesso[gi]+vtTxEntrega[gi])/1e3;const tr=(tot*1000/gmvVT[gi]*100).toFixed(2);return`Total: R$ ${tot.toFixed(1)}K · Take Rate: ${tr}%`;}
