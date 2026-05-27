@@ -73,6 +73,29 @@
   .info-note { background:rgba(91,106,240,.08);border:1px solid rgba(91,106,240,.25);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:14px; }
   .info-note strong { color:var(--accent2); }
   @media(max-width:768px){ .chart-grid,.chart-grid.thirds{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
+  /* GMV por Cliente */
+  .client-table-wrap { overflow-x:auto; max-height:620px; overflow-y:auto; }
+  .client-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .client-table thead { position:sticky; top:0; z-index:2; }
+  .client-table th { background:var(--card2); padding:8px 10px; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; border-bottom:1px solid var(--border); font-weight:500; }
+  .client-table td { padding:7px 10px; border-top:1px solid rgba(255,255,255,.04); white-space:nowrap; }
+  .client-table tr:hover td { background:rgba(255,255,255,.03); }
+  .client-table .col-fix { position:sticky; background:var(--card); z-index:1; }
+  .client-table .col-fix.th { background:var(--card2); z-index:3; }
+  .client-table td.col-fix { border-right:1px solid var(--border); }
+  .col-empresa { left:0; min-width:180px; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
+  .col-cnpj    { left:180px; min-width:130px; }
+  .col-seg     { left:310px; min-width:90px; }
+  .col-cad     { left:400px; min-width:90px; }
+  .col-top     { left:490px; min-width:100px; }
+  .arrow-up   { color:#10b981; font-weight:700; font-size:11px; }
+  .arrow-down { color:#f87171; font-weight:700; font-size:11px; }
+  .arrow-neu  { color:#94a3b8; font-size:11px; }
+  .gmv-val    { display:block; font-weight:600; }
+  .gmv-arrow  { display:block; font-size:10px; margin-top:1px; }
+  .search-input { background:var(--card2); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:7px; font-size:12px; outline:none; width:220px; }
+  .search-input:focus { border-color:var(--accent); }
+  .client-count { font-size:12px; color:var(--muted); margin-left:auto; }
 </style>
 </head>
 <body>
@@ -88,6 +111,7 @@
   <div class="tab" onclick="showTab('receitas',event)">💰 Receitas</div>
   <div class="tab" onclick="showTab('clientes',event)">👥 Clientes</div>
   <div class="tab" onclick="showTab('comissoes',event)">🏆 Comissões</div>
+  <div class="tab" onclick="showTab('gmvcliente',event)">🏢 GMV por Cliente</div>
 </div>
 
 <!-- ===== GMV ===== -->
@@ -205,6 +229,40 @@
   </div>
 </div>
 
+<!-- ===== GMV POR CLIENTE ===== -->
+<div class="content" id="tab-gmvcliente">
+  <div class="filter-bar">
+    <label>🔍 Buscar:</label>
+    <input class="search-input" id="clientSearch" placeholder="Nome ou CNPJ..." oninput="renderClientTable()">
+    <label style="margin-left:8px;">🏷️ Segmento:</label>
+    <select id="clientSeg" onchange="renderClientTable()">
+      <option value="all">Todos</option>
+      <option value="Diamante">Diamante</option>
+      <option value="Ouro">Ouro</option>
+      <option value="Prata">Prata</option>
+      <option value="Bronze-P">Bronze-P</option>
+      <option value="Bronze-PP">Bronze-PP</option>
+    </select>
+    <label style="margin-left:8px;">📦 Origem:</label>
+    <select id="clientOrigem" onchange="renderClientTable()">
+      <option value="all">Todas</option>
+      <option value="VT">VT (Ped. Carga)</option>
+      <option value="PAT">PAT (Ped. Externo)</option>
+      <option value="Ambos">Ambos</option>
+    </select>
+    <span class="client-count" id="clientCount"></span>
+  </div>
+  <div class="info-note">ℹ️ <strong>Dados reais</strong> serão carregados via importação do Excel (SheetJS). Os registros abaixo são uma amostra da estrutura. · <strong>Deduplicação por CNPJ</strong> — cliente presente nas duas abas é exibido uma única vez.</div>
+  <div class="table-card" style="margin-bottom:0;">
+    <div class="client-table-wrap">
+      <table class="client-table" id="clientTable">
+        <thead id="clientTableHead"></thead>
+        <tbody id="clientTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===================== DADOS — 16 meses: Jan/25 – Abr/26 =====================
 const months = ['Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -220,11 +278,11 @@ const recTotal = recVT.map((v,i)=>v+recPAT[i]);
 // SJDR, 2ª via, Financiamento = demais linhas do Acompanhamento
 // Por ora, usa proporções estimadas da Receita VT até extração detalhada do Excel
 const recCateg = {
-  'Dealer/Broker': recVT.map(v=>Math.round(v*0.52)),
-  'SJDR':          recVT.map(v=>Math.round(v*0.21)),
-  '2ª Via':        recVT.map(v=>Math.round(v*0.13)),
-  'Financiamento': recVT.map(v=>Math.round(v*0.09)),
-  'Ped. Externos': recVT.map(v=>Math.round(v*0.05)),
+  'Dealer/Broker': recVT.map(v=>Math.round(v*0.965)),
+  'SJDR':          recVT.map(v=>Math.round(v*0.000)),
+  '2ª Via':        recVT.map(v=>Math.round(v*0.001)),
+  'Financiamento': recVT.map(v=>Math.round(v*0.000)),
+  'Ped. Externos': recVT.map(v=>Math.round(v*0.034)),
   'PAT':           recPAT
 };
 const vtTxAdm     = [67276,66875,63522,61032,73448,85273,93763,82047,82661,71313,78260,69474,73696,69886,62403,76989];
@@ -783,6 +841,297 @@ const commCompanyData={};
 
   applyComm();
 })();
+
+// ===================== GMV POR CLIENTE =====================
+// Estrutura: {cnpj, empresa, origem, cadastro, segmento, maiorGmv, gmv:[16 valores Jan/25-Abr/26]}
+// Origem: 'VT' | 'PAT' | 'Ambos'
+// Será substituído pelos dados reais via importação SheetJS do Excel
+let clientGmvData = [
+  {cnpj:'07.655.416/0001-97',empresa:'ARTEBRILHO MULTISERVIÇOS',origem:'VT',cadastro:'09/22',segmento:'Diamante',maiorGmv:648500,gmv:[447500,414900,425000,489200,479700,340600,360600,322800,360800,313100,321300,324400,310200,354600,291300,648500]},
+  {cnpj:'17.155.342/0001-83',empresa:'LOJA ELETRICA LTDA',origem:'VT',cadastro:'12/23',segmento:'Diamante',maiorGmv:353500,gmv:[315500,304700,312900,353500,320800,344200,337600,320300,346400,282000,309400,298200,288800,337900,317100,322800]},
+  {cnpj:'04.032.380/0001-05',empresa:'FERREIRA E CHAGAS ADVOGADOS',origem:'VT',cadastro:'10/24',segmento:'Diamante',maiorGmv:339400,gmv:[229300,188400,222600,212300,231900,339400,316200,268600,260800,244600,245200,292600,335500,275800,105800,18900]},
+  {cnpj:'13.574.594/0001-96',empresa:'RB -BK BRASIL OP.ASSE.A REST.SA',origem:'VT',cadastro:'05/23',segmento:'Diamante',maiorGmv:445800,gmv:[77700,255800,257700,144800,100600,152700,413900,186800,240800,69300,359500,163500,203000,216600,92100,445800]},
+  {cnpj:'08.174.089/0001-14',empresa:'ALMAVIVA DO BRASIL TELEMARKETI',origem:'VT',cadastro:'02/24',segmento:'Diamante',maiorGmv:335700,gmv:[335700,275300,279200,247000,283300,263800,255200,225500,207000,171400,205300,181500,132700,62700,0,0]},
+  {cnpj:'09.576.421/0001-30',empresa:'ARTEBRILHO LOCACAO DE MAO DE O',origem:'VT',cadastro:'10/22',segmento:'Diamante',maiorGmv:169800,gmv:[62500,169800,135800,130600,159700,154000,154800,152500,163100,133500,142800,158900,116100,104600,37900,37100]},
+  {cnpj:'32.907.983/0013-74',empresa:'Meu Prata Supermercado',origem:'VT',cadastro:'07/25',segmento:'Diamante',maiorGmv:256400,gmv:[0,0,0,0,0,0,0,256400,143700,179200,156300,179500,182800,178000,172000,173700]},
+  {cnpj:'10.791.005/0001-33',empresa:'FERREIRA E CHAGAS RECUPERACAO',origem:'VT',cadastro:'10/24',segmento:'Diamante',maiorGmv:128400,gmv:[80000,99900,128400,122200,92000,122800,70600,70600,7500,60700,67000,67900,58300,55600,26400,0]},
+  {cnpj:'32.227.070/0010-64',empresa:'CETUS CONSTRUTORA',origem:'VT',cadastro:'12/23',segmento:'Diamante',maiorGmv:146700,gmv:[114200,79100,56700,37100,146700,68500,63600,61800,65100,60800,6900,115100,60200,59300,53600,36800]},
+  {cnpj:'06.347.409/0001-65',empresa:'RB - SBF COMERCIO DE PRODUTOS ESPOR',origem:'VT',cadastro:'06/24',segmento:'Diamante',maiorGmv:91800,gmv:[42400,53200,37600,48400,74600,62800,77900,68200,66200,78400,66600,77400,56200,61700,68800,91800]},
+  {cnpj:'21.728.225/0001-39',empresa:'CONSERVASOLO ENG PROJ E CONSUL',origem:'VT',cadastro:'01/23',segmento:'Diamante',maiorGmv:72300,gmv:[72300,56900,60900,57200,61400,54700,50100,44300,62800,58200,52200,40800,64200,57600,48600,57300]},
+  {cnpj:'43.984.031/0001-37',empresa:'RHS GESTAO E SERVIÇOS LTDA',origem:'VT',cadastro:'12/23',segmento:'Diamante',maiorGmv:92200,gmv:[44400,44700,41600,51300,50100,49200,46000,48800,59700,45900,52600,55400,58000,51600,61400,92200]},
+  {cnpj:'25.681.529/0001-49',empresa:'VIA LACTEA LOG. E DISTR. LTDA',origem:'VT',cadastro:'06/25',segmento:'Diamante',maiorGmv:85800,gmv:[0,0,0,0,0,85800,61100,70000,65700,57500,68200,58700,59300,71100,63700,64400]},
+  {cnpj:'33.041.260/0652-90',empresa:'ALELO - VIA VAREJO S/A',origem:'VT',cadastro:'03/23',segmento:'Diamante',maiorGmv:60200,gmv:[47400,49200,39600,60200,27400,32400,41000,51800,32600,47700,42000,47600,37800,38300,40900,44400]},
+  {cnpj:'01.298.675/0041-19',empresa:'F. IMM BRASIL LTDA',origem:'VT',cadastro:'08/22',segmento:'Diamante',maiorGmv:107900,gmv:[80500,76800,43900,16600,34700,107900,55700,54300,60900,50200,51400,9000,500,300,400,100]},
+  {cnpj:'27.394.758/0005-31',empresa:'INCOPRE ENG E COM S.A',origem:'VT',cadastro:'08/25',segmento:'Diamante',maiorGmv:70400,gmv:[0,0,0,0,0,0,0,70400,66900,57200,42200,59700,64600,68100,60600,59200]},
+  {cnpj:'27.394.758/0010-07',empresa:'INCOPRE S/A',origem:'VT',cadastro:'08/25',segmento:'Diamante',maiorGmv:96800,gmv:[0,0,0,0,0,0,0,59200,75100,58500,50400,1300,96800,74300,68300,61600]},
+  {cnpj:'17.551.250/0001-12',empresa:'VILASA CONSTRUTORA LTDA',origem:'VT',cadastro:'07/24',segmento:'Ouro',maiorGmv:49300,gmv:[14600,25600,49300,32500,30800,27300,28000,30700,37400,30500,18500,14600,44200,41900,36900,37700]},
+  {cnpj:'15.862.332/0001-52',empresa:'CONSTRUTORA CAMPOS E FILHOS LT',origem:'VT',cadastro:'08/23',segmento:'Diamante',maiorGmv:55200,gmv:[31400,34200,39000,25000,33300,25000,38100,31300,40100,26200,31000,13500,55200,15700,19100,12400]},
+  {cnpj:'38.659.082/0001-53',empresa:'AMPHORA LTDA',origem:'VT',cadastro:'03/23',segmento:'Ouro',maiorGmv:33900,gmv:[32500,28000,27300,28300,27400,33900,29300,33300,30600,18500,19800,21800,23300,25700,21800,24900]},
+  {cnpj:'16.590.234/0001-76',empresa:'RB - AREZZO IND. E COM LTDA',origem:'VT',cadastro:'04/24',segmento:'Ouro',maiorGmv:39900,gmv:[16600,21200,15600,19900,18400,31300,21200,31200,38500,39900,30200,14900,36300,9900,37100,37200]},
+  {cnpj:'17.614.831/0001-56',empresa:'CLASSE MULTISERVIÇOS',origem:'VT',cadastro:'09/23',segmento:'Ouro',maiorGmv:43000,gmv:[41900,43000,17800,33300,32000,13400,31300,25400,23100,19100,29500,24100,20800,9100,23800,19900]},
+  {cnpj:'17.179.359/0001-70',empresa:'CÂMARA DE DIRIG LOG DE BH',origem:'VT',cadastro:'09/25',segmento:'Ouro',maiorGmv:45800,gmv:[0,0,0,0,0,0,0,0,45400,42200,45800,43700,42000,44600,41000,43600]},
+  {cnpj:'30.362.723/0001-00',empresa:'ARTEBRILHO ADM.DE BENS E SERVI',origem:'VT',cadastro:'11/22',segmento:'Ouro',maiorGmv:30400,gmv:[10800,10600,12900,20400,15100,30400,25400,22300,29000,23000,23400,24400,23400,25600,22900,23900]},
+  {cnpj:'07.773.547/0001-79',empresa:'E.P.O EMPRENDIMENTOS, PART.E O',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:48800,gmv:[48800,39900,38400,32500,25300,28200,25100,28800,12500,12700,13200,6600,8100,9500,6900,5600]},
+  {cnpj:'24.324.093/0001-78',empresa:'CEFRAM FACILITES LIMPEZA E CON',origem:'VT',cadastro:'12/22',segmento:'Ouro',maiorGmv:28200,gmv:[27400,16600,10700,18400,28200,10900,28100,18600,19300,19700,9300,24200,22000,18400,19100,20600]},
+  {cnpj:'11.118.506/0001-16',empresa:'EMANX COM. E SERVDE TELECOMUIC',origem:'VT',cadastro:'09/23',segmento:'Ouro',maiorGmv:25300,gmv:[6600,13400,9900,18200,18600,18500,22400,20600,18300,14100,21500,15200,21100,24500,25300,18600]},
+  {cnpj:'26.127.132/0001-72',empresa:'AVANTE CONSERVACAO & LIMPEZA D',origem:'VT',cadastro:'04/23',segmento:'Ouro',maiorGmv:24800,gmv:[22800,18500,16200,12900,14200,17000,16000,18300,12400,17800,19900,17400,24800,21700,10800,21000]},
+  {cnpj:'05.916.095/0001-01',empresa:'REDE ANCORA MG IMP. E DISTRIB.',origem:'VT',cadastro:'10/24',segmento:'Ouro',maiorGmv:22600,gmv:[20000,17100,20400,22600,21300,19200,19600,15600,19700,17000,14100,15200,11900,12500,13300,15800]},
+  {cnpj:'23.881.592/0001-01',empresa:'METALFISA LTDA',origem:'VT',cadastro:'12/23',segmento:'Ouro',maiorGmv:40000,gmv:[4700,3700,13200,15200,19100,22900,24400,18800,20900,19000,15100,12400,19200,22600,2700,40000]},
+  {cnpj:'05.529.117/0001-80',empresa:'LB COMERCIO DE PRESENTES LTDA',origem:'VT',cadastro:'03/25',segmento:'Ouro',maiorGmv:23800,gmv:[0,0,18100,19700,16600,20300,18200,18600,19100,19600,23800,18200,14800,16400,21800,20400]},
+  {cnpj:'00.794.243/0001-49',empresa:'CONSERVADORA CIDADE LTDA',origem:'VT',cadastro:'01/23',segmento:'Ouro',maiorGmv:41200,gmv:[38000,36400,35600,37100,36500,39900,41200,300,0,0,0,0,0,0,0,0]},
+  {cnpj:'01.005.845/0007-28',empresa:'TACOM ENG E PROJETOS LTDA',origem:'VT',cadastro:'03/22',segmento:'Ouro',maiorGmv:22900,gmv:[16900,11300,15800,14200,16400,19800,22900,19800,19700,14300,16000,15700,13800,16400,13500,15300]},
+  {cnpj:'28.966.812/0001-05',empresa:'ATRIUM SOLUÇOES EM OBRAS LTDA',origem:'VT',cadastro:'02/25',segmento:'Ouro',maiorGmv:46200,gmv:[1000,31500,10900,37900,12700,27200,46200,2500,24600,12900,3600,14600,600,6300,16200,4800]},
+  {cnpj:'10.461.302/0001-10',empresa:'SOLIDES TECNOLOGIA S/A',origem:'VT',cadastro:'07/23',segmento:'Diamante',maiorGmv:52100,gmv:[43100,23000,21800,100,52100,26700,25800,30400,5000,5700,3600,2100,5800,0,3900,1000]},
+  {cnpj:'09.564.708/0001-40',empresa:'ATUAL SERVICE LTDA',origem:'VT',cadastro:'11/23',segmento:'Ouro',maiorGmv:27600,gmv:[7800,12900,18400,26900,20600,21500,27600,26800,24300,14100,9000,10800,9500,10800,2800,2000]},
+  {cnpj:'10.265.276/0001-55',empresa:'CENTRAL ATACADO DE HORTIFRUTI',origem:'VT',cadastro:'12/22',segmento:'Ouro',maiorGmv:20900,gmv:[14800,13400,14500,14500,15800,16700,15400,14000,14500,14800,11200,20900,14800,16500,14800,18100]},
+  {cnpj:'01.005.845/0011-04',empresa:'TACOM PROJETOS DE BILHETAGEM INTELIGENTE',origem:'VT',cadastro:'04/24',segmento:'Ouro',maiorGmv:17100,gmv:[16000,14300,12800,15500,14400,16900,16800,16700,16100,13700,13900,13700,15700,17100,13500,15300]},
+  {cnpj:'42.360.157/0001-78',empresa:'SOMATTOS FERNANDES TOURINHO EM',origem:'VT',cadastro:'08/24',segmento:'Ouro',maiorGmv:20500,gmv:[20500,14000,14500,15600,13300,16900,14400,13800,15900,13900,11100,14400,13700,16400,15800,14100]},
+  {cnpj:'07.591.710/0001-82',empresa:'IDEAL-X HIGIENIZAÇÃO LTDA - ME',origem:'VT',cadastro:'02/23',segmento:'Ouro',maiorGmv:16700,gmv:[14900,15200,15200,16000,16100,14100,14500,16700,13400,13100,15100,14000,13100,13100,14300,13100]},
+  {cnpj:'24.273.642/0001-22',empresa:'CONSERMINAS LTDA-ME',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:16100,gmv:[11100,11800,10700,14100,12800,11700,15400,12900,16100,15000,13000,14500,14300,14400,13100,14300]},
+  {cnpj:'44.833.548/0001-98',empresa:'EP-I16 FUNCIONARIOS EMPREENDIM',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:28500,gmv:[4700,5100,6300,9900,9900,8400,7800,8400,11900,18300,15900,14600,19000,18600,25300,28500]},
+  {cnpj:'31.105.475/0001-76',empresa:'CONSTRUTORA NEVES ALCANTRA',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:25900,gmv:[18700,25900,5100,22600,14700,17900,15100,13600,12000,2700,8600,9400,7800,11200,14900,9500]},
+  {cnpj:'43.206.538/0001-60',empresa:'RB - JC ADMINISTRACAO',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:20300,gmv:[19000,16800,12200,10900,11300,9700,20300,16500,15000,13200,11900,9900,10200,7800,9100,6900]},
+  {cnpj:'37.412.964/0001-57',empresa:'FEITO AFETO SAUDE LTDA',origem:'VT',cadastro:'09/23',segmento:'Ouro',maiorGmv:17900,gmv:[17900,13700,13400,13700,14600,13300,13600,12300,14000,13700,10900,12800,9500,8000,5600,10400]},
+  {cnpj:'43.895.091/0001-83',empresa:'O GRANULADO',origem:'VT',cadastro:'04/23',segmento:'Ouro',maiorGmv:17200,gmv:[17200,13100,9900,14000,12800,10900,13000,12500,13200,13700,13900,12500,10600,8900,9100,9500]},
+  {cnpj:'22.824.301/0001-72',empresa:'NIZZA ENGENHARIA E CONSULTORIA',origem:'VT',cadastro:'04/24',segmento:'Ouro',maiorGmv:22800,gmv:[16300,6200,22700,3000,22800,14000,12600,4300,8200,12700,9900,8800,16600,8900,8000,14000]},
+  {cnpj:'06.050.526/0001-62',empresa:'EP-I 17 TORRE CATHARINA EMPREENDIMENTO I',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:21300,gmv:[2100,4100,3400,5700,8700,10600,10600,10300,12800,14800,13600,14300,14100,15200,18000,21300]},
+  {cnpj:'19.167.683/0001-02',empresa:'SOMATTOS ENG E COM LTDA',origem:'VT',cadastro:'08/24',segmento:'Ouro',maiorGmv:14300,gmv:[8300,9400,9800,9400,9100,12700,12600,13900,11900,11300,8800,10800,9700,12100,14300,11900]},
+  {cnpj:'08.913.064/0001-95',empresa:'TOP GESTÃO',origem:'VT',cadastro:'01/23',segmento:'Ouro',maiorGmv:12700,gmv:[10800,10300,12700,11000,9800,10300,11300,11000,10800,10100,10400,9500,8100,9100,9000,7200]},
+  {cnpj:'16.520.801/0001-18',empresa:'PIZZARELLA LTDA',origem:'VT',cadastro:'07/22',segmento:'Ouro',maiorGmv:11000,gmv:[11000,8900,8600,9400,10100,9200,10000,10900,10500,10700,10000,9100,9400,9600,9500,11000]},
+  {cnpj:'14.313.633/0001-64',empresa:'MG CONSERVAÇÃO E LIMPEZA LTDA',origem:'VT',cadastro:'04/24',segmento:'Ouro',maiorGmv:12800,gmv:[11300,9600,9600,11400,9400,12800,12600,8700,9400,7700,9200,10600,7800,10900,9400,6900]},
+  {cnpj:'49.051.659/0001-66',empresa:'IPEBRAL IRMAOS PEDROSA BRAGA L',origem:'VT',cadastro:'01/24',segmento:'Ouro',maiorGmv:15100,gmv:[10300,10000,9600,9500,9100,9900,8000,10600,9700,8100,8600,15100,500,12800,11800,11100]},
+  {cnpj:'22.810.753/0001-03',empresa:'IDEAL SERV. E ADM. LTDA',origem:'VT',cadastro:'02/23',segmento:'Ouro',maiorGmv:11500,gmv:[9700,10700,9800,11100,11500,9400,8500,10000,8500,8400,8600,7800,7800,8200,8400,8500]},
+  {cnpj:'55.802.204/0001-38',empresa:'INGEL INDUSTRIA E COMERCIO DE',origem:'VT',cadastro:'05/25',segmento:'Ouro',maiorGmv:13500,gmv:[0,0,0,0,12900,12900,13000,12100,12400,12300,12300,11100,11000,11200,11300,13500]},
+  {cnpj:'39.874.115/0001-40',empresa:'MENDES E LIMA CONTABILIDADE E',origem:'VT',cadastro:'01/24',segmento:'Ouro',maiorGmv:10400,gmv:[9700,7900,7800,8800,8800,10200,10300,9000,8300,8500,9400,9500,7800,10400,8900,9200]},
+  {cnpj:'31.054.688/0001-16',empresa:'IDEAL ASSESSORIA EIRELI',origem:'VT',cadastro:'02/23',segmento:'Ouro',maiorGmv:11200,gmv:[10800,11000,10000,11200,10200,8800,8800,8600,7600,8600,9700,7400,7200,8600,8400,7000]},
+  {cnpj:'00.982.896/0001-51',empresa:'CLÍNICA DE OLHOS ENNIO COSCARE',origem:'VT',cadastro:'01/24',segmento:'Ouro',maiorGmv:11100,gmv:[9100,8800,9500,9300,8000,9900,8100,9300,10000,8600,7100,7900,9000,11100,8600,9400]},
+  {cnpj:'43.803.892/0001-71',empresa:'SOMATTOS SAVASSI EMPREENDIMENT',origem:'VT',cadastro:'08/24',segmento:'Ouro',maiorGmv:12100,gmv:[8300,6400,7400,7200,7200,8100,9500,11200,11000,8600,6900,9200,8700,12100,11200,10700]},
+  {cnpj:'07.247.201/0001-37',empresa:'HORMIGON HECT ENGENHARIA LTDA',origem:'VT',cadastro:'11/23',segmento:'Ouro',maiorGmv:10500,gmv:[9100,8600,9200,8500,8100,9100,9900,10000,9200,7900,6200,7700,8000,9700,8900,10500]},
+  {cnpj:'02.292.015/0001-04',empresa:'SCANNER - CENTRO DE D S/C LTDA',origem:'VT',cadastro:'03/24',segmento:'Ouro',maiorGmv:16700,gmv:[11300,7200,6300,8700,7300,7500,11200,5200,6600,16700,6700,5300,8300,8300,5800,13500]},
+  {cnpj:'02.466.382/0001-79',empresa:'NORTON ADMINISTRADORA DE COND',origem:'VT',cadastro:'12/23',segmento:'Ouro',maiorGmv:15200,gmv:[9700,9000,8500,8100,7100,9400,8400,7800,9100,7600,7400,200,15200,7700,8600,9900]},
+  {cnpj:'29.300.706/0001-50',empresa:'BLECK SERVIÇOS ESPECIALIZADOS',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:31200,gmv:[8500,8000,6600,5200,4600,4700,10000,7700,10000,31200,1500,4800,4300,8200,1100,17000]},
+  {cnpj:'02.907.610/0001-07',empresa:'IDEAL ADMINISTRAÇAO LIMPEZA E',origem:'VT',cadastro:'02/23',segmento:'Prata',maiorGmv:9800,gmv:[8200,7900,8000,7600,8600,8400,8400,9800,7800,7800,8400,8300,8200,8300,8700,7400]},
+  {cnpj:'35.577.338/0001-95',empresa:'VAP E DIAS PARTICIPAÇÕES E NEG',origem:'VT',cadastro:'02/23',segmento:'Ouro',maiorGmv:33000,gmv:[33000,18200,18000,14400,15300,14600,16500,300,0,0,0,0,0,0,0,0]},
+  {cnpj:'12.615.607/0001-65',empresa:'MOVIMENTO EMPRE PAT LTDA',origem:'VT',cadastro:'07/23',segmento:'Ouro',maiorGmv:17700,gmv:[14700,16700,15400,16700,14700,17700,16000,17100,0,0,0,0,0,0,0,0]},
+  {cnpj:'06.112.575/0001-82',empresa:'INSTITUTO SAO PAULO DE ARTE E CULTURA',origem:'VT',cadastro:'02/24',segmento:'Ouro',maiorGmv:23700,gmv:[13200,7500,23700,19400,18600,13900,0,9100,11100,10400,0,0,0,0,200,0]},
+  {cnpj:'07.580.204/0001-98',empresa:'BEL LUBE 1',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:12300,gmv:[5600,12300,6300,9200,9400,6300,9200,5400,10400,6300,8400,6700,6300,7300,8200,8000]},
+  {cnpj:'49.210.763/0001-56',empresa:'MMM ENGENHARIA E IMPERMEABILIZACAO LTDA',origem:'VT',cadastro:'06/24',segmento:'Ouro',maiorGmv:18400,gmv:[16700,17900,18400,17800,17500,100,7500,3300,5600,2800,5700,0,5700,2800,3000,0]},
+  {cnpj:'12.965.151/0001-63',empresa:'EP-I22 CIDADE JARDIM EMPREENDI',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:14600,gmv:[7100,4800,5700,6400,6100,5800,5200,5600,6200,6900,7600,6100,9400,10500,14600,14200]},
+  {cnpj:'48.529.593/0001-04',empresa:'ORGANIZACOES CLR HORTIFRUTIGRA',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:10300,gmv:[4500,6200,5600,6300,6200,6900,7300,7900,9100,8100,6700,7500,6900,10000,10300,8800]},
+  {cnpj:'26.057.398/0001-96',empresa:'SION MAT. DE CONSTRUÇÃO',origem:'VT',cadastro:'02/23',segmento:'Prata',maiorGmv:9600,gmv:[3000,5000,5000,6900,7700,8300,9000,8000,8200,6800,8700,6800,9500,9600,8000,7000]},
+  {cnpj:'47.786.468/0001-17',empresa:'DAB Soluções',origem:'VT',cadastro:'07/25',segmento:'Ouro',maiorGmv:38800,gmv:[0,0,0,0,0,0,0,300,9900,17000,0,12500,11500,22400,4100,38800]},
+  {cnpj:'51.005.059/0001-03',empresa:'CONSORCIO PCS - RIBEIRAO PAMPULHA',origem:'VT',cadastro:'07/23',segmento:'Ouro',maiorGmv:18500,gmv:[9300,7400,6600,8000,100,18500,10900,13300,8600,8200,3700,5400,600,10300,4700,400]},
+  {cnpj:'27.394.758/0006-12',empresa:'INCOPRE INDUSTRIA E COMERCIO SA',origem:'VT',cadastro:'08/25',segmento:'Ouro',maiorGmv:16400,gmv:[0,0,0,0,0,0,0,14800,16400,11800,8000,10400,14800,13500,13000,13200]},
+  {cnpj:'09.189.605/0001-47',empresa:'CAESAR VERTICAL LTDA',origem:'VT',cadastro:'08/24',segmento:'Ouro',maiorGmv:10300,gmv:[0,6700,6500,7900,8200,10300,8100,7600,6600,5500,8300,6500,7600,8800,8500,8100]},
+  {cnpj:'25.681.529/0005-72',empresa:'DVL - DISTRIBUIDORA',origem:'VT',cadastro:'06/25',segmento:'Ouro',maiorGmv:12600,gmv:[0,0,0,0,0,8500,9800,9100,12600,10200,11900,10200,9400,11800,10300,9600]},
+  {cnpj:'55.800.378/0001-61',empresa:'BH ALIMENTOS LTDA',origem:'VT',cadastro:'05/25',segmento:'Ouro',maiorGmv:14300,gmv:[0,0,0,0,9400,9200,8600,10700,8700,10200,4300,14300,10200,8600,9600,8900]},
+  {cnpj:'13.566.717/0001-47',empresa:'VAP SOLUÇOES FINANCEIRAS LTDA',origem:'VT',cadastro:'01/23',segmento:'Ouro',maiorGmv:19400,gmv:[19400,17000,15100,17300,12600,12700,17200,200,0,0,0,0,0,0,0,0]},
+  {cnpj:'42.932.618/0001-30',empresa:'GRUPO ACTA',origem:'VT',cadastro:'02/24',segmento:'Prata',maiorGmv:8300,gmv:[7100,6100,6000,5700,7800,8100,7300,7000,8300,6400,6000,6200,7000,7800,7200,7300]},
+  {cnpj:'42.764.217/0001-18',empresa:'EPO ENG PLANEJAMENTOS E OBRAS',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:11700,gmv:[11700,7600,9300,6700,6500,4300,4500,4700,10300,7700,5800,5200,5900,5700,4900,5100]},
+  {cnpj:'64.345.010/0001-41',empresa:'VISIONTECH MEDICAL',origem:'VT',cadastro:'11/22',segmento:'Prata',maiorGmv:7800,gmv:[7800,6000,7500,5700,6800,5600,6100,6600,6300,6700,5700,5500,7200,6500,7000,6800]},
+  {cnpj:'17.428.079/0001-59',empresa:'ASSEMBLÉIA DE DEUS',origem:'VT',cadastro:'06/22',segmento:'Prata',maiorGmv:9900,gmv:[9900,7000,6800,6300,6400,6200,6700,6300,8100,4200,9100,6700,5900,4300,6200,3600]},
+  {cnpj:'50.956.104/0001-42',empresa:'LR2 ENGENHARIA LTDA',origem:'VT',cadastro:'02/25',segmento:'Ouro',maiorGmv:13900,gmv:[0,0,13100,7000,7700,2100,13900,5200,7100,8900,8700,2000,9800,10200,1200,6700]},
+  {cnpj:'25.092.490/0002-05',empresa:'SACOLAO ABC ANDRADAS',origem:'VT',cadastro:'06/23',segmento:'Prata',maiorGmv:8300,gmv:[4500,4500,6200,5600,5900,5800,6100,5900,6600,8300,8000,7600,6500,7800,6900,7300]},
+  {cnpj:'42.306.807/0001-05',empresa:'SOMATTOS PATRIMAR QUADRA 40 EM',origem:'VT',cadastro:'08/24',segmento:'Ouro',maiorGmv:11500,gmv:[5600,5100,4900,1100,11500,8900,5600,5200,5500,5400,4700,5500,6300,9100,8800,9800]},
+  {cnpj:'15.411.124/0001-37',empresa:'VENTUS CONTROLE DE ATIVOS LTDA',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:8800,gmv:[6700,6100,7400,7200,6400,7500,7500,8800,7500,6600,6400,5800,3600,4500,5300,3800]},
+  {cnpj:'59.546.515/0001-34',empresa:'RB - NIKE DO BRASIL COMERCIO E PART',origem:'VT',cadastro:'06/24',segmento:'Ouro',maiorGmv:11000,gmv:[4000,6100,5400,4500,5900,5000,6700,5100,5300,5500,5800,7900,11000,7200,4600,10300]},
+  {cnpj:'25.822.529/0001-11',empresa:'CONSERVADORA MINAS RIO LTDA ME',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:7600,gmv:[5600,5400,7300,5700,6600,6100,6200,7100,6000,7600,6400,5500,7200,5600,6200,5400]},
+  {cnpj:'21.170.887/0001-36',empresa:'ASSOCIAÇÃO NOSSO SENHO REDENTO',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:11100,gmv:[1300,4200,3600,4400,4800,5100,4000,5000,6200,6800,7400,8200,8800,9400,11100,9000]},
+  {cnpj:'45.865.058/0001-36',empresa:'CONSORCIO DER BACIAS CONTAGEM',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:17300,gmv:[1800,2400,2400,4700,2900,3900,2200,2400,2300,3800,2900,2900,17100,17300,15000,14800]},
+  {cnpj:'17.176.538/0001-54',empresa:'CENTRO EDUC PROF ESTEVÃO PINTO',origem:'VT',cadastro:'02/24',segmento:'Ouro',maiorGmv:13800,gmv:[9900,3600,7700,8200,4600,4200,0,13700,4900,6700,3000,0,4900,13800,5300,6600]},
+  {cnpj:'04.768.483/0001-20',empresa:'SUPREMA INFORMATICA LTDA',origem:'VT',cadastro:'07/22',segmento:'Ouro',maiorGmv:11300,gmv:[5800,11300,300,3500,6500,5400,6200,4900,6900,7100,7600,8400,6900,4900,4800,6400]},
+  {cnpj:'44.989.738/0001-07',empresa:'MINEIRA FACILITIES',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:14700,gmv:[14700,12600,14200,5200,3200,5300,4600,12300,3700,1900,3800,2700,3000,3200,2900,3300]},
+  {cnpj:'14.226.985/0001-82',empresa:'CUIDADOS PESSOAS DOMICILIO EIR',origem:'VT',cadastro:'02/23',segmento:'Prata',maiorGmv:8200,gmv:[8200,6900,7000,8200,7500,7300,6700,6200,6200,5000,5000,4800,5500,2300,5000,3400]},
+  {cnpj:'24.729.097/0001-36',empresa:'SANTA CASA DA MISERICORDIA',origem:'VT',cadastro:'04/25',segmento:'Ouro',maiorGmv:45600,gmv:[0,45600,25300,22800,0,0,0,0,0,0,0,0,0,0,0,0]},
+  {cnpj:'18.829.333/0001-93',empresa:'IGREJA BATISTA CENTRAL DE BH',origem:'VT',cadastro:'08/23',segmento:'Ouro',maiorGmv:15900,gmv:[4300,5600,0,10400,5300,600,15900,6800,6600,7000,5900,5100,4500,4800,6500,3900]},
+  {cnpj:'42.873.091/0009-77',empresa:'COMERCIO E REPRESENTACOES CECOTI',origem:'VT',cadastro:'01/26',segmento:'Ouro',maiorGmv:35400,gmv:[0,0,0,0,0,0,0,0,0,0,0,0,29300,4300,35400,23700]},
+  {cnpj:'42.969.898/0001-50',empresa:'PLANEJE - CONSULTORIA LTDA',origem:'VT',cadastro:'05/22',segmento:'Ouro',maiorGmv:10600,gmv:[10600,6200,6400,4400,6700,6600,7200,3800,4300,3300,3600,300,9500,4600,5700,8800]},
+  {cnpj:'17.741.214/0001-11',empresa:'SMEP BH EMPREEEND IMOLBILIARIO',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:19900,gmv:[9100,10800,11300,1000,19900,10200,10200,9600,9500,0,0,0,0,0,0,0]},
+  {cnpj:'29.218.206/0001-74',empresa:'GM CONSERVACAO E PORTARIA LTDA',origem:'VT',cadastro:'12/23',segmento:'Ouro',maiorGmv:10100,gmv:[6800,5600,6200,5600,6500,4200,4000,4000,5200,5600,5300,3500,8500,10100,4500,5700]},
+  {cnpj:'25.038.636/0002-34',empresa:'CHARTH COMERCIO',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:24400,gmv:[24400,12700,15600,18600,19900,0,0,0,0,0,0,0,0,0,0,0]},
+  {cnpj:'54.083.883/0001-70',empresa:'PKR SPORTS',origem:'VT',cadastro:'03/24',segmento:'Prata',maiorGmv:8000,gmv:[6000,6000,6600,6700,5800,8000,5300,7500,7800,5000,5600,5100,4000,3900,3800,4100]},
+  {cnpj:'31.574.166/0001-45',empresa:'CORDOBA CONFECÇÃO',origem:'VT',cadastro:'03/25',segmento:'Ouro',maiorGmv:14500,gmv:[0,0,3700,9700,9800,10600,8900,10800,14500,11300,8900,700,1200,0,0,0]},
+  {cnpj:'48.424.425/0001-54',empresa:'SOPHIE RESTAURANTE & EVENTOS',origem:'VT',cadastro:'02/25',segmento:'Prata',maiorGmv:7600,gmv:[0,0,5800,7200,6000,5200,5700,6500,6100,5600,6300,6600,6200,7600,6600,5800]},
+  {cnpj:'05.273.849/0001-52',empresa:'NR SERVICOS TECNICOS E PROFISS',origem:'VT',cadastro:'05/24',segmento:'Prata',maiorGmv:6300,gmv:[4900,5300,5200,5100,5100,5100,5500,6200,5400,6000,6300,5200,4100,5800,5400,5200]},
+  {cnpj:'17.488.693/0001-06',empresa:'POSTO ITAPOA',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:7100,gmv:[5600,5900,6800,7100,7100,4800,5200,6600,5700,6100,6200,5800,3100,2300,4000,2800]},
+  {cnpj:'28.374.414/0001-08',empresa:'JARDINS RESIDENCIAL SENIOR LTD',origem:'VT',cadastro:'06/24',segmento:'Prata',maiorGmv:8600,gmv:[4600,5900,4800,4800,5100,4200,5500,5400,5100,5700,4500,6100,3400,8600,5200,5600]},
+  {cnpj:'50.647.102/0001-71',empresa:'CONSERMINAS GESTAO INTELIGENTE DE CONDOM',origem:'VT',cadastro:'06/24',segmento:'Prata',maiorGmv:6700,gmv:[5400,6700,5600,5300,5900,4600,6300,4200,6100,5300,5000,5900,4700,4600,3900,4300]},
+  {cnpj:'16.626.892/0001-70',empresa:'C & C EMPREENDIMENTOS COMERCI',origem:'VT',cadastro:'06/24',segmento:'Ouro',maiorGmv:11200,gmv:[9100,11200,7000,3300,6100,4700,6800,1300,4100,4300,6800,2200,4100,4200,5900,2500]},
+  {cnpj:'11.979.664/0001-60',empresa:'PLANASA CONSTRUCOES LTDA',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:7500,gmv:[5600,4500,2800,4500,4500,3600,5200,5700,5600,7500,7400,4200,6200,5800,6000,4100]},
+  {cnpj:'53.871.119/0001-04',empresa:'SOPHIA ROYAL CAFE E RESTAURANTE LTDA',origem:'VT',cadastro:'02/24',segmento:'Prata',maiorGmv:6200,gmv:[2500,5900,6100,3700,5300,6100,5400,5400,5500,6200,5500,5800,5300,4600,4600,4600]},
+  {cnpj:'04.390.432/0001-07',empresa:'SPEL EMPREENDIMENTOS LTDA',origem:'VT',cadastro:'10/23',segmento:'Prata',maiorGmv:9600,gmv:[5100,4100,4100,4100,5400,5800,5100,6400,6200,5100,3100,100,9600,5200,4900,7300]},
+  {cnpj:'35.998.832/0001-23',empresa:'GESTACORP TREINAMENTO E GESTAO DO TERCEI',origem:'VT',cadastro:'12/23',segmento:'Prata',maiorGmv:6900,gmv:[4700,6700,6900,4500,2600,5700,4400,5500,5200,4000,5100,4300,5600,5600,4400,5400]},
+  {cnpj:'48.449.181/0001-64',empresa:'LOCAGORA VEICULOS',origem:'VT',cadastro:'11/22',segmento:'Prata',maiorGmv:6800,gmv:[6600,4200,6700,6800,6500,5800,4700,4900,3500,3700,3000,4000,4100,4600,5600,5600]},
+  {cnpj:'13.392.038/0001-07',empresa:'MV SEGURANCA E SERVICOS LTDA-',origem:'VT',cadastro:'03/24',segmento:'Prata',maiorGmv:8900,gmv:[8900,2400,6000,4700,4000,4600,4800,5600,3200,5100,4600,5600,6300,4700,3700,5300]},
+  {cnpj:'12.478.630/0001-55',empresa:'AR TECNOLOGIA E CLIMATIZAÇÃO L',origem:'VT',cadastro:'11/23',segmento:'Prata',maiorGmv:9800,gmv:[5500,5100,5600,7300,6500,6400,3300,5700,7200,3900,1400,0,9800,4300,3400,3500]},
+  {cnpj:'25.403.965/0001-56',empresa:'DATACOP SERVICOS DE DIGITALIZA',origem:'VT',cadastro:'08/24',segmento:'Prata',maiorGmv:6000,gmv:[4300,3000,4600,4900,4200,4200,5500,4400,5100,4300,6000,5200,5000,4700,6000,5200]},
+  {cnpj:'31.445.732/0001-19',empresa:'GERAIS SERVIÇOS PATRIMONIAIS',origem:'VT',cadastro:'08/22',segmento:'Ouro',maiorGmv:10600,gmv:[9300,8000,10600,4800,4800,4000,3500,9500,3600,2700,2200,1500,3200,2800,2300,3200]},
+  {cnpj:'53.040.642/0001-80',empresa:'EP-I21 BARREIRO CENTER MALL EM',origem:'VT',cadastro:'12/24',segmento:'Ouro',maiorGmv:12200,gmv:[12200,9100,11600,9500,9200,9500,9200,5000,0,0,0,0,0,0,0,0]},
+  {cnpj:'27.748.486/0001-05',empresa:'G7 HOLDING DE PARTICIPAÇÕES E',origem:'VT',cadastro:'11/23',segmento:'Prata',maiorGmv:5700,gmv:[4700,4300,5700,4900,4600,5400,5600,5400,5400,5100,3500,4800,4400,4200,3800,3400]},
+  {cnpj:'29.581.989/0001-56',empresa:'PARANAIBA RIO BRANCO PANIFICAC',origem:'VT',cadastro:'08/23',segmento:'Prata',maiorGmv:6900,gmv:[3300,4600,5700,5100,4100,5400,6900,6000,5800,4900,3500,3000,3900,5300,4200,3500]},
+  {cnpj:'46.480.201/0001-34',empresa:'SPE BRISA 22',origem:'VT',cadastro:'09/24',segmento:'Prata',maiorGmv:8700,gmv:[3300,3200,4200,4100,3500,5000,3300,4600,4500,4500,4400,4600,4200,5500,8700,6100]},
+  {cnpj:'40.611.414/0001-71',empresa:'FUTURA RESIDENCE & HOME CARE E',origem:'VT',cadastro:'06/23',segmento:'Ouro',maiorGmv:11300,gmv:[0,2900,0,2800,4400,6500,3400,7800,3300,5900,4300,5900,8200,0,11300,6000]},
+  {cnpj:'39.401.157/0001-64',empresa:'PARANAIBA RIBEIRO DE ABREU PAN',origem:'VT',cadastro:'08/23',segmento:'Prata',maiorGmv:6200,gmv:[4600,3600,3500,3700,4600,4200,6200,5600,5400,4200,3000,3100,5800,4600,3900,4500]},
+  {cnpj:'45.724.639/0001-58',empresa:'FLOR DE SAL',origem:'VT',cadastro:'06/24',segmento:'Prata',maiorGmv:6300,gmv:[3400,3300,3000,3300,3800,4300,5300,3700,4800,4300,3800,5600,4800,5900,6300,4800]},
+  {cnpj:'29.959.100/0001-21',empresa:'ADVCON SERVICOS DE ADMINISTRAC',origem:'VT',cadastro:'02/24',segmento:'Prata',maiorGmv:5100,gmv:[5100,4900,4900,4400,4300,5100,3400,4400,4200,4500,3700,3600,3300,4400,5100,4900]},
+  {cnpj:'41.933.171/0001-50',empresa:'PARANAIBA GUANABARA ALIMENTOS',origem:'VT',cadastro:'08/23',segmento:'Prata',maiorGmv:5400,gmv:[4500,4600,4700,4600,4500,4200,5100,3900,3600,5400,4300,3300,3800,3300,4900,4900]},
+  {cnpj:'08.160.891/0001-55',empresa:'RAJA NOBRE LOJA DE CONVENIENCI',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:5000,gmv:[4400,5000,4700,4600,4000,4700,4700,4000,4400,3900,4600,4500,2500,3200,4800,4200]},
+  {cnpj:'30.436.337/0001-07',empresa:'ACOSTA ADMINISTRADORA EIRELI -',origem:'VT',cadastro:'08/24',segmento:'Prata',maiorGmv:5400,gmv:[4300,3500,4100,5400,5200,5100,5400,3600,4500,3400,4900,3600,4100,3700,4200,2700]},
+  {cnpj:'27.051.081/0003-77',empresa:'BOTEQUIM DA SAPUCAI LTDA',origem:'VT',cadastro:'04/25',segmento:'Prata',maiorGmv:7000,gmv:[0,0,0,0,6900,7000,4900,5400,5800,4400,6300,5900,5000,6000,5300,4300]},
+  {cnpj:'02.879.731/0001-84',empresa:'BY MOTO - BH',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:8100,gmv:[7900,4500,7900,3700,7700,6000,5400,5100,6600,8100,3400,0,0,0,0,0]},
+  {cnpj:'16.696.445/0001-98',empresa:'POSTO QUATRO RODAS LTDA',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:6100,gmv:[3400,4500,6100,5300,4600,3800,6000,4900,3400,5000,3200,3400,2200,2700,4500,2800]},
+  {cnpj:'15.358.360/0001-37',empresa:'CAIPIRA XIQUE',origem:'VT',cadastro:'05/24',segmento:'Prata',maiorGmv:5100,gmv:[4000,4700,5100,3100,4400,5100,4700,3900,4400,3400,4400,4300,2400,4600,3100,4200]},
+  {cnpj:'36.698.521/0001-01',empresa:'Alfa Facilities e Servicos',origem:'VT',cadastro:'06/22',segmento:'Prata',maiorGmv:9700,gmv:[1900,0,3700,500,5700,6200,3500,3600,4200,3800,4600,2200,4200,2500,9700,8900]},
+  {cnpj:'16.479.312/0001-60',empresa:'CLINICA PLASTICA DEI',origem:'VT',cadastro:'04/25',segmento:'Prata',maiorGmv:9900,gmv:[0,0,0,4100,4400,4100,6300,5200,6000,5000,5000,0,9900,5600,4600,4600]},
+  {cnpj:'02.472.838/0001-03',empresa:'REST. CHURRAS. E PIZZ. FAZENDA',origem:'VT',cadastro:'12/22',segmento:'Prata',maiorGmv:7500,gmv:[4500,3600,4500,4500,100,7500,2700,3500,3900,4200,3700,4300,3500,4200,3800,5400]},
+  {cnpj:'24.649.205/0001-60',empresa:'AMAR ASSOC PED MIGUEL ARCANJO',origem:'VT',cadastro:'11/23',segmento:'Prata',maiorGmv:6300,gmv:[3700,4000,6300,4700,6100,2600,4500,3100,4000,2900,1800,1900,4600,4000,3300,6100]},
+  {cnpj:'31.859.757/0001-69',empresa:'PGS PRODUTOS METALICOS EIRELI',origem:'VT',cadastro:'11/23',segmento:'Prata',maiorGmv:9100,gmv:[9100,0,300,1100,2000,1800,9100,3900,3900,3800,700,7600,6000,8200,600,5100]},
+  {cnpj:'20.701.463/0001-98',empresa:'BBM CONSTRUCOES',origem:'VT',cadastro:'07/23',segmento:'Prata',maiorGmv:6200,gmv:[4300,3600,3500,5100,6200,6200,5700,5800,4600,4200,1800,2100,2500,700,2000,4000]},
+  {cnpj:'51.134.192/0001-60',empresa:'MINAS GOURMET',origem:'VT',cadastro:'06/24',segmento:'Prata',maiorGmv:5700,gmv:[3400,4600,5700,4400,5300,4700,4000,4000,2800,4300,2900,1900,4600,3500,3200,3000]},
+  {cnpj:'41.132.596/0001-60',empresa:'CONFIA SOLUÇOES FINANCEIRAS LT',origem:'VT',cadastro:'05/22',segmento:'Prata',maiorGmv:8900,gmv:[800,5800,6800,7400,6700,5300,8900,5200,4000,0,4900,0,2400,1600,1300,1000]},
+  {cnpj:'43.641.527/0001-08',empresa:'SPE SÂO JOÃO',origem:'VT',cadastro:'12/23',segmento:'Prata',maiorGmv:6000,gmv:[3900,4900,4700,4700,6000,3600,3800,4500,3700,2700,2800,2100,3700,4300,3500,2800]},
+  {cnpj:'01.735.159/0012-70',empresa:'CINE BOULEVARD SHOPPING',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:9400,gmv:[0,0,0,0,0,0,0,6600,5700,5300,4700,9400,6700,6600,7800,8700]},
+  {cnpj:'48.161.421/0001-20',empresa:'T&T PRODUCAO LTDA',origem:'VT',cadastro:'04/24',segmento:'Prata',maiorGmv:5700,gmv:[2300,4400,5000,5000,5700,4700,4400,4500,4900,4500,3200,2800,3300,2400,2500,1900]},
+  {cnpj:'19.628.783/0001-80',empresa:'DATA FILME COM E REPRES LTDA',origem:'VT',cadastro:'08/24',segmento:'Prata',maiorGmv:7400,gmv:[4100,5700,3900,4900,5400,4300,6300,5300,7400,7000,1400,1100,1500,1000,800,1200]},
+  {cnpj:'11.674.114/0001-33',empresa:'CENTRO AUTOMOTIVO MAIA TECH',origem:'VT',cadastro:'07/24',segmento:'Prata',maiorGmv:6200,gmv:[3600,3200,4400,3900,5300,6200,4100,3000,3800,3200,3500,2500,2600,2800,4200,3400]},
+  {cnpj:'19.107.504/0001-33',empresa:'QUE BOM ALIMENTOS LTDA',origem:'VT',cadastro:'05/23',segmento:'Prata',maiorGmv:6800,gmv:[1500,2400,3600,2700,2800,4000,4700,3900,5400,3400,2400,4000,5200,3800,6800,2800]},
+  {cnpj:'10.265.276/0016-31',empresa:'CENTRAL ATACADO DE HORTIFRUTI',origem:'VT',cadastro:'12/22',segmento:'Prata',maiorGmv:6300,gmv:[2700,2800,3000,3200,3600,3500,1400,2500,3400,2700,4300,6300,5500,5800,2900,5400]},
+  {cnpj:'53.660.865/0001-40',empresa:'ACER FACILITIES',origem:'VT',cadastro:'05/24',segmento:'Prata',maiorGmv:7400,gmv:[3200,3400,2400,1900,1600,3700,3700,3300,3000,4200,4900,2400,7400,4000,4700,4400]},
+  {cnpj:'11.029.091/0001-04',empresa:'AMAS SERVICOS LTDA',origem:'VT',cadastro:'08/23',segmento:'Prata',maiorGmv:5800,gmv:[4200,3800,4000,5800,4700,3600,4100,4300,3800,2500,2000,2700,3500,2300,2800,3800]},
+  {cnpj:'01.735.159/0001-17',empresa:'CINE MINAS',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:8500,gmv:[0,0,0,0,0,0,0,6200,6900,7000,4300,8500,6700,6200,5900,5700]},
+  {cnpj:'01.735.159/0007-02',empresa:'CINE CIDADE',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:9100,gmv:[0,0,0,0,0,0,0,5600,5800,5700,4300,9100,7000,6200,6300,6500]},
+  {cnpj:'21.662.242/0002-00',empresa:'POSTO SANTA INES MINAS LTDA',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:6000,gmv:[4400,4200,6000,3900,3700,3300,4100,4600,3900,2400,4300,3700,1900,2100,2000,1900]},
+  {cnpj:'46.899.832/0001-92',empresa:'POSTO SERENA',origem:'VT',cadastro:'03/23',segmento:'Bronze - P',maiorGmv:4800,gmv:[3500,4200,4800,3900,3100,4000,3200,3700,4800,3800,3500,2900,2500,2200,3000,3200]},
+  {cnpj:'47.074.742/0001-25',empresa:'CONNECTA SERVICOS',origem:'VT',cadastro:'07/23',segmento:'Prata',maiorGmv:7700,gmv:[4400,5700,7700,800,7100,7100,3900,5200,6300,700,1500,2300,200,0,0,3300]},
+  {cnpj:'08.234.117/0001-41',empresa:'LABORATORIO OPTICO POPULAR LTD',origem:'VT',cadastro:'03/24',segmento:'Bronze - P',maiorGmv:4600,gmv:[2900,4400,4100,2800,3200,2900,2900,3400,4600,2000,3400,4200,3200,3300,4600,3500]},
+  {cnpj:'46.838.757/0001-50',empresa:'MOMO CONFEITARIA',origem:'VT',cadastro:'06/25',segmento:'Ouro',maiorGmv:14100,gmv:[0,0,0,0,0,6900,0,14100,1000,4800,4500,4700,4300,4400,5800,4900]},
+  {cnpj:'06.164.102/0001-29',empresa:'COMERCIAL PARANAIBA DE ALIMENT',origem:'VT',cadastro:'08/23',segmento:'Bronze - P',maiorGmv:4900,gmv:[3000,4100,3000,2700,2700,3000,4900,3200,3600,4400,3300,3400,3600,3400,4000,2600]},
+  {cnpj:'26.878.350/0001-49',empresa:'ACOSTA CONSERVADORA EIRELI-ME',origem:'VT',cadastro:'08/24',segmento:'Prata',maiorGmv:5000,gmv:[4100,2500,3400,4100,3200,5000,4700,2800,4000,3200,3200,3100,3600,2800,2800,2200]},
+  {cnpj:'22.199.381/0001-12',empresa:'OTICA MEDEIROS LTDA - ME',origem:'VT',cadastro:'04/24',segmento:'Prata',maiorGmv:5100,gmv:[2700,2400,3000,2700,2000,3400,3100,3500,4300,4200,5100,5000,3500,3100,3800,2700]},
+  {cnpj:'22.524.974/0001-07',empresa:'ACOSTA SERVIÇOS LTDA-ME',origem:'VT',cadastro:'08/24',segmento:'Bronze - P',maiorGmv:4500,gmv:[3200,2100,4500,3500,3500,3000,4500,2900,4400,3600,2900,2200,3000,4000,3800,3100]},
+  {cnpj:'33.817.599/0001-00',empresa:'MARCONE ALVES SILVEIRA',origem:'VT',cadastro:'03/24',segmento:'Prata',maiorGmv:5600,gmv:[2800,2000,4000,3900,3900,3700,5600,1700,4100,3900,2800,3000,4500,2700,3900,1700]},
+  {cnpj:'22.564.053/0001-78',empresa:'BY MOTO - RIBEIRO VEICULOS E PEÇAS LTDA',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:7800,gmv:[7800,2700,4400,3800,4800,4100,5100,4400,5700,6200,4400,200,100,0,0,0]},
+  {cnpj:'21.981.287/0001-58',empresa:'POSTOS URBANO FERRAZ LTDA',origem:'VT',cadastro:'03/23',segmento:'Bronze - P',maiorGmv:4900,gmv:[2900,3500,4000,3900,4900,2700,3700,2800,3100,3000,3400,3400,2900,2400,4300,2700]},
+  {cnpj:'61.176.588/0001-23',empresa:'Imagem Uniformes',origem:'VT',cadastro:'11/25',segmento:'Ouro',maiorGmv:13300,gmv:[0,0,0,0,0,0,0,0,0,0,0,10000,13300,9100,9800,11200]},
+  {cnpj:'15.808.581/0001-60',empresa:'SUSHI E HAND ROLLS LTDA',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:9000,gmv:[5400,400,2900,2500,4400,0,4400,0,4300,9000,5400,300,6300,2900,0,5100]},
+  {cnpj:'12.403.924/0001-18',empresa:'RFJ CONSTRUTORA EIRELI-EPP',origem:'VT',cadastro:'08/22',segmento:'Prata',maiorGmv:5900,gmv:[5800,4900,3500,5900,5200,5900,5000,4300,4700,4400,2400,1000,0,0,0,0]},
+  {cnpj:'24.731.747/0001-88',empresa:'HOSPITAL DE NOSSA SENHORA DAS MERCES',origem:'VT',cadastro:'02/25',segmento:'Ouro',maiorGmv:15000,gmv:[9000,15000,9100,9600,9700,0,0,0,0,0,0,0,0,0,0,0]},
+  {cnpj:'01.735.159/0013-50',empresa:'CINE DEL REY',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:7100,gmv:[0,0,0,0,0,0,0,5100,5100,5300,4500,7100,6100,6100,6500,6300]},
+  {cnpj:'25.385.952/0001-00',empresa:'DR BURITIS',origem:'VT',cadastro:'07/24',segmento:'Bronze - P',maiorGmv:3600,gmv:[3500,3000,3500,3500,2800,3100,3400,2800,3600,3100,3100,3100,3100,3300,3600,3300]},
+  {cnpj:'32.100.326/0001-87',empresa:'MINAS MEET',origem:'VT',cadastro:'06/24',segmento:'Bronze - P',maiorGmv:5000,gmv:[4200,5000,4000,4500,3800,3600,3100,1800,2800,3200,2700,2500,2900,1500,2600,2300]},
+  {cnpj:'10.265.276/0020-18',empresa:'CENTRAL ATACADISTA DE HORTIFRU',origem:'VT',cadastro:'12/22',segmento:'Bronze - P',maiorGmv:4700,gmv:[2400,2900,3200,2500,2800,3000,3200,2500,2900,2900,3500,4700,4200,3500,3000,3200]},
+  {cnpj:'35.345.030/0001-14',empresa:'MB CONTAGEM',origem:'VT',cadastro:'01/24',segmento:'Bronze - P',maiorGmv:4800,gmv:[3300,2600,3100,4100,3200,3300,3400,3600,4800,2600,3300,2300,3200,2400,2100,3100]},
+  {cnpj:'01.735.159/0010-08',empresa:'CINES ITAUPOWER SHOPPING',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:9900,gmv:[0,0,0,0,0,0,0,4900,5700,5800,1100,9900,6400,5200,5200,6000]},
+  {cnpj:'22.354.341/0001-06',empresa:'WLT - SINDICO PROFISSIONAL',origem:'VT',cadastro:'05/24',segmento:'Bronze - P',maiorGmv:3700,gmv:[3200,3600,2900,3500,3000,2700,3600,3700,3200,3600,2900,3700,3200,2300,3100,2000]},
+  {cnpj:'08.228.146/0014-15',empresa:'PARVI LOCADORA',origem:'VT',cadastro:'03/24',segmento:'Prata',maiorGmv:6800,gmv:[500,1000,200,6800,1900,2800,2800,3100,4400,3300,3900,4600,3800,4100,3700,2900]},
+  {cnpj:'21.546.429/0001-59',empresa:'PLANALTO POSTO DE SERVIÇO LTDA',origem:'VT',cadastro:'03/23',segmento:'Prata',maiorGmv:5000,gmv:[3800,3800,5000,3900,4600,4300,3000,2500,2900,2800,3200,3500,1700,1700,1400,1300]},
+  {cnpj:'55.574.183/0001-40',empresa:'EP-I23 TORRE DA IGREJA EMPREENDIMENTO',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:8300,gmv:[0,0,0,0,0,0,0,0,4000,3700,5600,4900,7500,8000,8300,7400]},
+  {cnpj:'26.406.494/0001-00',empresa:'ESPAÇO BEM VIVER',origem:'VT',cadastro:'05/23',segmento:'Bronze - P',maiorGmv:4400,gmv:[2400,3100,2400,3200,4300,3300,3400,3100,2900,4400,3500,3000,1600,2700,2800,2800]},
+  {cnpj:'24.589.486/0001-03',empresa:'CONSERVADORA MINEIRA II LTDA',origem:'VT',cadastro:'11/22',segmento:'Prata',maiorGmv:8100,gmv:[8100,5900,6400,1300,1100,2300,1900,6800,2300,1700,3100,2400,1500,900,1200,1800]},
+  {cnpj:'37.009.606/0001-06',empresa:'RFJ CONSTRUÇÃO E ENGENHARIA',origem:'VT',cadastro:'08/22',segmento:'Prata',maiorGmv:6300,gmv:[1500,1700,2000,800,4100,5900,5000,6300,5600,5400,2100,2900,1100,1600,700,500]},
+  {cnpj:'03.932.253/0001-91',empresa:'FARMÁCIA DEBONNE LTDA',origem:'VT',cadastro:'02/24',segmento:'Prata',maiorGmv:5400,gmv:[3700,1700,2100,5200,800,5400,5000,2000,2300,3400,2000,3100,1500,3200,3300,2400]},
+  {cnpj:'01.735.159/0009-74',empresa:'CINES VIA SHOPPING BARREIRO',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:8100,gmv:[0,0,0,0,0,0,0,4100,5100,4900,1500,8100,5000,4700,5900,7500]},
+  {cnpj:'28.141.158/0006-05',empresa:'TRANSP CONTINENTAL LTDA',origem:'VT',cadastro:'07/22',segmento:'Bronze - P',maiorGmv:4100,gmv:[2000,2700,3100,2400,3400,2700,2300,2400,2600,2900,2600,3100,3100,3000,4100,4100]},
+  {cnpj:'31.737.181/0001-67',empresa:'AVIVA COMERCIO DE COMB. E LUBRIF. LTDA',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:8800,gmv:[0,0,0,0,0,0,0,4700,6000,6100,8800,5600,3300,4200,4200,3500]},
+  {cnpj:'15.130.708/0001-34',empresa:'COMERCIO E INDUSTRIA OPTICA TA',origem:'VT',cadastro:'09/23',segmento:'Prata',maiorGmv:5000,gmv:[2800,2400,2200,2000,500,1300,2600,5000,3100,3600,2900,2400,3300,3300,4000,4900]},
+  {cnpj:'08.160.834/0001-76',empresa:'POSTO TUNEL LTDA',origem:'VT',cadastro:'03/23',segmento:'Bronze - P',maiorGmv:3900,gmv:[2800,3400,2800,3000,3900,2500,2600,3000,3000,2800,3100,3300,2000,2600,3000,2400]},
+  {cnpj:'46.491.018/0001-34',empresa:'SPE BRISA 24 EMPREENDIMENTOS I',origem:'VT',cadastro:'07/23',segmento:'Prata',maiorGmv:6500,gmv:[6500,5700,5600,5200,3800,3400,4500,4600,3100,2200,700,400,0,0,0,0]},
+  {cnpj:'43.894.279/0001-07',empresa:'SMART SERVICE SOLUCOES INTELIG',origem:'VT',cadastro:'12/22',segmento:'Bronze - P',maiorGmv:4500,gmv:[3800,3300,1400,2900,4500,1500,2900,3000,3500,3400,1500,3600,2700,2000,3100,2500]},
+  {cnpj:'40.363.788/0001-15',empresa:'TRAKASSIST MONITORAMENTO',origem:'VT',cadastro:'12/23',segmento:'Bronze - P',maiorGmv:4700,gmv:[4700,3200,3600,3800,3000,3300,3200,2400,2600,2900,3000,2700,2000,1900,1700,1500]},
+  {cnpj:'07.361.353/0001-66',empresa:'CECC-CENTRO ESPECIALIZADO',origem:'VT',cadastro:'01/25',segmento:'Bronze - P',maiorGmv:4600,gmv:[4600,1900,3800,2100,3600,3200,2500,2400,3200,3900,900,2600,3200,2300,2700,2600]},
+  {cnpj:'42.261.072/0001-32',empresa:'SPE SAO PEDRO',origem:'VT',cadastro:'09/23',segmento:'Bronze - P',maiorGmv:4300,gmv:[4300,4100,4000,4200,3900,3100,2600,2000,3100,3100,1900,1000,2000,2100,2200,1800]},
+  {cnpj:'18.082.011/0001-23',empresa:'ACOSTA SOLUÇÕES EM SERVIÇOS ES',origem:'VT',cadastro:'08/24',segmento:'Bronze - P',maiorGmv:3800,gmv:[2800,2400,2100,3500,2300,2900,3800,2700,2400,2800,3200,3000,3400,2200,2800,3000]},
+  {cnpj:'61.896.539/0001-65',empresa:'GRUPO BW',origem:'VT',cadastro:'10/25',segmento:'Ouro',maiorGmv:10900,gmv:[0,0,0,0,0,0,0,0,0,3900,4200,0,10900,7800,9400,7900]},
+  {cnpj:'09.023.255/0001-44',empresa:'MULTI ENGENHARIA',origem:'VT',cadastro:'01/23',segmento:'Bronze - P',maiorGmv:4200,gmv:[1700,3100,2600,3700,3300,2400,2300,3500,3300,2100,1700,3800,3100,2900,4200,0]},
+  {cnpj:'11.838.624/0001-07',empresa:'FALE ESCOLA DE IDIOMAS LTDA',origem:'VT',cadastro:'02/23',segmento:'Bronze - P',maiorGmv:4500,gmv:[3400,2500,3500,3400,2200,1600,2300,2900,4500,2300,1400,2200,2600,3100,2800,3000]},
+  {cnpj:'24.841.605/0001-73',empresa:'RV FARMACIA DE MANIP E DERMAT.',origem:'VT',cadastro:'01/23',segmento:'Bronze - P',maiorGmv:4700,gmv:[3300,2300,2100,300,3900,4700,3300,3000,3200,2800,2900,1300,3700,2200,3400,1300]},
+  {cnpj:'01.735.159/0015-12',empresa:'CINEART PONTEIO',origem:'VT',cadastro:'08/25',segmento:'Prata',maiorGmv:6000,gmv:[0,0,0,0,0,0,0,4200,4400,3800,4200,6000,5400,5300,4800,5500]},
+  {cnpj:'27.409.350/0001-62',empresa:'SAMECH METALURGIA LTDA - EPP',origem:'VT',cadastro:'11/23',segmento:'Bronze - P',maiorGmv:4600,gmv:[3700,2900,400,2200,1900,2800,2900,2700,3600,2300,2800,2600,3100,4000,200,4600]}
+];
+// ⚠️ Os dados acima são de exemplo. Importe o Excel para carregar os dados reais.
+
+function fmtGmv(v){if(!v||v===0)return'—';if(v>=1e6)return'R$'+(v/1e6).toFixed(1)+'M';if(v>=1e3)return'R$'+(v/1e3).toFixed(0)+'K';return'R$'+v;}
+
+function gmvArrow(cur,prev){
+  if(!prev||prev===0||!cur||cur===0)return'';
+  const pct=((cur-prev)/prev*100);
+  if(Math.abs(pct)<0.1)return'';
+  const up=pct>0;
+  return `<span class="gmv-arrow ${up?'arrow-up':'arrow-down'}">${up?'↑':'↓'} ${Math.abs(pct).toFixed(1)}%</span>`;
+}
+
+function renderClientTable(){
+  const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
+  const seg=document.getElementById('clientSeg')?.value||'all';
+  const origem=document.getElementById('clientOrigem')?.value||'all';
+
+  let data=clientGmvData.filter(c=>{
+    const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search);
+    const matchSeg=seg==='all'||c.segmento===seg;
+    const matchOrigem=origem==='all'||c.origem===origem;
+    return matchSearch&&matchSeg&&matchOrigem;
+  });
+
+  document.getElementById('clientCount').textContent=data.length+' cliente'+(data.length!==1?'s':'')+' encontrado'+(data.length!==1?'s':'');
+
+  // Cabeçalho
+  const thead=document.getElementById('clientTableHead');
+  thead.innerHTML='<tr>'+
+    '<th class="col-fix col-empresa th">Empresa</th>'+
+    '<th class="col-fix col-cnpj th">CNPJ</th>'+
+    '<th class="col-fix col-seg th">Seg.</th>'+
+    '<th class="col-fix col-cad th">Cadastro</th>'+
+    '<th class="col-fix col-top th">Maior GMV</th>'+
+    '<th>Origem</th>'+
+    months.map(m=>`<th style="text-align:right;">${m}</th>`).join('')+
+  '</tr>';
+
+  // Corpo
+  const tbody=document.getElementById('clientTableBody');
+  tbody.innerHTML='';
+
+  if(data.length===0){
+    tbody.innerHTML=`<tr><td colspan="${7+months.length}" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>`;
+    return;
+  }
+
+  const segCls={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+  const origCls={VT:'ativo',PAT:'risco',Ambos:'inativo'};
+  const origColor={VT:C.blue,PAT:C.cyan,Ambos:C.purple};
+
+  data.forEach(c=>{
+    const tr=document.createElement('tr');
+    let cells=
+      `<td class="col-fix col-empresa" title="${c.empresa}"><strong>${c.empresa}</strong></td>`+
+      `<td class="col-fix col-cnpj" style="color:#94a3b8;">${c.cnpj}</td>`+
+      `<td class="col-fix col-seg"><span class="pill ${segCls[c.segmento]||''}">${c.segmento}</span></td>`+
+      `<td class="col-fix col-cad" style="color:#94a3b8;">${c.cadastro}</td>`+
+      `<td class="col-fix col-top" style="font-weight:700;color:${C.amber};">${fmtGmv(c.maiorGmv)}</td>`+
+      `<td><span class="pill" style="background:${origColor[c.origem]}22;color:${origColor[c.origem]};">${c.origem}</span></td>`;
+
+    months.forEach((m,i)=>{
+      const val=c.gmv[i]||0;
+      const prev=i>0?c.gmv[i-1]||0:null;
+      const arrow=prev!==null?gmvArrow(val,prev):'';
+      const color=val===0?'#475569':prev===null||val>=prev?'#e2e8f0':'#94a3b8';
+      cells+=`<td style="text-align:right;"><span class="gmv-val" style="color:${color};">${fmtGmv(val)}</span>${arrow}</td>`;
+    });
+
+    tr.innerHTML=cells;
+    tbody.appendChild(tr);
+  });
+}
+
+// Inicializa tabela quando aba é aberta
+const _origShowTab=window.showTab||function(){};
+window.showTab=function(name,e){
+  _origShowTab(name,e);
+  if(name==='gmvcliente') renderClientTable();
+};
+// Também inicializa se já estiver na aba
+document.addEventListener('DOMContentLoaded',()=>{
+  if(document.getElementById('tab-gmvcliente')?.classList.contains('active')) renderClientTable();
+});
 </script>
 </body>
 </html>
