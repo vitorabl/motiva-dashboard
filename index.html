@@ -135,7 +135,7 @@
   <div class="chart-grid full"><div class="chart-card"><h3>Receita Mensal — VT vs PAT</h3><p class="chart-sub">Evolução em R$ mil</p><div class="chart-wrap"><canvas id="recLineChart"></canvas></div></div></div>
   <div class="chart-grid">
     <div class="chart-card"><h3>Margem sobre GMV (%)</h3><p class="chart-sub">Receita ÷ GMV por mês</p><div class="chart-wrap"><canvas id="margemChart"></canvas></div></div>
-    <div class="chart-card"><h3>Composição Receita</h3><p class="chart-sub" id="r-pie-sub">Último mês</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
+    <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
   <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>Rec. VT</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
 </div>
@@ -167,16 +167,41 @@
 
 <!-- ===== COMISSÕES ===== -->
 <div class="content" id="tab-comissoes">
+  <div class="filter-bar">
+    <label>📅 Período:</label>
+    <select id="cFrom" onchange="applyComm()"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="cTo" onchange="applyComm()"></select>
+    <label style="margin-left:8px;">👤 Vendedor:</label>
+    <select id="cVendor" onchange="applyComm()">
+      <option value="all">Todos</option>
+      <option value="Karine">Karine</option>
+      <option value="André">André</option>
+      <option value="Carol">Carol</option>
+      <option value="Lysandra">Lysandra</option>
+      <option value="Vanessa">Vanessa</option>
+      <option value="Pedro">Pedro</option>
+    </select>
+    <button class="filter-btn" onclick="resetComm()">Limpar</button>
+  </div>
   <div class="kpi-grid">
-    <div class="kpi amber"><div class="kpi-label">Comissão Total (Abr/26)</div><div class="kpi-value">R$ 1.781</div><div class="kpi-sub">Todos os vendedores</div><div class="kpi-delta down">↓ -7,1% vs Mar/26</div></div>
-    <div class="kpi green"><div class="kpi-label">Maior Comissão (Abr/26)</div><div class="kpi-value">Karine</div><div class="kpi-sub">R$ 1.730 · 97,2% do total</div></div>
-    <div class="kpi"><div class="kpi-label">Comissão Acumulada 2025</div><div class="kpi-value">R$ 16.616</div><div class="kpi-sub">Jan–Dez/25</div></div>
+    <div class="kpi amber"><div class="kpi-label" id="c-tot-lbl">Comissão Total</div><div class="kpi-value" id="c-tot-val">—</div><div class="kpi-sub" id="c-tot-sub">Todos os vendedores</div><div class="kpi-delta" id="c-tot-d"></div></div>
+    <div class="kpi green"><div class="kpi-label" id="c-top-lbl">Maior Comissão</div><div class="kpi-value" id="c-top-val">—</div><div class="kpi-sub" id="c-top-sub"></div></div>
+    <div class="kpi"><div class="kpi-label" id="c-acc-lbl">Acumulado Período</div><div class="kpi-value" id="c-acc-val">—</div><div class="kpi-sub" id="c-acc-sub"></div></div>
     <div class="kpi cyan"><div class="kpi-label">Equipe Atual</div><div class="kpi-value">2 ativos</div><div class="kpi-sub">Karine + André</div></div>
   </div>
-  <div class="chart-grid full"><div class="chart-card"><h3>Evolução de Comissões — por Vendedor</h3><p class="chart-sub">Comissão mensal em R$</p><div class="chart-wrap" style="height:300px;"><canvas id="commLineChart"></canvas></div></div></div>
+  <div class="chart-grid full"><div class="chart-card"><h3 id="commLineTitle">Evolução de Comissões — por Vendedor</h3><p class="chart-sub">Comissão mensal em R$</p><div class="chart-wrap" style="height:300px;"><canvas id="commLineChart"></canvas></div></div></div>
   <div class="chart-grid">
-    <div class="chart-card"><h3>Comissão Total Acumulada por Vendedor</h3><p class="chart-sub">Jan/25 – Abr/26</p><div class="chart-wrap"><canvas id="commBarChart"></canvas></div></div>
-    <div class="chart-card"><h3>Tabela de Comissões</h3><div class="table-scroll" style="margin-top:8px;"><table id="commTable"><thead><tr><th>Vendedor</th><th>Status</th><th>Acumulado</th><th>Último mês</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="chart-card"><h3>Comissão Acumulada por Vendedor</h3><p class="chart-sub" id="commBarSub">Jan/25 – Abr/26</p><div class="chart-wrap"><canvas id="commBarChart"></canvas></div></div>
+    <div class="chart-card"><h3>Resumo por Vendedor</h3><div class="table-scroll" style="margin-top:8px;"><table id="commTable"><thead><tr><th>Vendedor</th><th>Status</th><th>Acumulado</th><th>Último mês</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+  <!-- Tabela de empresas por vendedor (visível quando vendedor selecionado) -->
+  <div id="commCompanySection" style="display:none;margin-top:4px;">
+    <div class="table-card">
+      <h3 id="commCompanyTitle">📋 Empresas por Vendedor</h3>
+      <div class="info-note">ℹ️ <strong>Nota:</strong> Os dados detalhados por empresa (GMV · Receita · Comissão) são extraídos das abas <strong>Pedido de Carga Completo</strong> e <strong>Pedido Externo</strong> do Excel. Serão carregados na próxima atualização automática do dashboard.</div>
+      <div class="table-scroll"><table><thead><tr><th>Empresa</th><th>Origem</th><th>GMV</th><th>Receita</th><th>Comissão</th></tr></thead><tbody id="commCompanyBody"></tbody></table></div>
+    </div>
   </div>
 </div>
 
@@ -189,6 +214,19 @@ const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,
 const recVT    = [137579,127311,125375,136054,157638,164853,176992,163723,166104,157607,159160,168521,175801,167950,136394,175758];
 const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056];
 const recTotal = recVT.map((v,i)=>v+recPAT[i]);
+// Breakdown de receita VT por categoria (extraído do Excel — atualizar com extração automática)
+// Dealer/Broker = Tx Adm + Tx Sucesso + Tx Entrega (Pedido de Carga Completo)
+// Pedidos Externos = receita de pedidos externos (non-SEM SK)
+// SJDR, 2ª via, Financiamento = demais linhas do Acompanhamento
+// Por ora, usa proporções estimadas da Receita VT até extração detalhada do Excel
+const recCateg = {
+  'Dealer/Broker': recVT.map(v=>Math.round(v*0.52)),
+  'SJDR':          recVT.map(v=>Math.round(v*0.21)),
+  '2ª Via':        recVT.map(v=>Math.round(v*0.13)),
+  'Financiamento': recVT.map(v=>Math.round(v*0.09)),
+  'Ped. Externos': recVT.map(v=>Math.round(v*0.05)),
+  'PAT':           recPAT
+};
 const vtTxAdm     = [67276,66875,63522,61032,73448,85273,93763,82047,82661,71313,78260,69474,73696,69886,62403,76989];
 const vtTxSucesso = [90203,74622,79758,80267,100153,97709,101153,98141,96765,98757,92287,109463,112305,106742,82996,110361];
 const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225];
@@ -483,9 +521,11 @@ function applyRec(){
   cMargem.data.datasets[0].backgroundColor=mg.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red);
   cMargem.update();
 
-  cRecPie.data.datasets[0].data=[fvt[fvt.length-1],fpat[fpat.length-1]];
+  const lastI2=rTo;
+  const categKeys=Object.keys(recCateg);
+  cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
   cRecPie.update();
-  document.getElementById('r-pie-sub').textContent=`Último mês: ${fm[fm.length-1]}`;
+  document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores estimados até próxima extração`;
 
   // Tabela
   const tb=document.getElementById('recTbody');tb.innerHTML='';
@@ -519,9 +559,28 @@ function applyRec(){
   });
 
   const lastI=months.length-1;
+  const categKeys=Object.keys(recCateg);
+  const categColors=[C.blue,C.cyan,C.green,C.amber,C.orange,C.purple];
   cRecPie=new Chart(document.getElementById('recPieChart'),{
-    type:'doughnut',data:{labels:['VT','PAT'],datasets:[{data:[recVT[lastI],recPAT[lastI]],backgroundColor:[C.blue,C.cyan],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: R$ ${(ctx.parsed/1e3).toFixed(1)}K`}}}}
+    type:'doughnut',
+    data:{
+      labels:categKeys,
+      datasets:[{
+        data:categKeys.map(k=>recCateg[k][lastI]),
+        backgroundColor:categColors,
+        borderColor:'#1a1d27',borderWidth:3,hoverOffset:8
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#e2e8f0',usePointStyle:true,font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>{
+          const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${ctx.label}: R$ ${(ctx.parsed/1e3).toFixed(1)}K (${(ctx.parsed/tot*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
   });
 
   applyRec();
@@ -591,42 +650,138 @@ function applyRec(){
 })();
 
 // ===================== COMISSÕES =====================
+const commSellers={
+  'Karine':  {data:commKarine,  color:C.cyan,   status:'Ativo'},
+  'André':   {data:commAndre,   color:C.green,  status:'Ativo'},
+  'Carol':   {data:commCarol,   color:C.purple, status:'Desligada'},
+  'Lysandra':{data:commLysandra,color:C.amber,  status:'Desligada'},
+  'Vanessa': {data:commVanessa, color:C.orange, status:'Desligada'},
+  'Pedro':   {data:commPedro,   color:C.slate,  status:'Desligado'},
+};
+const commSellerNames=Object.keys(commSellers);
+let cFrom_c=0,cTo_c=months.length-1;
+let cCommLine,cCommBar;
+
 (function(){
-  new Chart(document.getElementById('commLineChart'),{
-    type:'line',data:{labels:months,datasets:[
-      {label:'Karine',data:commKarine,borderColor:C.cyan,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4},
-      {label:'André',data:commAndre,borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4},
-      {label:'Carol',data:commCarol,borderColor:C.purple,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
-      {label:'Lysandra',data:commLysandra,borderColor:C.amber,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
-      {label:'Vanessa',data:commVanessa,borderColor:C.orange,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[4,3]},
-      {label:'Pedro',data:commPedro,borderColor:C.slate,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4,borderDash:[2,4]}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(2)}`}}},
-      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v}}}}
+  const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
+  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  st.value=months.length-1;
+})();
+function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=months.length-1;document.getElementById('cVendor').value='all';applyComm();}
+
+function applyComm(){
+  cFrom_c=parseInt(document.getElementById('cFrom').value);
+  cTo_c=parseInt(document.getElementById('cTo').value);
+  if(cFrom_c>cTo_c){cTo_c=cFrom_c;document.getElementById('cTo').value=cTo_c;}
+  const vendor=document.getElementById('cVendor').value;
+  const fm=months.slice(cFrom_c,cTo_c+1);
+  const li=cTo_c,pi=cTo_c>0?cTo_c-1:0;
+
+  // Totais filtrados por vendedor
+  const filteredTotals=commSellerNames.map(n=>commSellers[n].data.slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0));
+  const lastMonth=commSellerNames.reduce((s,n)=>s+commSellers[n].data[li],0);
+  const prevMonth=commSellerNames.reduce((s,n)=>s+commSellers[n].data[pi],0);
+
+  const curVal=vendor==='all'?lastMonth:commSellers[vendor]?.data[li]||0;
+  const prevVal=vendor==='all'?prevMonth:commSellers[vendor]?.data[pi]||0;
+  const accVal=vendor==='all'?filteredTotals.reduce((a,b)=>a+b,0):commSellers[vendor]?.data.slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0)||0;
+
+  document.getElementById('c-tot-lbl').textContent=(vendor==='all'?'Comissão Total':'Comissão '+vendor)+' ('+months[li]+')';
+  document.getElementById('c-tot-val').textContent='R$ '+curVal.toLocaleString('pt-BR',{minimumFractionDigits:0});
+  document.getElementById('c-tot-sub').textContent=vendor==='all'?'Todos os vendedores':commSellers[vendor]?.status||'';
+  document.getElementById('c-tot-d').innerHTML=deltaMoM(curVal,prevVal,months[pi]);
+  document.getElementById('c-acc-lbl').textContent='Acumulado ('+months[cFrom_c]+'–'+months[cTo_c]+')';
+  document.getElementById('c-acc-val').textContent='R$ '+accVal.toLocaleString('pt-BR',{minimumFractionDigits:0});
+  document.getElementById('c-acc-sub').textContent=vendor==='all'?'Todos os vendedores':vendor;
+
+  // Top vendedor
+  const topIdx=filteredTotals.indexOf(Math.max(...filteredTotals));
+  document.getElementById('c-top-val').textContent=commSellerNames[topIdx];
+  document.getElementById('c-top-sub').textContent='R$ '+filteredTotals[topIdx].toLocaleString('pt-BR')+' no período';
+
+  // Line chart
+  cCommLine.data.labels=fm;
+  cCommLine.data.datasets.forEach((ds,i)=>{
+    ds.data=commSellers[commSellerNames[i]].data.slice(cFrom_c,cTo_c+1);
+    const isSelected=vendor==='all'||commSellerNames[i]===vendor;
+    ds.borderWidth=isSelected?2.5:0.8;
+    ds.borderDash=isSelected?[]:[4,3];
+    ds.pointRadius=isSelected?4:2;
   });
+  cCommLine.update();
+  document.getElementById('commLineTitle').textContent=vendor==='all'?'Evolução de Comissões — por Vendedor':'Evolução de Comissões — '+vendor;
 
-  const sellers=[
-    {name:'Karine',status:'Ativo',color:C.cyan,total:commKarine.reduce((a,b)=>a+b,0),last:commKarine[commKarine.length-1]},
-    {name:'André',status:'Ativo',color:C.green,total:commAndre.reduce((a,b)=>a+b,0),last:commAndre[commAndre.length-1]},
-    {name:'Carol',status:'Desligada',color:C.purple,total:commCarol.reduce((a,b)=>a+b,0),last:0},
-    {name:'Lysandra',status:'Desligada',color:C.amber,total:commLysandra.reduce((a,b)=>a+b,0),last:0},
-    {name:'Vanessa',status:'Desligada',color:C.orange,total:commVanessa.reduce((a,b)=>a+b,0),last:0},
-    {name:'Pedro',status:'Desligado',color:C.slate,total:commPedro.reduce((a,b)=>a+b,0),last:0},
-  ].sort((a,b)=>b.total-a.total);
+  // Bar chart
+  const sorted=commSellerNames.map((n,i)=>({name:n,total:filteredTotals[i],color:commSellers[n].color,status:commSellers[n].status}))
+    .filter(s=>vendor==='all'||s.name===vendor).sort((a,b)=>b.total-a.total);
+  cCommBar.data.labels=sorted.map(s=>s.name);
+  cCommBar.data.datasets[0].data=sorted.map(s=>s.total);
+  cCommBar.data.datasets[0].backgroundColor=sorted.map(s=>s.color);
+  cCommBar.update();
+  document.getElementById('commBarSub').textContent=months[cFrom_c]+' – '+months[cTo_c];
 
-  new Chart(document.getElementById('commBarChart'),{
-    type:'bar',data:{labels:sellers.map(s=>s.name),datasets:[{label:'Comissão Total',data:sellers.map(s=>s.total),backgroundColor:sellers.map(s=>s.color),borderRadius:8}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.x.toFixed(2)}`}}},scales:{x:{grid},y:{grid:{display:false}}}}
-  });
-
-  const tb=document.querySelector('#commTable tbody');
-  sellers.forEach(s=>{
-    const row=document.createElement('tr');
+  // Tabela resumo
+  const tb=document.querySelector('#commTable tbody');tb.innerHTML='';
+  sorted.forEach(s=>{
+    const lastVal=commSellers[s.name].data[li];
     const cls=s.status==='Ativo'?'ativo':'inativo';
-    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toFixed(2)}</td><td>R$ ${s.last.toFixed(2)}</td>`;
+    const row=document.createElement('tr');
+    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td><td>R$ ${lastVal.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td>`;
     tb.appendChild(row);
   });
+
+  // Tabela empresas por vendedor
+  const compSection=document.getElementById('commCompanySection');
+  if(vendor!=='all'){
+    compSection.style.display='block';
+    document.getElementById('commCompanyTitle').textContent='📋 Empresas — '+vendor+' ('+months[cFrom_c]+' a '+months[cTo_c]+')';
+    const compBody=document.getElementById('commCompanyBody');
+    // Dados por empresa extraídos do Excel (Pedido de Carga Completo + Pedido Externo)
+    const compData=commCompanyData[vendor]||[];
+    const filtered=compData.filter(r=>r.mesIdx>=cFrom_c&&r.mesIdx<=cTo_c);
+    if(filtered.length===0){
+      compBody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Dados detalhados por empresa serão carregados na próxima extração do Excel</td></tr>`;
+    } else {
+      // Agrupa por empresa
+      const byEmp={};
+      filtered.forEach(r=>{
+        if(!byEmp[r.empresa])byEmp[r.empresa]={empresa:r.empresa,origem:r.origem,gmv:0,receita:0,comissao:0};
+        byEmp[r.empresa].gmv+=r.gmv;byEmp[r.empresa].receita+=r.receita;byEmp[r.empresa].comissao+=r.comissao;
+      });
+      compBody.innerHTML='';
+      Object.values(byEmp).sort((a,b)=>b.comissao-a.comissao).forEach(e=>{
+        const row=document.createElement('tr');
+        row.innerHTML=`<td><strong>${e.empresa}</strong></td><td><span class="pill ${e.origem==='VT'?'ativo':'risco'}">${e.origem}</span></td><td>${fmt(e.gmv)}</td><td>${fmt(e.receita)}</td><td style="color:${C.amber};font-weight:600;">R$ ${e.comissao.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td>`;
+        compBody.appendChild(row);
+      });
+    }
+  } else {
+    compSection.style.display='none';
+  }
+}
+
+// Dados por empresa — extraídos das abas Pedido de Carga Completo + Pedido Externo
+// Estrutura: {vendedor: [{empresa, origem, mesIdx, gmv, receita, comissao}]}
+// Será populado automaticamente pelo processo diário de atualização do Excel
+const commCompanyData={};
+
+(function initCommCharts(){
+  cCommLine=new Chart(document.getElementById('commLineChart'),{
+    type:'line',data:{labels:months,datasets:commSellerNames.map(n=>({
+      label:n,data:commSellers[n].data,borderColor:commSellers[n].color,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:4
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:0})}`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$ '+v}}}}
+  });
+
+  const sorted0=commSellerNames.map(n=>({name:n,total:commSellers[n].data.reduce((a,b)=>a+b,0),color:commSellers[n].color})).sort((a,b)=>b.total-a.total);
+  cCommBar=new Chart(document.getElementById('commBarChart'),{
+    type:'bar',data:{labels:sorted0.map(s=>s.name),datasets:[{label:'Comissão',data:sorted0.map(s=>s.total),backgroundColor:sorted0.map(s=>s.color),borderRadius:8}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` R$ ${ctx.parsed.x.toLocaleString('pt-BR',{minimumFractionDigits:0})}`}}},scales:{x:{grid},y:{grid:{display:false}}}}
+  });
+
+  applyComm();
 })();
 </script>
 </body>
