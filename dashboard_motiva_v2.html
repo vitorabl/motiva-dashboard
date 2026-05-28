@@ -216,7 +216,7 @@ function togglePwd(){
     <div class="chart-card"><h3>Margem sobre GMV (%)</h3><p class="chart-sub">Receita ÷ GMV por mês</p><div class="chart-wrap"><canvas id="margemChart"></canvas></div></div>
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
-  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>Rec. VT</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#5b6af0;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega VT</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
 </div>
 
 <!-- ===== CLIENTES ===== -->
@@ -227,7 +227,7 @@ function togglePwd(){
     <div class="kpi red"><div class="kpi-label">Inativos +90d (Abr/26)</div><div class="kpi-value">462</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta down">↑ +19 vs Mar/26</div></div>
     <div class="kpi cyan"><div class="kpi-label">Base Total (Abr/26)</div><div class="kpi-value">1.011</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta up">↑ +10 vs Mar/26</div></div>
     <div class="kpi purple"><div class="kpi-label">Concentração da Base</div><div class="kpi-value">Bronze-PP</div><div class="kpi-sub">Segmento dominante</div><div class="kpi-pct amber">46,0% da base</div></div>
-    <div class="kpi"><div class="kpi-label">Maior Segmento em Vol.</div><div class="kpi-value">Bronze-P</div><div class="kpi-sub">331 clientes (32,5%)</div><div class="kpi-pct blue">R$ 1K–5K/mês</div></div>
+    <div class="kpi"><div class="kpi-label">Maior Segmento em Vol.</div><div class="kpi-value">Bronze-P</div><div class="kpi-sub">331 clientes (32,5%)</div><div class="kpi-pct blue">GMV R$ 1K–5K/mês</div></div>
   </div>
   <div class="chart-grid">
     <div class="chart-card"><h3>Crescimento da Base de Clientes</h3><p class="chart-sub">Total acumulado por mês</p><div class="chart-wrap"><canvas id="clientsLineChart"></canvas></div></div>
@@ -277,9 +277,12 @@ function togglePwd(){
   <!-- Tabela de empresas por vendedor (visível quando vendedor selecionado) -->
   <div id="commCompanySection" style="display:none;margin-top:4px;">
     <div class="table-card">
-      <h3 id="commCompanyTitle">📋 Empresas por Vendedor</h3>
-      <div class="info-note">ℹ️ <strong>Nota:</strong> Os dados detalhados por empresa (GMV · Receita · Comissão) são extraídos das abas <strong>Pedido de Carga Completo</strong> e <strong>Pedido Externo</strong> do Excel. Serão carregados na próxima atualização automática do dashboard.</div>
-      <div class="table-scroll"><table><thead><tr><th>Empresa</th><th style='text-align:right'>GMV</th><th style='text-align:right'>Receita</th><th style='text-align:right'>Comissão</th></tr></thead><tbody id="commCompanyBody"></tbody></table></div>
+      <h3 id="commCompanyTitle" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📋 Empresas por Vendedor</span>
+        <button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">⬇ Exportar CSV</button>
+      </h3>
+      <div class="info-note" id="commCompanyNote">ℹ️ <strong>Nota:</strong> Os dados detalhados por empresa (GMV · Receita · Comissão) são extraídos das abas <strong>Pedido de Carga Completo</strong> e <strong>Pedido Externo</strong> do Excel. Serão carregados na próxima atualização automática do dashboard.</div>
+      <div class="table-scroll"><table><thead><tr><th>Empresa</th><th>CNPJ</th><th style='text-align:right'>GMV</th><th style='text-align:right'>Receita</th><th style='text-align:right'>Comissão</th></tr></thead><tbody id="commCompanyBody"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -306,6 +309,7 @@ function togglePwd(){
       <option value="Ambos">Ambos</option>
     </select>
     <span class="client-count" id="clientCount"></span>
+    <button onclick="exportClientCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:8px;">⬇ Exportar CSV</button>
   </div>
   <div class="info-note">ℹ️ <strong>Dados reais</strong> serão carregados via importação do Excel (SheetJS). Os registros abaixo são uma amostra da estrutura. · <strong>Deduplicação por CNPJ</strong> — cliente presente nas duas abas é exibido uma única vez.</div>
   <div class="table-card" style="margin-bottom:0;">
@@ -510,7 +514,7 @@ function applyGmv(){
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:10}},
         tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex+gFrom,isVT=ctx.datasetIndex===0;const rec=isVT?recVT[i]:recPAT[i],gmv=isVT?gmvVT[i]:gmvPAT[i];return` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%  (R$ ${(rec/1e3).toFixed(0)}K / R$ ${(gmv/1e6).toFixed(1)}M)`;},}},},
-      scales:{x:{grid},y:{grid,ticks:{callback:v=>v+'%'},title:{display:true,text:'Take Rate (%)',color:'#94a3b8'}}}}
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>parseFloat(v).toFixed(2)+'%'},title:{display:true,text:'Take Rate (%)',color:'#94a3b8'}}}}
   });
 
   const avgTR_all=vtTxAdm.reduce((s,v,i)=>s+(v+vtTxSucesso[i]+vtTxEntrega[i])/gmvVT[i]*100,0)/vtTxAdm.length;
@@ -645,7 +649,7 @@ function applyRec(){
     const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
     const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${m}</strong></td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
     tb.appendChild(row);
   });
 }
@@ -1769,18 +1773,21 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
   const visMonths = months.slice(fromIdx, toIdx+1);
 
   // Calcular totais no período selecionado
+  // Estrutura VD: [empresa, cnpj, [gmv_array], [rec_array], [comm_array]]
   const rows = companies.map(c => {
-    const gmv   = c.g.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    const rec   = c.r.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    const comm  = c.k.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    return {empresa:c.e, cnpj:c.c, gmv, rec, comm};
+    const gmvArr  = Array.isArray(c[2]) ? c[2] : [];
+    const recArr  = Array.isArray(c[3]) ? c[3] : [];
+    const commArr = Array.isArray(c[4]) ? c[4] : [];
+    const gmv   = gmvArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
+    const rec   = recArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
+        const comm  = commArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
+    return {empresa:c[0], cnpj:c[1], gmv, rec, comm};
   }).filter(r => r.gmv > 0 || r.comm > 0)
     .sort((a,b) => b.gmv - a.gmv);
 
-  title.textContent = `📋 Empresas de ${vendor} — ${months[fromIdx]} a ${months[toIdx]}`;
+  title.innerHTML = '<span>📋 Empresas de '+vendor+' — '+months[fromIdx]+' a '+months[toIdx]+'</span>'<button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">⬇ Exportar CSV</button>';
   section.style.display = 'block';
 
-  // Remover info-note se existir
   const note = section.querySelector('.info-note');
   if(note) note.style.display='none';
 
@@ -1789,19 +1796,84 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
                   : v > 0    ? 'R$ '+v.toFixed(0)
                   : '—';
 
-  body.innerHTML = rows.map((r,i) => `
+  window._lastCommRows   = rows;
+  window._lastCommVendor = vendor;
+  window._lastCommPeriod = months[fromIdx]+' a '+months[toIdx];
+
+  body.innerHTML = rows.map(r => `
     <tr>
-      <td><strong>${r.empresa}</strong><br><span style="color:#64748b;font-size:10px;">${r.cnpj}</span></td>
+      <td><strong>${r.empresa}</strong></td>
+      <td style="color:#64748b;font-size:11px;">${r.cnpj||'—'}</td>
       <td style="text-align:right;">${fmtV(r.gmv)}</td>
       <td style="text-align:right;">${fmtV(r.rec)}</td>
       <td style="text-align:right;color:#fbbf24;">${r.comm > 0 ? 'R$ '+r.comm.toFixed(2) : '—'}</td>
     </tr>`).join('');
 
   if(rows.length === 0){
-    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos no período</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos no período</td></tr>';
   }
+}
+
+// Exportar comissoes
+function exportCommCSV(){
+  const rows   = window._lastCommRows   || [];
+  const vendor = window._lastCommVendor || 'Vendedor';
+  const period = window._lastCommPeriod || '';
+  if(!rows.length){ alert('Nenhum dado para exportar.'); return; }
+  const bom    = '\uFEFF';
+  const header = ['Empresa','CNPJ','GMV (R$)','Receita (R$)','Comissao (R$)'].join(';');
+  const lines  = rows.map(r => [
+    '"'+r.empresa.replace(/"/g,'""')+'"',
+    '"'+(r.cnpj||'')+'"',
+    r.gmv.toFixed(2),
+    r.rec.toFixed(2),
+    r.comm.toFixed(2)
+  ].join(';'));
+  const csv  = bom + header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'comissoes_'+vendor.replace(/\s/g,'_')+'_'+period.replace(/[\s\/]/g,'_')+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Exportar GMV por Cliente
+function exportClientCSV(){
+  const seg    = document.getElementById('clientSeg')?.value   || 'all';
+  const search = (document.getElementById('clientSearch')?.value || '').toLowerCase();
+  const _SEGS_LOCAL = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP',''];
+  let filtered = _CD.filter(r => {
+    if(seg !== 'all' && _SEGS_LOCAL[r[2]] !== seg) return false;
+    if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search)) return false;
+    return true;
+  });
+  const bom    = '\uFEFF';
+  const gmvHdr = months.map(m => 'GMV '+m);
+  const header = ['Empresa','CNPJ','Segmento','Cadastro',...gmvHdr,'GMV Total'].join(';');
+  const lines  = filtered.map(r => {
+    const gmvVals = months.map((_,i) => (r[5+i]||0).toFixed(1));
+    const gmvTot  = gmvVals.reduce((s,v) => s + parseFloat(v), 0).toFixed(0);
+    return [
+      '"'+r[1].replace(/"/g,'""')+'"',
+      '"'+r[0]+'"',
+      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
+      '"'+(r[3]||'')+'"',
+      ...gmvVals,
+      gmvTot
+    ].join(';');
+  });
+  const csv  = bom + header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 </script>
 </body>
-</
+</html>
