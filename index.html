@@ -132,7 +132,8 @@ var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
   var lvl = sessionStorage.getItem(AUTH_KEY);
   if(lvl === 'geral' || lvl === 'full'){
     document.getElementById('auth-overlay').style.display='none';
-    applyAuthLevel(lvl);
+    // applyAuthLevel chamado depois do DOM carregar
+    document.addEventListener('DOMContentLoaded', function(){ applyAuthLevel(lvl); });
   }
   setTimeout(function(){
     var el=document.getElementById('auth-input');
@@ -141,11 +142,8 @@ var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
 })();
 
 function applyAuthLevel(lvl){
-  // Oculta/mostra aba de Comissões conforme nível
   var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
-  if(tabComm){
-    tabComm.style.display = (lvl === 'full') ? '' : 'none';
-  }
+  if(tabComm) tabComm.style.display = (lvl === 'full') ? '' : 'none';
 }
 
 function checkAuth(){
@@ -154,7 +152,6 @@ function checkAuth(){
   var lvl = null;
   if(val === SENHA_FULL)       lvl = 'full';
   else if(val === SENHA_GERAL) lvl = 'geral';
-
   if(lvl){
     sessionStorage.setItem(AUTH_KEY, lvl);
     document.getElementById('auth-overlay').style.display='none';
@@ -1844,5 +1841,47 @@ function exportClientCSV(){
     return true;
   });
   const bom = '\uFEFF';
+  const gmvHdr = months.map(m => 'GMV '+m);
+  const varHdr = months.slice(1).map(m => 'Var% '+m);
+  const interleaved = [gmvHdr[0]];
+  for(let i=1;i<months.length;i++){ interleaved.push(gmvHdr[i]); interleaved.push(varHdr[i-1]); }
+  const header = ['Empresa','CNPJ','Segmento','Cadastro',...interleaved,'GMV Total','Meses em Queda','Ultimo Mes em Queda'].join(';');
+  const lines = filtered.map(r => {
+    const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
+    const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
+    const varArr = gmvArr.map((v,i) => {
+      if(i===0) return null;
+      const prev=gmvArr[i-1];
+      if(!prev||prev===0||!v||v===0) return null;
+      return ((v-prev)/prev*100);
+    });
+    let quedaCount=0, ultimaQueda='';
+    varArr.forEach((pct,i)=>{ if(pct!==null&&pct<0){ quedaCount++; ultimaQueda=months[i]; } });
+    const interleaved2=[gmvArr[0].toFixed(1)];
+    for(let i=1;i<months.length;i++){
+      interleaved2.push(gmvArr[i].toFixed(1));
+      const pct=varArr[i];
+      interleaved2.push(pct!==null?(pct.toFixed(1)+'%').replace('.',','):'');
+    }
+    return [
+      '"'+r[1].replace(/"/g,'""')+'"',
+      '"'+r[0]+'"',
+      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
+      '"'+(r[3]||'')+'"',
+      ...interleaved2,
+      gmvTot,quedaCount,'"'+(ultimaQueda||'')+'"'
+    ].join(';');
+  });
+  const csv  = bom + header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-  // Cabe\u00E7alhos: coluna
+</script>
+</body>
+</html>
