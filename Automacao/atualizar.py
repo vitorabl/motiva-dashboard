@@ -6,11 +6,10 @@ from datetime import datetime
 BASE       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXCEL      = os.path.join(BASE, '2025 - Financeiro Motiva - Controle Lorena.v2.xlsx')
 DASHBOARD  = os.path.join(BASE, 'dashboard_motiva_v2.html')
-INDEX      = os.path.join(BASE, 'index.html')            # Netlify serve index.html
-GIT_REPO   = BASE                                         # raiz do repositório git
+INDEX      = os.path.join(BASE, 'index.html')   # GitHub Pages e fallback
+GIT_REPO   = BASE
 
-# Token do GitHub — usado só para push automático
-# Token armazenado no git config local — não incluir no código
+# Token armazenado no git config local — nao incluir no codigo
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def safe_float(v):
@@ -25,37 +24,35 @@ def month_key(val):
 
 def norm_vendor(v):
     if not v: return None
-    m = {'karine':'Karine','carol':'Carol','andré':'André','andre':'André',
+    m = {'karine':'Karine','carol':'Carol','andre':'Andre','andre':'André',
          'lysandra':'Lysandra','vanessa':'Vanessa','pedro':'Pedro'}
     return m.get(str(v).strip().lower(), str(v).strip())
 
 def replace_const(html, name, vals, strings=False):
-    """Substitui: const name = [...];"""
     if strings:
         vs = ','.join(f"'{v}'" for v in vals)
     else:
         vs = ','.join(str(int(v)) if float(v)==int(float(v)) else str(round(float(v),2)) for v in vals)
     pat = rf'(const\s+{re.escape(name)}\s*=\s*\[)[^\]]*(\])'
     new, n = re.subn(pat, rf'\g<1>{vs}\g<2>', html)
-    print(f"  {'✓' if n else '✗'} {name}: {len(vals)} valores")
+    print(f"  {'OK' if n else 'XX'} {name}: {len(vals)} valores")
     return new
 
 def validar_html(html, label=''):
-    """Garante que o arquivo está íntegro antes de salvar."""
     ok = True
     if not html.rstrip().endswith('</html>'):
-        print(f"  ⚠️  {label}: arquivo NÃO termina com </html>!")
+        print(f"  AVISO {label}: arquivo NAO termina com </html>!")
         ok = False
     if html.count('</script>') < 2:
-        print(f"  ⚠️  {label}: menos de 2 blocos </script> — possível truncamento!")
+        print(f"  AVISO {label}: menos de 2 blocos script!")
         ok = False
-    if len(html) < 200_000:
-        print(f"  ⚠️  {label}: arquivo muito pequeno ({len(html)//1024}KB) — suspeito!")
+    if len(html) < 200000:
+        print(f"  AVISO {label}: arquivo pequeno ({len(html)//1024}KB)!")
         ok = False
     return ok
 
 # ── 1. ACOMPANHAMENTO ─────────────────────────────────────────────────────────
-print("\n📊 Lendo Acompanhamento...")
+print("\nLendo Acompanhamento...")
 wb = openpyxl.load_workbook(EXCEL, data_only=True, read_only=True)
 ws = wb['Acompanhamento']
 hdr = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
@@ -83,10 +80,10 @@ recVT=rs(33); recPAT=rs(37)
 commKarine=rs(132); commCarol=rs(134); commAndre=rs(138)
 commLysandra=rs(152); commVanessa=rs(154); commPedro=rs(156)
 commTotal=[commKarine[i]+commCarol[i]+commAndre[i]+commLysandra[i]+commVanessa[i]+commPedro[i] for i in range(N)]
-print(f"  GMV VT: R$ {sum(gmvVT):,.0f}  |  Comissão: R$ {sum(commTotal):,.0f}")
+print(f"  GMV VT: R$ {sum(gmvVT):,.0f}  |  Comissao: R$ {sum(commTotal):,.0f}")
 
 # ── 2. GMV POR CLIENTE ────────────────────────────────────────────────────────
-print("\n👥 Lendo GMV por Cliente...")
+print("\nLendo GMV por Cliente...")
 wb2 = openpyxl.load_workbook(EXCEL, data_only=True, read_only=True)
 ws2 = wb2['GMV por Cliente']
 SEG_IDS = {'Diamante':0,'Ouro':1,'Prata':2,'Bronze-P':3,'Bronze-PP':4}
@@ -122,8 +119,8 @@ for c in clients:
     cd_parts.append(f"[{json.dumps(c['cnpj'])},{json.dumps(c['empresa'],ensure_ascii=False)},{SEG_IDS.get(c['seg'],5)},{json.dumps(c['cad'])},0,{gmv_s},0]")
 CD_JS='const _CD=[\n'+',\n'.join(cd_parts)+'\n];'
 
-# ── 3. PEDIDOS POR VENDEDOR + TAXAS (PdCC e PE) ───────────────────────────────
-print("\n🏢 Lendo pedidos por vendedor/empresa e acumulando taxas...")
+# ── 3. PEDIDOS POR VENDEDOR + TAXAS ───────────────────────────────────────────
+print("\nLendo pedidos por vendedor e taxas...")
 MK=[]; yy,mm=2025,1
 for _ in range(N):
     MK.append(f"{yy}_{mm:02d}"); mm+=1
@@ -131,13 +128,9 @@ for _ in range(N):
 MIDX={k:i for i,k in enumerate(MK)}
 
 vd=defaultdict(lambda:defaultdict(lambda:{'cnpj':'','pm':defaultdict(lambda:{'g':0,'r':0,'c':0})}))
-
-pcc_adm = defaultdict(float)   # PdCC col P (idx 15) - Tx Adm
-pcc_suc = defaultdict(float)   # PdCC col Q (idx 16) - Tx Sucesso
-pcc_ent = defaultdict(float)   # PdCC col S (idx 18) - Tx Entrega
-pcc_nf  = defaultdict(float)   # PdCC col T (idx 19) - NF Pedido de Carga
-pe_adm  = defaultdict(float)   # PE col N (idx 13) - Tx Adm (TODAS as linhas)
-pe_suc  = defaultdict(float)   # PE col O (idx 14) - Tx Sucesso (TODAS as linhas)
+pcc_adm=defaultdict(float); pcc_suc=defaultdict(float)
+pcc_ent=defaultdict(float); pcc_nf=defaultdict(float)
+pe_adm=defaultdict(float);  pe_suc=defaultdict(float)
 
 wb3=openpyxl.load_workbook(EXCEL,data_only=True,read_only=True)
 for row in wb3['Pedido de carga Completo'].iter_rows(min_row=2,values_only=True):
@@ -151,10 +144,10 @@ for row in wb3['Pedido de carga Completo'].iter_rows(min_row=2,values_only=True)
     p['g']+=safe_float(row[11] if len(row)>11 else None)
     p['r']+=safe_float(row[15] if len(row)>15 else None)+safe_float(row[16] if len(row)>16 else None)+safe_float(row[18] if len(row)>18 else None)
     p['c']+=safe_float(row[26] if len(row)>26 else None)
-    pcc_adm[mes] += safe_float(row[15] if len(row)>15 else None)
-    pcc_suc[mes] += safe_float(row[16] if len(row)>16 else None)
-    pcc_ent[mes] += safe_float(row[18] if len(row)>18 else None)
-    pcc_nf[mes]  += safe_float(row[19] if len(row)>19 else None)
+    pcc_adm[mes]+=safe_float(row[15] if len(row)>15 else None)
+    pcc_suc[mes]+=safe_float(row[16] if len(row)>16 else None)
+    pcc_ent[mes]+=safe_float(row[18] if len(row)>18 else None)
+    pcc_nf[mes] +=safe_float(row[19] if len(row)>19 else None)
 
 for row in wb3['Pedido externo'].iter_rows(min_row=2,values_only=True):
     mes=month_key(row[4] if len(row)>4 else None)
@@ -167,15 +160,15 @@ for row in wb3['Pedido externo'].iter_rows(min_row=2,values_only=True):
     p['g']+=safe_float(row[7] if len(row)>7 else None)
     p['r']+=safe_float(row[15] if len(row)>15 else None)
     p['c']+=safe_float(row[23] if len(row)>23 else None)
-    pe_adm[mes] += safe_float(row[13] if len(row)>13 else None)
-    pe_suc[mes] += safe_float(row[14] if len(row)>14 else None)
+    pe_adm[mes]+=safe_float(row[13] if len(row)>13 else None)
+    pe_suc[mes]+=safe_float(row[14] if len(row)>14 else None)
 wb3.close()
 
-vtTxAdm     = [int(round(pcc_adm[mk] + pe_adm[mk])) for mk in MK]
-vtTxSucesso = [int(round(pcc_suc[mk] + pe_suc[mk])) for mk in MK]
-vtTxEntrega = [int(round(pcc_ent[mk]))               for mk in MK]
-nfPedCarga  = [int(round(pcc_nf[mk]))                for mk in MK]
-print(f"  Tx Adm: R$ {sum(vtTxAdm):,.0f}  |  Tx Sucesso: R$ {sum(vtTxSucesso):,.0f}  |  NF: R$ {sum(nfPedCarga):,.0f}")
+vtTxAdm    =[int(round(pcc_adm[mk]+pe_adm[mk])) for mk in MK]
+vtTxSucesso=[int(round(pcc_suc[mk]+pe_suc[mk])) for mk in MK]
+vtTxEntrega=[int(round(pcc_ent[mk]))             for mk in MK]
+nfPedCarga =[int(round(pcc_nf[mk]))              for mk in MK]
+print(f"  Tx Adm: R$ {sum(vtTxAdm):,.0f} | Tx Sucesso: R$ {sum(vtTxSucesso):,.0f} | NF: R$ {sum(nfPedCarga):,.0f}")
 
 VENDORS=['Karine','André','Carol','Lysandra','Vanessa','Pedro']
 vd_out={}
@@ -200,19 +193,76 @@ for vend in VENDORS:
 VD_JS='const VD={'+','.join(vd_parts)+'};'
 
 # ── 4. ATUALIZAR HTML ─────────────────────────────────────────────────────────
-print("\n📝 Atualizando HTML...")
+print("\nAtualizando HTML...")
 with open(DASHBOARD,'r',encoding='utf-8') as f: html=f.read()
-orig_kb = len(html)//1024
+orig_kb=len(html)//1024
 
-# Validar arquivo base antes de modificar
-if not validar_html(html, 'arquivo original'):
-    print("\n❌ Arquivo original corrompido. Abortando para não piorar.")
+if not validar_html(html,'arquivo original'):
+    print("\nERRO: Arquivo original corrompido. Abortando.")
     sys.exit(1)
 
-# Substituir arrays de dados
 html=replace_const(html,'months',      LABELS,      strings=True)
 html=replace_const(html,'gmvVT',       gmvVT)
 html=replace_const(html,'gmvPAT',      gmvPAT)
 html=replace_const(html,'gmvTotal',    gmvTotal)
 html=replace_const(html,'recVT',       recVT)
-html=replace_c
+html=replace_const(html,'recPAT',      recPAT)
+html=replace_const(html,'vtTxAdm',     vtTxAdm)
+html=replace_const(html,'vtTxSucesso', vtTxSucesso)
+html=replace_const(html,'vtTxEntrega', vtTxEntrega)
+html=replace_const(html,'nfPedCarga',  nfPedCarga)
+html=replace_const(html,'commTotal',   commTotal)
+html=replace_const(html,'commKarine',  commKarine)
+html=replace_const(html,'commAndre',   commAndre)
+html=replace_const(html,'commCarol',   commCarol)
+html=replace_const(html,'commLysandra',commLysandra)
+html=replace_const(html,'commVanessa', commVanessa)
+html=replace_const(html,'commPedro',   commPedro)
+
+html,n=re.subn(r'const VD=\{.*?\};',VD_JS,html,flags=re.DOTALL)
+print(f"  {'OK' if n else 'XX'} VD: {sum(len(v) for v in vd_out.values())} empresas")
+html,n=re.subn(r'const _CD=\[.*?\];',CD_JS,html,flags=re.DOTALL)
+print(f"  {'OK' if n else 'XX'} _CD: {len(clients)} clientes")
+
+html=re.sub(r'emandamento',f'em andamento',html)
+html=re.sub(r'em\s+andamento.*?(?=<)',f'em andamento',html)
+html=re.sub(r'andamento[^<]*','andamento',html)
+html=re.sub(r'em andamento','em andamento',html)
+html=re.sub(r'[⚡]\s*\w+/\d+\s*em andamento',f'⚡ {LABELS[-1]} em andamento',html)
+html=re.sub(r'Dashboard Financeiro\s*\xb7\s*\w+/\d+\s*–\s*\w+/\d+',
+            f'Dashboard Financeiro \xb7 {LABELS[0]} – {LABELS[-1]}',html)
+print(f"  OK Badge: {LABELS[0]} a {LABELS[-1]}")
+
+if not validar_html(html,'arquivo atualizado'):
+    print("\nERRO: Resultado corrompido. Abortando.")
+    sys.exit(1)
+
+with open(DASHBOARD,'w',encoding='utf-8') as f: f.write(html)
+shutil.copy2(DASHBOARD,INDEX)
+print(f"\nHTML salvo! {orig_kb}KB -> {len(html)//1024}KB | index.html copiado")
+
+# ── 5. PUSH PARA GITHUB ───────────────────────────────────────────────────────
+print("\nPublicando no GitHub...")
+data_hoje=datetime.now().strftime('%d/%m/%Y %H:%M')
+try:
+    def git(args):
+        r=subprocess.run(['git','-C',GIT_REPO]+args,capture_output=True,text=True)
+        if r.returncode!=0 and r.stderr: print(f"  git {args[0]}: {r.stderr.strip()}")
+        return r
+    git(['config','user.email','vitor.leite@usekim.com.br'])
+    git(['config','user.name','Vitor'])
+    git(['add','dashboard_motiva_v2.html','index.html'])
+    commit=git(['commit','-m',f'Auto-update {data_hoje} -- {LABELS[-1]} em andamento'])
+    if 'nothing to commit' in commit.stdout:
+        print("  Sem alteracoes desde ultimo commit.")
+    else:
+        push=git(['push','origin','main'])
+        if push.returncode==0:
+            print(f"  Publicado! -> https://vitorabl.github.io/motiva-dashboard/")
+        else:
+            print(f"  Push falhou: {push.stderr.strip()}")
+except Exception as e:
+    print(f"  Erro no git: {e}")
+    print("  Dashboard salvo localmente. Faca push manual se necessario.")
+
+print(f"\nProcesso concluido em {datetime.now().strftime('%H:%M:%S')}")
