@@ -121,23 +121,45 @@
   </div>
 </div>
 <script>
+// ── Senhas ──────────────────────────────────────────────────────────────────
+// SENHA_GERAL  → acesso a todas as abas EXCETO Comissões
+// SENHA_FULL   → acesso completo (inclui Comissões)
+var SENHA_GERAL = 'Motiva@2026';
+var SENHA_FULL  = 'Motiva@Full2026';
+var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
+
 (function(){
-  var KEY='motiva_auth_ok';
-  if(sessionStorage.getItem(KEY)==='1'){
+  var lvl = sessionStorage.getItem(AUTH_KEY);
+  if(lvl === 'geral' || lvl === 'full'){
     document.getElementById('auth-overlay').style.display='none';
+    applyAuthLevel(lvl);
   }
   setTimeout(function(){
     var el=document.getElementById('auth-input');
     if(el)el.focus();
   },100);
 })();
+
+function applyAuthLevel(lvl){
+  // Oculta/mostra aba de Comissões conforme nível
+  var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
+  if(tabComm){
+    tabComm.style.display = (lvl === 'full') ? '' : 'none';
+  }
+}
+
 function checkAuth(){
-  var val=document.getElementById('auth-input').value;
+  var val=document.getElementById('auth-input').value.trim();
   var err=document.getElementById('auth-error');
-  if(val==='Motiva@2026'){
-    sessionStorage.setItem('motiva_auth_ok','1');
+  var lvl = null;
+  if(val === SENHA_FULL)       lvl = 'full';
+  else if(val === SENHA_GERAL) lvl = 'geral';
+
+  if(lvl){
+    sessionStorage.setItem(AUTH_KEY, lvl);
     document.getElementById('auth-overlay').style.display='none';
     err.textContent='';
+    applyAuthLevel(lvl);
   } else {
     err.textContent='Senha incorreta. Tente novamente.';
     document.getElementById('auth-input').value='';
@@ -1823,19 +1845,4 @@ function exportClientCSV(){
   });
   const bom = '\uFEFF';
 
-  // Cabe\u00E7alhos: colunas GMV intercaladas com Var% (a partir do 2\u00BA m\u00EAs)
-  const gmvHdr  = months.map(m => 'GMV '+m);
-  const varHdr  = months.slice(1).map(m => 'Var% '+m);
-
-  // Monta cabe\u00E7alho: Empresa | CNPJ | Segmento | Cadastro | GMV M1 | GMV M2 | Var% M2 | ... | GMV Total | Meses em Queda | \u00DAltimo M\u00EAs em Queda
-  const interleaved = [gmvHdr[0]];
-  for(let i=1;i<months.length;i++){ interleaved.push(gmvHdr[i]); interleaved.push(varHdr[i-1]); }
-  const header = ['Empresa','CNPJ','Segmento','Cadastro',...interleaved,'GMV Total','Meses em Queda','Ultimo Mes em Queda'].join(';');
-
-  const lines = filtered.map(r => {
-    const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
-    const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
-
-    // Varia\u00E7\u00E3o % m\u00EAs a m\u00EAs
-    const varArr = gmvArr.map((v,i) => {
-      if(
+  // Cabe\u00E7alhos: coluna
