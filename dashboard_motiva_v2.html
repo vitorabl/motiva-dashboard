@@ -319,7 +319,7 @@ function togglePwd(){
 </div>
 
 <script>
-// ===================== DADOS — 16 meses: Jan/25 – Mai/26 =====================
+// ===================== DADOS — 17 meses: Jan/25 – Mai/26 =====================
 const months = ['Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','Ago/25','Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26','Mai/26'];
 const gmvVT    = [3750309,3849420,3791696,3759588,3900582,3974325,4118794,4077965,4102352,3625259,3766626,3610548,3799822,3705194,3229324,3945232,1429862];
 const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,7429489,7244888,7297424,7678535,7587766,8066394,9028648,7550483,11946729,0];
@@ -327,21 +327,19 @@ const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,
 const recVT    = [137579,127311,125375,136054,157638,164853,176992,163723,166104,157607,159160,168521,175801,167950,136394,175758,47613];
 const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,0];
 const recTotal = recVT.map((v,i)=>v+recPAT[i]);
-// Breakdown de receita VT por categoria (extraído do Excel — atualizar com extração automática)
-// Dealer/Broker = Tx Adm + Tx Sucesso + Tx Entrega (Pedido de Carga Completo)
-// Pedidos Externos = receita de pedidos externos (non-SEM SK)
-// SJDR, 2ª via, Financiamento = demais linhas do Acompanhamento
-// Por ora, usa proporções estimadas da Receita VT até extração detalhada do Excel
+// NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
+const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,161887,130197,168849,47613];
 const recCateg = {
-  'Dealer/Broker': recVT.map(v=>Math.round(v*0.965)),
-  'SJDR':          recVT.map(v=>Math.round(v*0.000)),
-  '2ª Via':        recVT.map(v=>Math.round(v*0.001)),
-  'Financiamento': recVT.map(v=>Math.round(v*0.000)),
-  'Ped. Externos': recVT.map(v=>Math.round(v*0.034)),
+  'Ped. Carga VT': nfPedCarga,
+  'Ped. Externos': nfPedCarga.map((v,i)=>Math.max(0,Math.round(recVT[i]-v))),
   'PAT':           recPAT
 };
-const vtTxAdm     = [129778,114519,113920,121690,151017,158349,172233,158935,158899,153580,154032,163577,170951,161692,129972,168624,47283];
-const vtTxSucesso = [7801,12793,11455,14363,6621,6504,4759,4773,7175,3787,4928,4825,4520,6063,6198,6909,0];
+// Taxas totais — soma de todas as fontes:
+//   Tx Adm    = Pedido de carga Completo col P  +  TODAS as linhas do Pedido Externo col N
+//   Tx Sucesso = Pedido de carga Completo col Q  +  TODAS as linhas do Pedido Externo col O
+//   Tx Entrega = Pedido de carga Completo col S  (Pedido Externo não possui Tx Entrega)
+const vtTxAdm     = [70193,72583,69025,65656,76764,87990,95769,83769,84495,72949,80094,71296,75257,71615,63964,78475,22052];
+const vtTxSucesso = [95087,81707,86104,90675,103460,101497,103907,101193,102106,100907,95380,112466,115264,111076,87634,115783,29280];
 const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225,330];
 const qtdClients  = [781,801,832,871,904,915,927,944,949,966,975,976,989,997,1001,1011];
 const qtdNew      = [9,20,31,39,33,11,12,17,5,17,9,1,13,8,4,10];
@@ -638,7 +636,7 @@ function applyRec(){
   const categKeys=Object.keys(recCateg);
   cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
   cRecPie.update();
-  document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores estimados até próxima extração`;
+  document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores reais extraídos do Excel`;
 
   // Tabela
   const tb=document.getElementById('recTbody');tb.innerHTML='';
@@ -1801,4 +1799,4 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
 
 </script>
 </body>
-</html>
+</
