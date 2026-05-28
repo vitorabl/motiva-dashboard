@@ -1821,31 +1821,21 @@ function exportClientCSV(){
     if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search)) return false;
     return true;
   });
-  const bom    = '\uFEFF';
-  const gmvHdr = months.map(m => 'GMV '+m);
-  const header = ['Empresa','CNPJ','Segmento','Cadastro',...gmvHdr,'GMV Total'].join(';');
-  const lines  = filtered.map(r => {
-    const gmvVals = months.map((_,i) => (r[5+i]||0).toFixed(1));
-    const gmvTot  = gmvVals.reduce((s,v) => s + parseFloat(v), 0).toFixed(0);
-    return [
-      '"'+r[1].replace(/"/g,'""')+'"',
-      '"'+r[0]+'"',
-      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
-      '"'+(r[3]||'')+'"',
-      ...gmvVals,
-      gmvTot
-    ].join(';');
-  });
-  const csv  = bom + header + '\n' + lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
+  const bom = '\uFEFF';
 
-</script>
-</body>
-</html>
+  // Cabe\u00E7alhos: colunas GMV intercaladas com Var% (a partir do 2\u00BA m\u00EAs)
+  const gmvHdr  = months.map(m => 'GMV '+m);
+  const varHdr  = months.slice(1).map(m => 'Var% '+m);
+
+  // Monta cabe\u00E7alho: Empresa | CNPJ | Segmento | Cadastro | GMV M1 | GMV M2 | Var% M2 | ... | GMV Total | Meses em Queda | \u00DAltimo M\u00EAs em Queda
+  const interleaved = [gmvHdr[0]];
+  for(let i=1;i<months.length;i++){ interleaved.push(gmvHdr[i]); interleaved.push(varHdr[i-1]); }
+  const header = ['Empresa','CNPJ','Segmento','Cadastro',...interleaved,'GMV Total','Meses em Queda','Ultimo Mes em Queda'].join(';');
+
+  const lines = filtered.map(r => {
+    const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
+    const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
+
+    // Varia\u00E7\u00E3o % m\u00EAs a m\u00EAs
+    const varArr = gmvArr.map((v,i) => {
+      if(
