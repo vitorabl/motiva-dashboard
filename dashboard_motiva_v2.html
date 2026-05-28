@@ -1785,7 +1785,7 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
   }).filter(r => r.gmv > 0 || r.comm > 0)
     .sort((a,b) => b.gmv - a.gmv);
 
-  title.innerHTML = '<span>📋 Empresas de '+vendor+' — '+months[fromIdx]+' a '+months[toIdx]+'</span>'<button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">⬇ Exportar CSV</button>';
+  title.innerHTML = '<span>📋 Empresas de '+vendor+' — '+months[fromIdx]+' a '+months[toIdx]+'</span><button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">&#11015; Exportar CSV</button>';
   section.style.display = 'block';
 
   const note = section.querySelector('.info-note');
