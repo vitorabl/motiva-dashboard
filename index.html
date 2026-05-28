@@ -144,6 +144,8 @@ var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
 function applyAuthLevel(lvl){
   var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
   if(tabComm) tabComm.style.display = (lvl === 'full') ? '' : 'none';
+  var btn = document.getElementById('btn-logout');
+  if(btn) btn.style.display = '';
 }
 
 function checkAuth(){
@@ -163,6 +165,22 @@ function checkAuth(){
     document.getElementById('auth-input').focus();
   }
 }
+
+function doLogout(){
+  sessionStorage.removeItem(AUTH_KEY);
+  // Se estava com acesso geral e a aba comissoes estava oculta, voltar para gmv
+  var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
+  if(tabComm && tabComm.style.display === 'none'){
+    var gmvTab = document.querySelector('.tab[onclick*="\'gmv\'"]');
+    if(gmvTab) gmvTab.click();
+  }
+  var btn = document.getElementById('btn-logout');
+  if(btn) btn.style.display = 'none';
+  document.getElementById('auth-input').value = '';
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-overlay').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('auth-input').focus(); }, 100);
+}
 function togglePwd(){
   var inp=document.getElementById('auth-input');
   var eye=document.getElementById('eye-btn');
@@ -178,7 +196,11 @@ function togglePwd(){
     <div class="logo">M</div>
     <div><h1>Motiva Benefícios</h1><p>Dashboard Financeiro · Jan/25 – Mai/26</p></div>
   </div>
-  <span style="background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-right:4px;">⚡ Mai/26 em andamento</span> <span class="badge">Lorena · 2025–2026</span>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">⚡ Mai/26 em andamento</span>
+    <span class="badge">Lorena · 2025–2026</span>
+    <button id="btn-logout" onclick="doLogout()" style="background:rgba(100,116,139,.15);border:1px solid rgba(100,116,139,.3);color:#94a3b8;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;display:none;" title="Trocar acesso">🔓 Sair</button>
+  </div>
 </div>
 <div class="tabs">
   <div class="tab active" onclick="showTab('gmv',event)">📊 GMV</div>
@@ -1849,39 +1871,4 @@ function exportClientCSV(){
   const lines = filtered.map(r => {
     const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
     const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
-    const varArr = gmvArr.map((v,i) => {
-      if(i===0) return null;
-      const prev=gmvArr[i-1];
-      if(!prev||prev===0||!v||v===0) return null;
-      return ((v-prev)/prev*100);
-    });
-    let quedaCount=0, ultimaQueda='';
-    varArr.forEach((pct,i)=>{ if(pct!==null&&pct<0){ quedaCount++; ultimaQueda=months[i]; } });
-    const interleaved2=[gmvArr[0].toFixed(1)];
-    for(let i=1;i<months.length;i++){
-      interleaved2.push(gmvArr[i].toFixed(1));
-      const pct=varArr[i];
-      interleaved2.push(pct!==null?(pct.toFixed(1)+'%').replace('.',','):'');
-    }
-    return [
-      '"'+r[1].replace(/"/g,'""')+'"',
-      '"'+r[0]+'"',
-      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
-      '"'+(r[3]||'')+'"',
-      ...interleaved2,
-      gmvTot,quedaCount,'"'+(ultimaQueda||'')+'"'
-    ].join(';');
-  });
-  const csv  = bom + header + '\n' + lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-</script>
-</body>
-</html>
+    const varArr = gmvArr.map((v,i
