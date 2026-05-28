@@ -152,7 +152,7 @@ function doLogout(){
   sessionStorage.removeItem(AUTH_KEY);
   var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
   if(tabComm && tabComm.style.display === 'none'){
-    var gmvTab = document.querySelector('.tab[onclick*="'gmv'"]');
+    var gmvTab = document.querySelector(".tab[onclick*=\"'gmv'\"]");
     if(gmvTab) gmvTab.click();
   }
   var btn = document.getElementById('btn-logout');
