@@ -846,34 +846,6 @@ function applyComm(){
     tb.appendChild(row);
   });
 
-  // Tabela empresas por vendedor
-  const compSection=document.getElementById('commCompanySection');
-  if(vendor!=='all'){
-    compSection.style.display='block';
-    document.getElementById('commCompanyTitle').textContent='📋 Empresas — '+vendor+' ('+months[cFrom_c]+' a '+months[cTo_c]+')';
-    const compBody=document.getElementById('commCompanyBody');
-    // Dados por empresa via VD (extraídos do Excel)
-    const vdEmps=(VD[vendor]||[]);
-    const vdRows=vdEmps.map(c=>({
-      empresa:c[0],cnpj:c[1],
-      gmv:c[2].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0),
-      rec:c[3].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0),
-      comm:c[4].slice(cFrom_c,cTo_c+1).reduce((a,b)=>a+b,0)
-    })).filter(r=>r.gmv>0||r.comm>0).sort((a,b)=>b.gmv-a.gmv);
-    if(!vdRows.length){
-      compBody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">Sem pedidos no período selecionado</td></tr>`;
-    } else {
-      const fv=v=>v>=1e6?'R$ '+(v/1e6).toFixed(1)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(0)+'K':v>0?'R$ '+Math.round(v):'—';
-      compBody.innerHTML='';
-      vdRows.forEach(r=>{
-        const row=document.createElement('tr');
-        row.innerHTML=`<td><strong>${r.empresa}</strong><br><span style="color:#64748b;font-size:10px">${r.cnpj}</span></td><td style="text-align:right">${fv(r.gmv)}</td><td style="text-align:right">${fv(r.rec)}</td><td style="text-align:right;color:#fbbf24;font-weight:700">${r.comm>0?'R$ '+r.comm.toFixed(2):'—'}</td>`;
-        compBody.appendChild(row);
-      });
-    }
-  } else {
-    compSection.style.display='none';
-  }
 }
 
 // Dados por empresa — extraídos das abas Pedido de Carga Completo + Pedido Externo
