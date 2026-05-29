@@ -1735,10 +1735,15 @@ function renderTags(){
   wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
   var input=document.getElementById('clientTagInput');
   _selectedClients.forEach(function(c){
-    var tag=document.createElement('span');tag.className='client-tag';
-    var nome=c.empresa.length>22?c.empresa.slice(0,21)+'…':c.empresa;
-    var cesc=c.cnpj.replace(/'/g,'&#39;');
-    tag.innerHTML=nome+' <span class="tag-remove" onmousedown="removeClientTag(''+cesc+'');return false;">×</span>';
+    var tag=document.createElement('span');
+    tag.className='client-tag';
+    var nome=c.empresa.length>22?c.empresa.slice(0,21)+'\u2026':c.empresa;
+    tag.appendChild(document.createTextNode(nome+' '));
+    var btn=document.createElement('span');
+    btn.className='tag-remove';
+    btn.textContent='\u00d7';
+    (function(cnpj){btn.addEventListener('mousedown',function(e){e.preventDefault();removeClientTag(cnpj);});})(c.cnpj);
+    tag.appendChild(btn);
     wrap.insertBefore(tag,input);
   });renderClientTable();
 }
@@ -1760,12 +1765,20 @@ function showClientDropdown(){
   var matches=pool.filter(function(c){return!_selectedClients.find(function(s){return s.cnpj===c.cnpj;});})
     .filter(function(c){return!q||c.empresa.toLowerCase().includes(q)||c.cnpj.includes(q);}).slice(0,30);
   if(!q&&matches.length===0){dd.style.display='none';return;}
-  dd.innerHTML=matches.length===0?'<div class="client-dropdown-empty">Nenhum cliente encontrado</div>'
-    :matches.map(function(c){
-      var safe=c.empresa.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-      var cs=c.cnpj.replace(/'/g,'&#39;');
-      return '<div class="client-dropdown-item" onmousedown="addClientTag(''+cs+'',''+safe+'');return false;"><span class="dd-name">'+c.empresa+'</span><span class="dd-cnpj">'+c.cnpj+'</span></div>';
-    }).join('');
+  dd.innerHTML='';
+  if(matches.length===0){
+    var empty=document.createElement('div');empty.className='client-dropdown-empty';
+    empty.textContent='Nenhum cliente encontrado';dd.appendChild(empty);
+  } else {
+    matches.forEach(function(c){
+      var item=document.createElement('div');item.className='client-dropdown-item';
+      var nm=document.createElement('span');nm.className='dd-name';nm.textContent=c.empresa;
+      var cn=document.createElement('span');cn.className='dd-cnpj';cn.textContent=c.cnpj;
+      item.appendChild(nm);item.appendChild(cn);
+      (function(cnpj,emp){item.addEventListener('mousedown',function(e){e.preventDefault();addClientTag(cnpj,emp);});})(c.cnpj,c.empresa);
+      dd.appendChild(item);
+    });
+  }
   dd.style.display='block';
 }
 function onClientTagKey(e){
