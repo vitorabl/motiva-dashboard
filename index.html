@@ -113,19 +113,19 @@
   .client-count { font-size:12px; color:var(--muted); margin-left:auto; }
 
   /* Multi-client filter */
-  .client-tag-wrap { display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex:1;min-width:180px;max-width:400px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:text;position:relative; }
-  .client-tag-wrap:focus-within { border-color:var(--accent); }
-  .client-tag { display:inline-flex;align-items:center;gap:4px;background:rgba(91,106,240,.18);color:#818cf8;border:1px solid rgba(91,106,240,.35);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap; }
-  .client-tag .tag-remove { cursor:pointer;font-size:13px;line-height:1;opacity:.7; }
-  .client-tag .tag-remove:hover { opacity:1; }
-  .client-tag-input { flex:1;min-width:90px;background:transparent;border:none;outline:none;color:var(--text);font-size:12px;padding:2px 0; }
-  .client-tag-input::placeholder { color:var(--muted); }
-  .client-dropdown { position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4); }
-  .client-dropdown-item { padding:7px 12px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;gap:2px; }
-  .client-dropdown-item:hover { background:var(--card2); }
-  .client-dropdown-item .dd-name { color:var(--text);font-weight:500; }
-  .client-dropdown-item .dd-cnpj { color:var(--muted);font-size:10px; }
-  .client-dropdown-empty { padding:10px 12px;font-size:12px;color:var(--muted);text-align:center; }
+  .client-tag-wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex:1;min-width:180px;max-width:400px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:text;position:relative;}
+  .client-tag-wrap:focus-within{border-color:var(--accent);}
+  .client-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(91,106,240,.18);color:#818cf8;border:1px solid rgba(91,106,240,.35);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .client-tag .tag-remove{cursor:pointer;font-size:13px;line-height:1;opacity:.7;}
+  .client-tag .tag-remove:hover{opacity:1;}
+  .client-tag-input{flex:1;min-width:90px;background:transparent;border:none;outline:none;color:var(--text);font-size:12px;padding:2px 0;}
+  .client-tag-input::placeholder{color:var(--muted);}
+  .client-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .client-dropdown-item{padding:7px 12px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;}
+  .client-dropdown-item:hover{background:var(--card2);}
+  .client-dropdown-item .dd-name{color:var(--text);font-weight:500;}
+  .client-dropdown-item .dd-cnpj{color:var(--muted);font-size:10px;}
+  .client-dropdown-empty{padding:10px 12px;font-size:12px;color:var(--muted);text-align:center;}
 </style>
 </head>
 <body>
@@ -292,10 +292,10 @@ function togglePwd(){
 <!-- ===== CLIENTES ===== -->
 <div class="content" id="tab-clientes">
   <div class="kpi-grid">
-    <div class="kpi green"><div class="kpi-label">Clientes Ativos (Abr/26)</div><div class="kpi-value">525</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta down">↓ -6 vs Mar/26</div></div>
-    <div class="kpi amber"><div class="kpi-label">Em Risco 30–90d (Abr/26)</div><div class="kpi-value">24</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta down">↓ -3 vs Mar/26</div></div>
-    <div class="kpi red"><div class="kpi-label">Inativos +90d (Abr/26)</div><div class="kpi-value">462</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta down">↑ +19 vs Mar/26</div></div>
-    <div class="kpi cyan"><div class="kpi-label">Base Total (Abr/26)</div><div class="kpi-value">1.011</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta up">↑ +10 vs Mar/26</div></div>
+    <div class="kpi green"><div class="kpi-label">Clientes Ativos (Mai/26)</div><div class="kpi-value">480</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta down">↓ -6 vs Mar/26</div></div>
+    <div class="kpi amber"><div class="kpi-label">Em Risco 30–90d (Mai/26)</div><div class="kpi-value">65</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta down">↓ -3 vs Mar/26</div></div>
+    <div class="kpi red"><div class="kpi-label">Inativos +90d (Mai/26)</div><div class="kpi-value">491</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta down">↑ +19 vs Mar/26</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Base Total (Mai/26)</div><div class="kpi-value">1.036</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta up">↑ +10 vs Mar/26</div></div>
     <div class="kpi purple"><div class="kpi-label">Concentração da Base</div><div class="kpi-value">Bronze-PP</div><div class="kpi-sub">Segmento dominante</div><div class="kpi-pct amber">46,0% da base</div></div>
     <div class="kpi"><div class="kpi-label">Maior Segmento em Vol.</div><div class="kpi-value">Bronze-P</div><div class="kpi-sub">331 clientes (32,5%)</div><div class="kpi-pct blue">GMV R$ 1K–5K/mês</div></div>
   </div>
@@ -421,12 +421,12 @@ const recCateg = {
 const vtTxAdm     = [70139,72519,68966,65590,76706,87939,95730,83736,84447,72902,80050,71261,75213,71551,63917,78420,66891];
 const vtTxSucesso = [95057,81651,86064,90632,103373,101447,103863,101142,102075,100860,95338,112440,115227,111005,87580,115757,125285];
 const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225,405];
-const qtdClients  = [871, 904, 915, 927, 944, 949, 966, 975, 976, 989, 997, 1001, 1011, 1011];
-const qtdNew      = [39, 33, 11, 12, 17, 5, 17, 9, 1, 13, 8, 4, 10, 0];
+const qtdClients  = [781,801,832,871,904,915,927,944,949,966,975,976,989,997,1001,1011,1036];
+const qtdNew      = [9,20,31,39,33,11,12,17,5,17,9,1,13,8,4,10,25];
 // Ativos (≤30d), Em risco (30-90d), Inativos (+90d) — calculados da aba Clientes
-const qtdAtivos   = [601, 611, 576, 555, 564, 560, 560, 562, 548, 549, 540, 531, 525, 525];
-const qtdRisco    = [9, 14, 52, 73, 36, 15, 24, 23, 19, 22, 23, 27, 24, 24];
-const qtdInativos = [261, 279, 287, 299, 344, 374, 382, 390, 409, 418, 434, 443, 462, 462];
+const qtdAtivos   = [555,563,578,601,611,576,555,564,560,560,562,548,549,540,531,525,480];
+const qtdRisco    = [10,11,12,9,14,52,73,36,15,24,23,19,22,23,27,24,65];
+const qtdInativos = [216,227,242,261,279,287,299,344,374,382,390,409,418,434,443,462,491];
 const commTotal   = [519,643,1159,794,1036,1101,990,1625,2157,2481,1799,1603,1988,1944,1877,1842,429];
 const commKarine  = [109,479,551,618,481,1004,966,1579,2103,2107,1692,1603,1898,1928,1820,1791,390];
 const commCarol   = [0,0,0,0,0,10,24,46,54,374,107,0,0,0,0,0,0];
@@ -806,8 +806,8 @@ function applyRec(){
 
   // Status donut
   new Chart(document.getElementById('statusChart'),{
-    type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[525,24,462],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1011*100).toFixed(1)}%)`}}}}
+    type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[480,65,491],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1036*100).toFixed(1)}%)`}}}}
   });
 
   // Segmentação composição donut
@@ -829,13 +829,13 @@ function applyRec(){
 
   // Inatividade detail
   const inact=[
-    {label:'Ativos (≤30d)',cls:'ativo',qtd:525},
-    {label:'Em Risco (30–90d)',cls:'risco',qtd:24},
-    {label:'Inativos (+90d)',cls:'inativo',qtd:462},
+    {label:'Ativos (≤30d)',cls:'ativo',qtd:480},
+    {label:'Em Risco (30–90d)',cls:'risco',qtd:65},
+    {label:'Inativos (+90d)',cls:'inativo',qtd:491},
   ];
   const inactDiv=document.getElementById('inactiveTable');
   inact.forEach(s=>{
-    const pv=(s.qtd/1011*100).toFixed(1);
+    const pv=(s.qtd/1036*100).toFixed(1);
     inactDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
   });
 })();
@@ -1731,89 +1731,65 @@ function gmvArrow(cur,prev){
 
 
 // ===== Filtro Multi-Cliente =====
-let _selectedClients = [];
-
+let _selectedClients=[];
 function renderTags(){
-  const wrap = document.getElementById('clientTagWrap');
-  if(!wrap) return;
-  wrap.querySelectorAll('.client-tag').forEach(t => t.remove());
-  const input = document.getElementById('clientTagInput');
-  _selectedClients.forEach(c => {
-    const tag = document.createElement('span');
-    tag.className = 'client-tag';
-    const nome = c.empresa.length > 22 ? c.empresa.slice(0,21) + '…' : c.empresa;
-    tag.innerHTML = nome + ' <span class="tag-remove" onmousedown="removeClientTag(\'' + c.cnpj.replace(/'/g,"\\'") + '\');return false;">×</span>';
-    wrap.insertBefore(tag, input);
+  var wrap=document.getElementById('clientTagWrap');
+  if(!wrap)return;
+  wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
+  var input=document.getElementById('clientTagInput');
+  _selectedClients.forEach(function(c){
+    var tag=document.createElement('span');
+    tag.className='client-tag';
+    var nome=c.empresa.length>22?c.empresa.slice(0,21)+'…':c.empresa;
+    var cnpjEsc=c.cnpj.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    tag.innerHTML=nome+' <span class="tag-remove" onmousedown="removeClientTag(\''+cnpjEsc+'\');return false;">×</span>';
+    wrap.insertBefore(tag,input);
   });
   renderClientTable();
 }
-
-function removeClientTag(cnpj){
-  _selectedClients = _selectedClients.filter(c => c.cnpj !== cnpj);
+function removeClientTag(cnpj){_selectedClients=_selectedClients.filter(function(c){return c.cnpj!==cnpj;});renderTags();}
+function addClientTag(cnpj,empresa){
+  if(!_selectedClients.find(function(c){return c.cnpj===cnpj;})){_selectedClients.push({cnpj:cnpj,empresa:empresa});}
+  document.getElementById('clientTagInput').value='';
+  var dd=document.getElementById('clientDropdown');
+  if(dd)dd.style.display='none';
   renderTags();
 }
-
-function addClientTag(cnpj, empresa){
-  if(!_selectedClients.find(c => c.cnpj === cnpj)){
-    _selectedClients.push({cnpj, empresa});
-  }
-  document.getElementById('clientTagInput').value = '';
-  const dd = document.getElementById('clientDropdown');
-  if(dd) dd.style.display = 'none';
-  renderTags();
-}
-
-function onClientTagInput(){ showClientDropdown(); }
-
-let _ddTimer = null;
-function hideClientDropdown(){
-  _ddTimer = setTimeout(() => {
-    const dd = document.getElementById('clientDropdown');
-    if(dd) dd.style.display = 'none';
-  }, 200);
-}
+function onClientTagInput(){showClientDropdown();}
+var _ddTimer=null;
+function hideClientDropdown(){_ddTimer=setTimeout(function(){var dd=document.getElementById('clientDropdown');if(dd)dd.style.display='none';},200);}
 function showClientDropdown(){
-  if(_ddTimer){ clearTimeout(_ddTimer); _ddTimer = null; }
-  const q = (document.getElementById('clientTagInput')?.value || '').toLowerCase().trim();
-  const dd = document.getElementById('clientDropdown');
-  if(!dd) return;
-  const pool = (typeof clientGmvData !== 'undefined' ? clientGmvData : []);
-  const matches = pool
-    .filter(c => !_selectedClients.find(s => s.cnpj === c.cnpj))
-    .filter(c => !q || c.empresa.toLowerCase().includes(q) || c.cnpj.includes(q))
-    .slice(0, 30);
-  if(!q && matches.length === 0){ dd.style.display = 'none'; return; }
-  dd.innerHTML = matches.length === 0
-    ? '<div class="client-dropdown-empty">Nenhum cliente encontrado</div>'
-    : matches.map(c => {
-        const safe = c.empresa.replace(/'/g,"\'").replace(/"/g,'&quot;');
-        const cnpjSafe = c.cnpj.replace(/'/g,"\'");
-        return '<div class="client-dropdown-item" onmousedown="addClientTag(\'' + cnpjSafe + '\',\'' + safe + '\');return false;"><span class="dd-name">' + c.empresa + '</span><span class="dd-cnpj">' + c.cnpj + '</span></div>';
-      }).join('');
-  dd.style.display = 'block';
+  if(_ddTimer){clearTimeout(_ddTimer);_ddTimer=null;}
+  var q=(document.getElementById('clientTagInput')||{value:''}).value.toLowerCase().trim();
+  var dd=document.getElementById('clientDropdown');
+  if(!dd)return;
+  var pool=typeof clientGmvData!=='undefined'?clientGmvData:[];
+  var matches=pool.filter(function(c){return!_selectedClients.find(function(s){return s.cnpj===c.cnpj;});})
+    .filter(function(c){return!q||c.empresa.toLowerCase().includes(q)||c.cnpj.includes(q);}).slice(0,30);
+  if(!q&&matches.length===0){dd.style.display='none';return;}
+  if(matches.length===0){dd.innerHTML='<div class="client-dropdown-empty">Nenhum cliente encontrado</div>';}
+  else{dd.innerHTML=matches.map(function(c){
+    var safe=c.empresa.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    var cnpjS=c.cnpj.replace(/'/g,'&#39;');
+    return '<div class="client-dropdown-item" onmousedown="addClientTag(\''+cnpjS+'\',\''+safe+'\');return false;"><span class="dd-name">'+c.empresa+'</span><span class="dd-cnpj">'+c.cnpj+'</span></div>';
+  }).join('');}
+  dd.style.display='block';
 }
-
 function onClientTagKey(e){
-  if(e.key === 'Backspace' && !e.target.value && _selectedClients.length){
-    _selectedClients.pop(); renderTags();
-  }
-  if(e.key === 'Escape'){
-    const dd = document.getElementById('clientDropdown');
-    if(dd) dd.style.display = 'none';
-  }
+  if(e.key==='Backspace'&&!e.target.value&&_selectedClients.length){_selectedClients.pop();renderTags();}
+  if(e.key==='Escape'){var dd=document.getElementById('clientDropdown');if(dd)dd.style.display='none';}
 }
-
 function renderClientTable(){
   const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
   const seg=document.getElementById('clientSeg')?.value||'all';
   const origem=document.getElementById('clientOrigem')?.value||'all';
 
-    const multiSel=_selectedClients;
   let data=clientGmvData.filter(c=>{
     const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search);
     const matchSeg=seg==='all'||c.segmento===seg;
     const matchOrigem=origem==='all'||c.origem===origem;
-    return matchSearch&&matchSeg&&matchOrigem&&(multiSel.length===0||multiSel.some(s=>s.cnpj===c.cnpj));
+    var matchMulti=_selectedClients.length===0||_selectedClients.some(function(s){return s.cnpj===c.cnpj;});
+    return matchSearch&&matchSeg&&matchOrigem&&matchMulti;
   });
 
   document.getElementById('clientCount').textContent=data.length+' cliente'+(data.length!==1?'s':'')+' encontrado'+(data.length!==1?'s':'');
