@@ -111,6 +111,21 @@
   .search-input { background:var(--card2); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:7px; font-size:12px; outline:none; width:220px; }
   .search-input:focus { border-color:var(--accent); }
   .client-count { font-size:12px; color:var(--muted); margin-left:auto; }
+
+  /* Multi-client filter */
+  .client-tag-wrap { display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex:1;min-width:180px;max-width:400px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:text;position:relative; }
+  .client-tag-wrap:focus-within { border-color:var(--accent); }
+  .client-tag { display:inline-flex;align-items:center;gap:4px;background:rgba(91,106,240,.18);color:#818cf8;border:1px solid rgba(91,106,240,.35);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap; }
+  .client-tag .tag-remove { cursor:pointer;font-size:13px;line-height:1;opacity:.7; }
+  .client-tag .tag-remove:hover { opacity:1; }
+  .client-tag-input { flex:1;min-width:90px;background:transparent;border:none;outline:none;color:var(--text);font-size:12px;padding:2px 0; }
+  .client-tag-input::placeholder { color:var(--muted); }
+  .client-dropdown { position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4); }
+  .client-dropdown-item { padding:7px 12px;font-size:12px;cursor:pointer;display:flex;flex-direction:column;gap:2px; }
+  .client-dropdown-item:hover { background:var(--card2); }
+  .client-dropdown-item .dd-name { color:var(--text);font-weight:500; }
+  .client-dropdown-item .dd-cnpj { color:var(--muted);font-size:10px; }
+  .client-dropdown-empty { padding:10px 12px;font-size:12px;color:var(--muted);text-align:center; }
 </style>
 </head>
 <body>
@@ -347,6 +362,12 @@ function togglePwd(){
   <div class="filter-bar">
     <label>🔍 Buscar:</label>
     <input class="search-input" id="clientSearch" placeholder="Nome ou CNPJ..." oninput="renderClientTable()">
+    <label style="margin-left:8px;">🏢 Clientes:</label>
+    <div class="client-tag-wrap" id="clientTagWrap" onclick="document.getElementById('clientTagInput').focus()">
+      <input class="client-tag-input" id="clientTagInput" placeholder="Adicionar cliente..." autocomplete="off"
+        oninput="onClientTagInput()" onkeydown="onClientTagKey(event)" onfocus="showClientDropdown()" onblur="hideClientDropdown()">
+      <div class="client-dropdown" id="clientDropdown" style="display:none;"></div>
+    </div>
     <label style="margin-left:8px;">🏷️ Segmento:</label>
     <select id="clientSeg" onchange="renderClientTable()">
       <option value="all">Todos</option>
@@ -1708,16 +1729,91 @@ function gmvArrow(cur,prev){
   return `<span class="gmv-arrow ${up?'arrow-up':'arrow-down'}">${up?'↑':'↓'} ${Math.abs(pct).toFixed(1)}%</span>`;
 }
 
+
+// ===== Filtro Multi-Cliente =====
+let _selectedClients = [];
+
+function renderTags(){
+  const wrap = document.getElementById('clientTagWrap');
+  if(!wrap) return;
+  wrap.querySelectorAll('.client-tag').forEach(t => t.remove());
+  const input = document.getElementById('clientTagInput');
+  _selectedClients.forEach(c => {
+    const tag = document.createElement('span');
+    tag.className = 'client-tag';
+    const nome = c.empresa.length > 22 ? c.empresa.slice(0,21) + '…' : c.empresa;
+    tag.innerHTML = nome + ' <span class="tag-remove" onmousedown="removeClientTag(\'' + c.cnpj.replace(/'/g,"\\'") + '\');return false;">×</span>';
+    wrap.insertBefore(tag, input);
+  });
+  renderClientTable();
+}
+
+function removeClientTag(cnpj){
+  _selectedClients = _selectedClients.filter(c => c.cnpj !== cnpj);
+  renderTags();
+}
+
+function addClientTag(cnpj, empresa){
+  if(!_selectedClients.find(c => c.cnpj === cnpj)){
+    _selectedClients.push({cnpj, empresa});
+  }
+  document.getElementById('clientTagInput').value = '';
+  const dd = document.getElementById('clientDropdown');
+  if(dd) dd.style.display = 'none';
+  renderTags();
+}
+
+function onClientTagInput(){ showClientDropdown(); }
+
+let _ddTimer = null;
+function hideClientDropdown(){
+  _ddTimer = setTimeout(() => {
+    const dd = document.getElementById('clientDropdown');
+    if(dd) dd.style.display = 'none';
+  }, 200);
+}
+function showClientDropdown(){
+  if(_ddTimer){ clearTimeout(_ddTimer); _ddTimer = null; }
+  const q = (document.getElementById('clientTagInput')?.value || '').toLowerCase().trim();
+  const dd = document.getElementById('clientDropdown');
+  if(!dd) return;
+  const pool = (typeof clientGmvData !== 'undefined' ? clientGmvData : []);
+  const matches = pool
+    .filter(c => !_selectedClients.find(s => s.cnpj === c.cnpj))
+    .filter(c => !q || c.empresa.toLowerCase().includes(q) || c.cnpj.includes(q))
+    .slice(0, 30);
+  if(!q && matches.length === 0){ dd.style.display = 'none'; return; }
+  dd.innerHTML = matches.length === 0
+    ? '<div class="client-dropdown-empty">Nenhum cliente encontrado</div>'
+    : matches.map(c => {
+        const safe = c.empresa.replace(/'/g,"\'").replace(/"/g,'&quot;');
+        const cnpjSafe = c.cnpj.replace(/'/g,"\'");
+        return '<div class="client-dropdown-item" onmousedown="addClientTag(\'' + cnpjSafe + '\',\'' + safe + '\');return false;"><span class="dd-name">' + c.empresa + '</span><span class="dd-cnpj">' + c.cnpj + '</span></div>';
+      }).join('');
+  dd.style.display = 'block';
+}
+
+function onClientTagKey(e){
+  if(e.key === 'Backspace' && !e.target.value && _selectedClients.length){
+    _selectedClients.pop(); renderTags();
+  }
+  if(e.key === 'Escape'){
+    const dd = document.getElementById('clientDropdown');
+    if(dd) dd.style.display = 'none';
+  }
+}
+
 function renderClientTable(){
   const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
   const seg=document.getElementById('clientSeg')?.value||'all';
   const origem=document.getElementById('clientOrigem')?.value||'all';
 
+    const multiSel=_selectedClients;
   let data=clientGmvData.filter(c=>{
     const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search);
     const matchSeg=seg==='all'||c.segmento===seg;
     const matchOrigem=origem==='all'||c.origem===origem;
-    return matchSearch&&matchSeg&&matchOrigem;
+    return matchSearch&&matchSeg&&matchOrigem&&(multiSel.length===0||multiSel.some(s=>s.cnpj===c.cnpj));
   });
 
   document.getElementById('clientCount').textContent=data.length+' cliente'+(data.length!==1?'s':'')+' encontrado'+(data.length!==1?'s':'');
