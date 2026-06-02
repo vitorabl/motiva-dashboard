@@ -491,7 +491,6 @@ let cGmvLine,cTakeRate,cVtBreak,cReceita;
 (function(){
   const sf=document.getElementById('gFrom'), st=document.getElementById('gTo');
   months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
-  st.value=months.length-1;
 })();
 
 function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=lastDataIdx;applyGmv();}
@@ -670,7 +669,6 @@ let cRecLine, cMargem, cRecPie;
 (function(){
   const sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
   months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
-  st.value=months.length-1;
 })();
 function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=lastDataIdx;applyRec();}
 
@@ -762,7 +760,7 @@ function applyRec(){
       scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v+'%'}}}}
   });
 
-  const lastI=months.length-1;
+  const lastI=lastDataIdx;
   const categKeys=Object.keys(recCateg);
   const categColors=[C.blue,C.cyan,C.green,C.amber,C.orange,C.purple];
   cRecPie=new Chart(document.getElementById('recPieChart'),{
@@ -863,15 +861,14 @@ const commSellers={
   'Pedro':   {data:commPedro,   color:C.slate,  status:'Desligado'},
 };
 const commSellerNames=Object.keys(commSellers);
-let cFrom_c=0,cTo_c=months.length-1;
+let cFrom_c=0,cTo_c=lastDataIdx;
 let cCommLine,cCommBar;
 
 (function(){
   const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
   months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
-  st.value=months.length-1;
 })();
-function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=months.length-1;document.getElementById('cVendor').value='all';applyComm();}
+function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
 
 function applyComm(){
   cFrom_c=parseInt(document.getElementById('cFrom').value);
