@@ -483,16 +483,15 @@ function showTab(name,e){
 // ===================== GMV TAB =====================
 const trVT_all  = months.map((_,i)=>parseFloat(pctVal(recVT[i],gmvVT[i]).toFixed(2)));
 const trPAT_all = months.map((_,i)=>parseFloat(pctVal(recPAT[i],gmvPAT[i]).toFixed(2)));
-let gFrom=0, gTo=0; // set after lastDataIdx computed
+let gFrom=0, gTo=lastDataIdx;
 let cGmvLine,cTakeRate,cVtBreak,cReceita;
 
 (function(){
   const sf=document.getElementById('gFrom'), st=document.getElementById('gTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
   st.value=months.length-1;
 })();
 
-document.addEventListener('DOMContentLoaded',function(){gTo=lastDataIdx;rTo=lastDataIdx;if(document.getElementById('gTo'))document.getElementById('gTo').value=lastDataIdx;if(document.getElementById('rTo'))document.getElementById('rTo').value=lastDataIdx;applyGmv();applyRec();});
 function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=lastDataIdx;applyGmv();}
 
 function applyGmv(){
@@ -663,12 +662,12 @@ function applyGmv(){
 })();
 
 // ===================== RECEITAS TAB =====================
-let rFrom=0, rTo=0; // set after lastDataIdx computed
+let rFrom=0, rTo=lastDataIdx;
 let cRecLine, cMargem, cRecPie;
 
 (function(){
   const sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
   st.value=months.length-1;
 })();
 function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=lastDataIdx;applyRec();}
@@ -867,7 +866,7 @@ let cCommLine,cCommBar;
 
 (function(){
   const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
   st.value=months.length-1;
 })();
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=months.length-1;document.getElementById('cVendor').value='all';applyComm();}
