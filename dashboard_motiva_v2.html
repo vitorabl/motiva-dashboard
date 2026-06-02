@@ -407,9 +407,10 @@ const recVT    = [147205,136732,134127,145838,168761,176601,196652,173817,175614
 const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,0,0,0,0,0,0,0,0];
 
 // Last month index with any data
-const lastDataIdx = (()=>{for(let i=months.length-1;i>=0;i--){if(gmvVT[i]||gmvPAT[i]||financiamento[i])return i;}return months.length-1;})();
 
 const financiamento = [9626,9421,8752,9784,11124,11748,19660,10094,9510,9591,8312,9610,8622,8685,8450,12319,22118,0,0,0,0,0,0,0];
+const lastDataIdx = (()=>{for(let i=months.length-1;i>=0;i--){if(gmvVT[i]||gmvPAT[i]||financiamento[i])return i;}return months.length-1;})();
+
 const recTotal = recVT.map((v,i)=>v+recPAT[i]);
 // NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
 const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,162099,133960,177956,195508,4982,0,0,0,0,0,0];
