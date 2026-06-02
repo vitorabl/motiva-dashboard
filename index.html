@@ -489,15 +489,26 @@ let gFrom=0, gTo=lastDataIdx;
 let cGmvLine,cTakeRate,cVtBreak,cReceita;
 
 (function(){
-  const sf=document.getElementById('gFrom'), st=document.getElementById('gTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
+  var sf=document.getElementById('gFrom'),st=document.getElementById('gTo');
+  if(!sf||!st) return;
+  sf.innerHTML=''; st.innerHTML='';
+  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
+  for(var i=0;i<=ldi;i++){
+    sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;
+    st.innerHTML+=`<option value="${i}">${months[i]}</option>`;
+  }
+  sf.value=0; st.value=ldi;
+  gFrom=0; gTo=ldi;
 })();
 
 function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=lastDataIdx;applyGmv();}
 
 function applyGmv(){
-  gFrom=parseInt(document.getElementById('gFrom').value);
-  gTo=parseInt(document.getElementById('gTo').value);
+  var _gf=parseInt(document.getElementById('gFrom')?.value||'0');
+  var _gt=parseInt(document.getElementById('gTo')?.value||String(lastDataIdx));
+  if(isNaN(_gf)) _gf=0;
+  if(isNaN(_gt)) _gt=lastDataIdx;
+  gFrom=_gf; gTo=_gt;
   if(gFrom>gTo){gTo=gFrom;document.getElementById('gTo').value=gTo;}
   const fl=a=>a.slice(gFrom,gTo+1);
   const fm=fl(months),fvt=fl(gmvVT),fpat=fl(gmvPAT),ftot=fl(gmvTotal);
@@ -667,14 +678,24 @@ let rFrom=0, rTo=lastDataIdx;
 let cRecLine, cMargem, cRecPie;
 
 (function(){
-  const sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
+  var sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
+  if(!sf||!st) return;
+  sf.innerHTML=''; st.innerHTML='';
+  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
+  for(var i=0;i<=ldi;i++){
+    sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;
+    st.innerHTML+=`<option value="${i}">${months[i]}</option>`;
+  }
+  sf.value=0; st.value=ldi;
+  rFrom=0; rTo=ldi;
 })();
 function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=lastDataIdx;applyRec();}
 
 function applyRec(){
-  rFrom=parseInt(document.getElementById('rFrom').value);
-  rTo=parseInt(document.getElementById('rTo').value);
+  var _rf=parseInt(document.getElementById('rFrom')?.value||'0');
+  var _rt=parseInt(document.getElementById('rTo')?.value||String(lastDataIdx));
+  if(isNaN(_rf)) _rf=0; if(isNaN(_rt)) _rt=lastDataIdx;
+  rFrom=_rf; rTo=_rt;
   if(rFrom>rTo){rTo=rFrom;document.getElementById('rTo').value=rTo;}
   const fl=a=>a.slice(rFrom,rTo+1);
   const fm=fl(months),fvt=fl(recVT),fpat=fl(recPAT),ftot=fl(recTotal),fgmv=fl(gmvTotal);
@@ -866,7 +887,10 @@ let cCommLine,cCommBar;
 
 (function(){
   const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
-  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});st.value=lastDataIdx;
+  sf.innerHTML='';st.innerHTML='';
+  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
+  for(var i=0;i<=ldi;i++){sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;st.innerHTML+=`<option value="${i}">${months[i]}</option>`;}
+  sf.value=0; st.value=ldi; cFrom_c=0; cTo_c=ldi;st.value=lastDataIdx;
 })();
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
 
