@@ -273,7 +273,7 @@ function togglePwd(){
     <button class="filter-btn" onclick="resetRec()">Limpar</button>
   </div>
   <div class="kpi-grid">
-    <div class="kpi green"><div class="kpi-label" id="r-tot-lbl">Receita Total</div><div class="kpi-value" id="r-tot-val">—</div><div class="kpi-sub">VT + PAT</div><div class="kpi-delta" id="r-tot-d"></div></div>
+    <div class="kpi green"><div class="kpi-label" id="r-tot-lbl">Receita Total</div><div class="kpi-value" id="r-tot-val">—</div><div class="kpi-sub">VT + PAT + Fin.</div><div class="kpi-delta" id="r-tot-d"></div></div>
     <div class="kpi"><div class="kpi-label" id="r-vt-lbl">Receita VT</div><div class="kpi-value" id="r-vt-val">—</div><div class="kpi-sub">Taxa adm + operação</div><div class="kpi-delta" id="r-vt-d"></div></div>
     <div class="kpi cyan"><div class="kpi-label" id="r-pat-lbl">Receita PAT</div><div class="kpi-value" id="r-pat-val">—</div><div class="kpi-sub">Alimentação</div><div class="kpi-delta" id="r-pat-d"></div></div>
     <div class="kpi amber"><div class="kpi-label" id="r-fin-lbl">Financiamento</div><div class="kpi-value" id="r-fin-val">—</div><div class="kpi-sub">Receita do mês</div><div class="kpi-delta" id="r-fin-d"></div></div>
@@ -404,6 +404,10 @@ const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,742948
 const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,11507454,11347241,10922683,11445161,11198315,11866217,12765837,11083520,16299150,4570791,112195,0,0,0,0,0,0];
 const recVT    = [147205,136732,134127,145838,168761,176601,196652,173817,175614,167198,167472,178131,184423,176847,148608,197184,224105,4982,0,0,0,0,0,0];
 const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,0,0,0,0,0,0,0,0];
+
+// Last month index with any data
+const lastDataIdx = (()=>{for(let i=months.length-1;i>=0;i--){if(gmvVT[i]||gmvPAT[i]||financiamento[i])return i;}return months.length-1;})();
+
 const financiamento = [9626,9421,8752,9784,11124,11748,19660,10094,9510,9591,8312,9610,8622,8685,8450,12319,22118,0,0,0,0,0,0,0];
 const recTotal = recVT.map((v,i)=>v+recPAT[i]);
 // NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
@@ -479,15 +483,17 @@ function showTab(name,e){
 // ===================== GMV TAB =====================
 const trVT_all  = months.map((_,i)=>parseFloat(pctVal(recVT[i],gmvVT[i]).toFixed(2)));
 const trPAT_all = months.map((_,i)=>parseFloat(pctVal(recPAT[i],gmvPAT[i]).toFixed(2)));
-let gFrom=0, gTo=months.length-1;
+let gFrom=0, gTo=0; // set after lastDataIdx computed
 let cGmvLine,cTakeRate,cVtBreak,cReceita;
 
 (function(){
   const sf=document.getElementById('gFrom'), st=document.getElementById('gTo');
-  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
   st.value=months.length-1;
 })();
-function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=months.length-1;applyGmv();}
+
+document.addEventListener('DOMContentLoaded',function(){gTo=lastDataIdx;rTo=lastDataIdx;if(document.getElementById('gTo'))document.getElementById('gTo').value=lastDataIdx;if(document.getElementById('rTo'))document.getElementById('rTo').value=lastDataIdx;applyGmv();applyRec();});
+function resetGmv(){document.getElementById('gFrom').value=0;document.getElementById('gTo').value=lastDataIdx;applyGmv();}
 
 function applyGmv(){
   gFrom=parseInt(document.getElementById('gFrom').value);
@@ -564,10 +570,10 @@ function applyGmv(){
   const tb=document.getElementById('gmvTbody'); tb.innerHTML='';
   fm.forEach((m,fi)=>{
     const gi=gFrom+fi;
-    const pVT=(gmvVT[gi]/gmvTotal[gi]*100).toFixed(1),pPAT=(gmvPAT[gi]/gmvTotal[gi]*100).toFixed(1);
+    const _tot=gmvTotal[gi]||gmvVT[gi]+gmvPAT[gi];const pVT=(_tot?gmvVT[gi]/_tot*100:0).toFixed(1),pPAT=(_tot?gmvPAT[gi]/_tot*100:0).toFixed(1);
     const trV=(recVT[gi]/gmvVT[gi]*100).toFixed(2),trP=(recPAT[gi]/gmvPAT[gi]*100).toFixed(2);
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${m}</strong></td><td>${fmt(gmvVT[gi])}</td><td style="color:#818cf8;font-weight:600;">${pVT}%</td><td>${fmt(gmvPAT[gi])}</td><td style="color:#22d3ee;font-weight:600;">${pPAT}%</td><td>${fmt(gmvTotal[gi])}</td><td style="color:#818cf8;font-weight:600;">${trV}%</td><td style="color:#22d3ee;font-weight:600;">${trP}%</td>`;
+    row.innerHTML=`<td><strong>${m}</strong></td><td>${fmt(gmvVT[gi])}</td><td style="color:#818cf8;font-weight:600;">${pVT}%</td><td>${fmt(gmvPAT[gi])}</td><td style="color:#22d3ee;font-weight:600;">${pPAT}%</td><td>${fmt(gmvTotal[gi]||gmvVT[gi]+gmvPAT[gi])}</td><td style="color:#818cf8;font-weight:600;">${trV}%</td><td style="color:#22d3ee;font-weight:600;">${trP}%</td>`;
     tb.appendChild(row);
   });
 }
@@ -657,15 +663,15 @@ function applyGmv(){
 })();
 
 // ===================== RECEITAS TAB =====================
-let rFrom=0, rTo=months.length-1;
+let rFrom=0, rTo=0; // set after lastDataIdx computed
 let cRecLine, cMargem, cRecPie;
 
 (function(){
   const sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
-  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
   st.value=months.length-1;
 })();
-function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=months.length-1;applyRec();}
+function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=lastDataIdx;applyRec();}
 
 function applyRec(){
   rFrom=parseInt(document.getElementById('rFrom').value);
@@ -677,8 +683,8 @@ function applyRec(){
 
   // KPIs
   document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
-  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
-  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
+  document.getElementById('r-tot-val').textContent=fmt(recTotal[li]+(financiamento[li]||0),true);
+  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li]+(financiamento[li]||0),recTotal[pi]+(financiamento[pi]||0),pm);
   document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
   document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
   document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
@@ -861,7 +867,7 @@ let cCommLine,cCommBar;
 
 (function(){
   const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
-  months.forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
+  months.slice(0,lastDataIdx+1).forEach((m,i)=>{sf.innerHTML+=`<option value="${i}">${m}</option>`;st.innerHTML+=`<option value="${i}">${m}</option>`;});
   st.value=months.length-1;
 })();
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=months.length-1;document.getElementById('cVendor').value='all';applyComm();}
@@ -3097,6 +3103,39 @@ window.showTab = function(name,e){
       </table>
     </div>
   </div>
+</div>
+
+
+<!-- ===== DOWNLOADS ===== -->
+<div class="content" id="tab-downloads">
+  <div style="margin-bottom:24px;">
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Arquivos Excel com todos os registros. Clique para baixar diretamente.</p>
+  </div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));">
+    <div class="kpi" style="padding:28px;">
+      <div class="kpi-label">📦 Pedido de Carga Completo (VT)</div>
+      <div class="kpi-value" style="font-size:18px;margin:12px 0;">48.492 registros</div>
+      <div class="kpi-sub" style="margin-bottom:16px;">Código, Empresa, CNPJ, Data, Mês, Operadora, Valor Recarga, Taxas, NF, Vendedor</div>
+      <a href="data/pedidos_vt.xlsx" download="pedidos_vt.xlsx"
+        style="display:inline-block;background:var(--accent);color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+        ⬇️ Baixar Excel
+      </a>
+    </div>
+    <div class="kpi green" style="padding:28px;">
+      <div class="kpi-label">🥗 Pedido Externo (PAT)</div>
+      <div class="kpi-value" style="font-size:18px;margin:12px 0;">1.672 registros</div>
+      <div class="kpi-sub" style="margin-bottom:16px;">Pedido, Cliente, CNPJ, Operadora, Data, Mês, Valor Recarga, Taxas, NF, BaseSK, Vendedor</div>
+      <a href="data/pedidos_pat.xlsx" download="pedidos_pat.xlsx"
+        style="display:inline-block;background:#10b981;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+        ⬇️ Baixar Excel
+      </a>
+    </div>
+  </div>
+  <div class="info-note" style="margin-top:20px;">
+    ℹ️ Os arquivos são atualizados automaticamente a cada execução diária do dashboard.
+    <br>Última atualização dos dados: <strong id="dl-date"></strong>
+  </div>
+  <script>document.getElementById('dl-date').textContent=new Date().toLocaleDateString('pt-BR');</script>
 </div>
 
 </body>
