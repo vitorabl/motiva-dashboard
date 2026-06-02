@@ -1820,6 +1820,7 @@ function renderClientTable(){
     '<th class="col-fix col-top th">Maior GMV</th>'+
     '<th>Origem</th>'+
     months.map(m=>`<th style="text-align:right;">${m}</th>`).join('')+
+    '<th style="text-align:right;font-weight:700;color:#f59e0b;">Total</th>'+
   '</tr>';
 
   // Corpo
@@ -1827,7 +1828,7 @@ function renderClientTable(){
   tbody.innerHTML='';
 
   if(data.length===0){
-    tbody.innerHTML=`<tr><td colspan="${7+months.length}" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="${8+months.length}" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>`;
     return;
   }
 
@@ -1852,6 +1853,8 @@ function renderClientTable(){
       const color=val===0?'#475569':prev===null||val>=prev?'#e2e8f0':'#94a3b8';
       cells+=`<td style="text-align:right;"><span class="gmv-val" style="color:${color};">${fmtGmv(val)}</span>${arrow}</td>`;
     });
+    const totalGmv=c.gmv.reduce((a,b)=>a+(b||0),0);
+    cells+=`<td style="text-align:right;font-weight:700;color:#f59e0b;border-left:1px solid #2a2f45;">${fmtGmv(totalGmv)}</td>`;
 
     tr.innerHTML=cells;
     tbody.appendChild(tr);
