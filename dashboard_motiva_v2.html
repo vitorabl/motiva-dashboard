@@ -17258,10 +17258,16 @@ var _ccDdTimer=null;
   var sel=document.getElementById('ccMes');
   if(!sel||typeof _CC_MESES==='undefined') return;
   _CC_MESES.forEach(function(m,i){ var o=document.createElement('option'); o.value=i; o.textContent=m; sel.appendChild(o); });
-  // Selecionar último mês com dados
-  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:_CC_MESES.length-1;
-  sel.value=Math.min(ldi,_CC_MESES.length-1);
-})();
+  var defaultIdx=_CC_MESES.length-1;
+  if(typeof months!=='undefined'&&typeof lastDataIdx!=='undefined'){
+    var mesLabel=months[lastDataIdx]||'';
+    var found=_CC_MESES.indexOf(mesLabel);
+    if(found>=0) defaultIdx=found;
+  }
+  sel.value=defaultIdx;
+  renderCC();
+}
+initCC();
 
 function resetCC(){
   _ccSelectedEmps=[];
