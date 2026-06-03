@@ -12260,7 +12260,7 @@ function renderCC(){
       borderColor:colors, borderWidth:2, borderRadius:6
     });
     var fmtTip=function(v){return v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':'R$ '+v.toFixed(2);};
-    var fmtBar=function(v){return v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'K':'R$'+v.toFixed(0);};
+    var fmtBar=function(v){return v>=1e6?'R$'+(v/1e6).toFixed(2)+'M':v>=1e3?'R$'+(v/1e3).toFixed(1)+'K':'R$'+v.toFixed(2);};
     canvas._ccChart=new Chart(canvas,{
       type:'bar', data:{labels:lbls, datasets:datasets},
       options:{responsive:true, maintainAspectRatio:false,
@@ -12388,5 +12388,5 @@ setTimeout(initCC, 100);
 
 </script>
 </body>
-<!-- deploy 20260603193546 -->
+<!-- deploy 20260603194419 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
