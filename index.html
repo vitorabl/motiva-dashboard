@@ -254,7 +254,7 @@ function togglePwd(){
     <div class="kpi amber"><div class="kpi-label" id="g-fin-lbl">Financiamento</div><div class="kpi-value" id="g-fin-val">—</div><div class="kpi-sub">Receita do mês</div><div class="kpi-delta" id="g-fin-d"></div></div>
     <div class="kpi purple"><div class="kpi-label">YoY — GMV</div><div class="kpi-value" id="g-yoy-val">—</div><div class="kpi-sub" id="g-yoy-sub"></div><div class="kpi-yoy"><span id="g-yoy-vt"></span><span id="g-yoy-pat"></span></div></div>
   </div>
-  <div class="info-note">ℹ️ <strong>Nota:</strong> Pedidos "SEM SK" do Pedido Externo excluídos do GMV PAT — já contabilizados no GMV VT via Pedido de Carga Completo.</div>
+  <div class="info-note">ℹ️ <strong>Nota:</strong> Pedido Externo — pedidos <strong>Sem SK</strong>: GMV VT incluso (pedidos VT externos). Pedidos com <strong>número BaseSK</strong>: GMV já no PCC, apenas receita e comissão considerados.</div>
   <div class="chart-grid full"><div class="chart-card"><h3>GMV Mensal — VT vs PAT</h3><p class="chart-sub">Evolução mês a mês em R$ milhões</p><div class="chart-wrap"><canvas id="gmvLineChart"></canvas></div></div></div>
   <div class="chart-grid full"><div class="chart-card"><h3>Composição do GMV por TIPO — Take Rate (%)</h3><p class="chart-sub">Taxa sobre o valor total de VT e PAT · Receita ÷ GMV</p><div class="chart-wrap"><canvas id="takeRateLineChart"></canvas></div></div></div>
   <div class="chart-grid">
@@ -285,7 +285,7 @@ function togglePwd(){
     <div class="chart-card"><h3>Margem sobre GMV (%)</h3><p class="chart-sub">Receita ÷ GMV por mês</p><div class="chart-wrap"><canvas id="margemChart"></canvas></div></div>
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
-  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#5b6af0;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega VT</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#818cf8;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega (2° Via)</th><th style="color:#f97316;">Financiamento</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
 </div>
 
 <!-- ===== CLIENTES ===== -->
@@ -703,11 +703,12 @@ function applyRec(){
 
   // KPIs
   document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
-  document.getElementById('r-tot-val').textContent=fmt(recTotal[li]+(financiamento[li]||0),true);
-  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li]+(financiamento[li]||0),recTotal[pi]+(financiamento[pi]||0),pm);
+  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
+  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
   document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
-  document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
-  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
+  const recVT_sf=li=>recVT[li]-(financiamento[li]||0);
+  document.getElementById('r-vt-val').textContent=fmt(recVT_sf(li),true);
+  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT_sf(li),recVT_sf(pi),pm);
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
   document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
   document.getElementById('r-pat-d').innerHTML=deltaMoM(recPAT[li],recPAT[pi],pm);
@@ -757,7 +758,7 @@ function applyRec(){
     const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
     const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
     tb.appendChild(row);
   });
 }
@@ -948,13 +949,16 @@ function applyComm(){
 
   // Tabela resumo
   const tb=document.querySelector('#commTable tbody');tb.innerHTML='';
+  let sumAcc=0,sumLast=0;
   sorted.forEach(s=>{
     const lastVal=commSellers[s.name].data[li];
+    sumAcc+=s.total; sumLast+=lastVal;
     const cls=s.status==='Ativo'?'ativo':'inativo';
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td><td>R$ ${lastVal.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td>`;
+    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toFixed(2)}</td><td>R$ ${lastVal.toFixed(2)}</td>`;
     tb.appendChild(row);
   });
+  if(sorted.length>1){const tot=document.createElement('tr');tot.style.cssText='border-top:2px solid #334155;background:#1e2433;font-weight:700;';tot.innerHTML=`<td colspan="2"><strong>TOTAL</strong></td><td>R$ ${sumAcc.toFixed(2)}</td><td>R$ ${sumLast.toFixed(2)}</td>`;tb.appendChild(tot);}
 
 }
 
@@ -2852,49 +2856,35 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
     return;
   }
 
-  const companies = VD[vendor] || [];
-  const visMonths = months.slice(fromIdx, toIdx+1);
-
-  // Calcular totais no período selecionado
-  // Estrutura VD: [empresa, cnpj, [gmv_array], [rec_array], [comm_array]]
-  const rows = companies.map(c => {
-    const gmvArr  = Array.isArray(c[2]) ? c[2] : [];
-    const recArr  = Array.isArray(c[3]) ? c[3] : [];
-    const commArr = Array.isArray(c[4]) ? c[4] : [];
-    const gmv   = gmvArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    const rec   = recArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-        const comm  = commArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    return {empresa:c[0], cnpj:c[1], gmv, rec, comm};
-  }).filter(r => r.gmv > 0 || r.comm > 0)
-    .sort((a,b) => b.gmv - a.gmv);
-
-  title.innerHTML = '<span>📋 Empresas de '+vendor+' — '+months[fromIdx]+' a '+months[toIdx]+'</span><button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">&#11015; Exportar CSV</button>';
-  section.style.display = 'block';
-
-  const note = section.querySelector('.info-note');
+  // Mostrar seção imediatamente
+  section.style.display='block';
+  const note=section.querySelector('.info-note');
   if(note) note.style.display='none';
+  title.innerHTML='<span>📋 Pedidos de <strong>'+vendor+'</strong> — '+months[fromIdx]+' a '+months[toIdx]+'</span>'+
+    '<button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">&#11015; Exportar CSV</button>';
 
-  const fmtV = v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M'
-                  : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'K'
-                  : v > 0    ? 'R$ '+v.toFixed(0)
-                  : '—';
-
-  window._lastCommRows   = rows;
-  window._lastCommVendor = vendor;
-  window._lastCommPeriod = months[fromIdx]+' a '+months[toIdx];
-
-  body.innerHTML = rows.map(r => `
-    <tr>
-      <td><strong>${r.empresa}</strong></td>
-      <td style="color:#64748b;font-size:11px;">${r.cnpj||'—'}</td>
-      <td style="text-align:right;">${fmtV(r.gmv)}</td>
-      <td style="text-align:right;">${fmtV(r.rec)}</td>
-      <td style="text-align:right;color:#fbbf24;">${r.comm > 0 ? 'R$ '+r.comm.toFixed(2) : '—'}</td>
-    </tr>`).join('');
-
-  if(rows.length === 0){
-    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos no período</td></tr>';
+  try {
+  const companies = (typeof VD!=='undefined'&&VD[vendor])?VD[vendor]:[];
+  if(!companies.length){
+    body.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem dados para '+vendor+'</td></tr>';
+    return;
   }
+  const rows=companies.map(c=>{
+    const gmvArr=Array.isArray(c[2])?c[2]:[];
+    const recArr=Array.isArray(c[3])?c[3]:[];
+    const commArr=Array.isArray(c[4])?c[4]:[];
+    const gmv=gmvArr.slice(fromIdx,toIdx+1).reduce((a,b)=>a+b,0);
+    const rec=recArr.slice(fromIdx,toIdx+1).reduce((a,b)=>a+b,0);
+    const comm=commArr.slice(fromIdx,toIdx+1).reduce((a,b)=>a+b,0);
+    return{empresa:c[0],cnpj:c[1],gmv,rec,comm};
+  }).filter(r=>r.gmv>0||r.comm>0).sort((a,b)=>b.comm-a.comm||b.gmv-a.gmv);
+  window._lastCommRows=rows; window._lastCommVendor=vendor; window._lastCommPeriod=months[fromIdx]+' a '+months[toIdx];
+  const fmtV=v=>v>=1e6?'R$ '+(v/1e6).toFixed(1)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(0)+'K':v>0?'R$ '+v.toFixed(0):'—';
+  const totGmv=rows.reduce((s,r)=>s+r.gmv,0),totRec=rows.reduce((s,r)=>s+r.rec,0),totComm=rows.reduce((s,r)=>s+r.comm,0);
+  body.innerHTML=rows.map(r=>'<tr><td><strong>'+r.empresa+'</strong></td><td style="color:#64748b;font-size:11px;">'+(r.cnpj||'—')+'</td><td style="text-align:right;">'+fmtV(r.gmv)+'</td><td style="text-align:right;">'+fmtV(r.rec)+'</td><td style="text-align:right;color:#fbbf24;font-weight:600;">'+(r.comm>0?'R$ '+r.comm.toFixed(2):'—')+'</td></tr>').join('')+
+    '<tr style="border-top:2px solid #334155;background:#1e2433;"><td colspan="2"><strong>TOTAL ('+rows.length+' empresas)</strong></td><td style="text-align:right;font-weight:700;">'+fmtV(totGmv)+'</td><td style="text-align:right;font-weight:700;">'+fmtV(totRec)+'</td><td style="text-align:right;color:#fbbf24;font-weight:700;">R$ '+totComm.toFixed(2)+'</td></tr>';
+  if(rows.length===0) body.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos no período</td></tr>';
+  } catch(err){ body.innerHTML='<tr><td colspan="5" style="color:#f87171;padding:20px;">Erro: '+err.message+'</td></tr>'; }
 }
 
 // Exportar comissoes
