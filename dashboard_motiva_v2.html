@@ -2789,12 +2789,17 @@ function renderClientTable(){
   const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
   const seg=document.getElementById('clientSeg')?.value||'all';
   const origem=document.getElementById('clientOrigem')?.value||'all';
-  const compDir=document.getElementById('clientCompDir')?.value||'all';
-  const baseIdxVal=document.getElementById('clientMesBase')?.value;
-  const compIdxVal=document.getElementById('clientMesComp')?.value;
-  const baseIdx=baseIdxVal!==undefined&&baseIdxVal!==''?parseInt(baseIdxVal):lastDataIdx;
-  const compIdx=compIdxVal!==undefined?parseInt(compIdxVal):-1;
-  const hasComp=compIdx>=0&&compIdx!==baseIdx;
+
+  // Filtros de comparacao -- com fallback seguro
+  var selBase=document.getElementById('clientMesBase');
+  var selComp=document.getElementById('clientMesComp');
+  var compDirEl=document.getElementById('clientCompDir');
+  var compDir=compDirEl?compDirEl.value:'all';
+  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
+  var baseIdx=selBase&&selBase.value!==''&&!isNaN(parseInt(selBase.value))?parseInt(selBase.value):ldi;
+  var compIdxRaw=selComp&&selComp.value!==''?parseInt(selComp.value):-1;
+  var compIdx=isNaN(compIdxRaw)?-1:compIdxRaw;
+  var hasComp=compIdx>=0&&compIdx!==baseIdx;
 
   let data=clientGmvData.filter(c=>{
     const matchSearch=!search||c.empresa.toLowerCase().includes(search)||c.cnpj.includes(search);
@@ -2802,103 +2807,88 @@ function renderClientTable(){
     const matchOrigem=origem==='all'||c.origem===origem;
     var matchMulti=_selectedClients.length===0||_selectedClients.some(function(s){return s.cnpj===c.cnpj;});
     if(!matchSearch||!matchSeg||!matchOrigem||!matchMulti) return false;
-
-    // Filtro de variação (só aplica quando há mês de comparação)
-    if(hasComp && compDir!=='all'){
-      const gmvBase=c.gmv[baseIdx]||0;
-      const gmvComp=c.gmv[compIdx]||0;
-      if(compDir==='up')   return gmvBase>gmvComp;
-      if(compDir==='down') return gmvBase<gmvComp&&gmvBase>0;
-      if(compDir==='new')  return gmvBase>0&&gmvComp===0;
-      if(compDir==='lost') return gmvBase===0&&gmvComp>0;
-      if(compDir==='nocomp') return gmvBase===0;
+    if(hasComp&&compDir!=='all'){
+      var gb=c.gmv[baseIdx]||0, gc=c.gmv[compIdx]||0;
+      if(compDir==='up')     return gb>gc;
+      if(compDir==='down')   return gb<gc&&gb>0;
+      if(compDir==='new')    return gb>0&&gc===0;
+      if(compDir==='lost')   return gb===0&&gc>0;
+      if(compDir==='nocomp') return gb===0;
     }
     return true;
   });
 
-  // Ordenar: quando há comparação, ordenar pela variação (maior aumento primeiro)
-  if(hasComp){
-    data.sort((a,b)=>{
-      const dA=(a.gmv[baseIdx]||0)-(a.gmv[compIdx]||0);
-      const dB=(b.gmv[baseIdx]||0)-(b.gmv[compIdx]||0);
-      return dB-dA;
-    });
-  }
+  if(hasComp) data=data.slice().sort(function(a,b){
+    return ((b.gmv[baseIdx]||0)-(b.gmv[compIdx]||0))-((a.gmv[baseIdx]||0)-(a.gmv[compIdx]||0));
+  });
 
   document.getElementById('clientCount').textContent=data.length+' cliente'+(data.length!==1?'s':'')+' encontrado'+(data.length!==1?'s':'');
 
-  // Cabeçalho — destacar colunas de comparação
+  // Cabecalho
   const thead=document.getElementById('clientTableHead');
-  const baseMesNm=months[baseIdx]||'';
-  const compMesNm=hasComp?(months[compIdx]||''):'';
-  thead.innerHTML='<tr>'+
+  var hCols='<tr>'+
     '<th class="col-fix col-empresa th">Empresa</th>'+
     '<th class="col-fix col-cnpj th">CNPJ</th>'+
     '<th class="col-fix col-seg th">Seg.</th>'+
     '<th class="col-fix col-cad th">Cadastro</th>'+
     '<th class="col-fix col-top th">Maior GMV</th>'+
-    '<th>Origem</th>'+
-    (hasComp?`<th style="text-align:right;background:#1e3a5f;color:#60a5fa;border-left:2px solid #60a5fa;font-weight:700;">📅 ${compMesNm}</th>`+
-              `<th style="text-align:right;background:#1a3320;color:#4ade80;border-left:2px solid #4ade80;font-weight:700;">📍 ${baseMesNm}</th>`+
-              `<th style="text-align:right;background:#2d1f3a;color:#c084fc;border-left:2px solid #c084fc;font-weight:700;">Δ Variação</th>`:'')+
-    months.map((m,i)=>{
-      const isBase=i===baseIdx,isComp=hasComp&&i===compIdx;
-      const bg=isBase?'background:#1a3320;':(isComp?'background:#1e3a5f;':'');
-      const col=isBase?'color:#4ade80;':(isComp?'color:#60a5fa;':'');
-      return`<th style="text-align:right;${bg}${col}">${m}</th>`;
-    }).join('')+
-    '<th style="text-align:right;font-weight:700;color:#f59e0b;">Total</th>'+
-  '</tr>';
+    '<th>Origem</th>';
+  if(hasComp){
+    hCols+='<th style="text-align:right;background:#1e3a5f;color:#60a5fa;font-weight:700;">'+months[compIdx]+'</th>'+
+            '<th style="text-align:right;background:#1a3320;color:#4ade80;font-weight:700;">'+months[baseIdx]+'</th>'+
+            '<th style="text-align:right;background:#2d1f3a;color:#c084fc;font-weight:700;">Variacao</th>';
+  }
+  months.forEach(function(m,i){
+    var bg=i===baseIdx?'background:#1a332033;':hasComp&&i===compIdx?'background:#1e3a5f33;':'';
+    var fc=i===baseIdx?'color:#4ade80;':hasComp&&i===compIdx?'color:#60a5fa;':'';
+    hCols+='<th style="text-align:right;'+bg+fc+'">'+m+'</th>';
+  });
+  hCols+='<th style="text-align:right;font-weight:700;color:#f59e0b;">Total</th></tr>';
+  thead.innerHTML=hCols;
 
   // Corpo
   const tbody=document.getElementById('clientTableBody');
   tbody.innerHTML='';
 
   if(data.length===0){
-    const cols=8+months.length+(hasComp?3:0);
-    tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado com esses filtros</td></tr>`;
+    tbody.innerHTML='<tr><td colspan="'+(7+months.length+(hasComp?3:0))+'" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>';
     return;
   }
 
   const segCls={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
   const origColor={VT:C.blue,PAT:C.cyan,Ambos:C.purple};
 
-  data.forEach(c=>{
-    const tr=document.createElement('tr');
-    let cells=
-      `<td class="col-fix col-empresa" title="${c.empresa}"><strong>${c.empresa}</strong></td>`+
-      `<td class="col-fix col-cnpj" style="color:#94a3b8;">${c.cnpj}</td>`+
-      `<td class="col-fix col-seg"><span class="pill ${segCls[c.segmento]||''}">${c.segmento}</span></td>`+
-      `<td class="col-fix col-cad" style="color:#94a3b8;">${c.cadastro}</td>`+
-      `<td class="col-fix col-top" style="font-weight:700;color:${C.amber};">${fmtGmv(c.maiorGmv)}</td>`+
-      `<td><span class="pill" style="background:${origColor[c.origem]}22;color:${origColor[c.origem]};">${c.origem}</span></td>`;
+  data.forEach(function(c){
+    var tr=document.createElement('tr');
+    var cells=
+      '<td class="col-fix col-empresa" title="'+c.empresa.replace(/"/g,"&quot;")+'"><strong>'+c.empresa+'</strong></td>'+
+      '<td class="col-fix col-cnpj" style="color:#94a3b8;">'+c.cnpj+'</td>'+
+      '<td class="col-fix col-seg"><span class="pill '+(segCls[c.segmento]||'')+'">'+c.segmento+'</span></td>'+
+      '<td class="col-fix col-cad" style="color:#94a3b8;">'+c.cadastro+'</td>'+
+      '<td class="col-fix col-top" style="font-weight:700;color:'+C.amber+';">'+fmtGmv(c.maiorGmv)+'</td>'+
+      '<td><span class="pill" style="background:'+origColor[c.origem]+'22;color:'+origColor[c.origem]+';">'+c.origem+'</span></td>';
 
-    // Colunas de comparação rápida
     if(hasComp){
-      const gmvBase=c.gmv[baseIdx]||0;
-      const gmvComp=c.gmv[compIdx]||0;
-      const delta=gmvBase-gmvComp;
-      const deltaPct=gmvComp>0?((delta/gmvComp)*100).toFixed(1):'—';
-      const dColor=delta>0?'#4ade80':delta<0?'#f87171':'#94a3b8';
-      const dSign=delta>0?'+':'';
+      var gb=c.gmv[baseIdx]||0, gc=c.gmv[compIdx]||0, delta=gb-gc;
+      var dColor=delta>0?'#4ade80':delta<0?'#f87171':'#94a3b8';
+      var dSign=delta>0?'+':'';
+      var pct=gc>0?(dSign+((delta/gc)*100).toFixed(1)+'%'):(gb>0?'Novo':'--');
       cells+=
-        `<td style="text-align:right;background:#1e3a5f33;border-left:2px solid #60a5fa22;color:#93c5fd;">${fmtGmv(gmvComp)}</td>`+
-        `<td style="text-align:right;background:#1a332033;border-left:2px solid #4ade8022;color:#86efac;">${fmtGmv(gmvBase)}</td>`+
-        `<td style="text-align:right;background:#2d1f3a33;border-left:2px solid #c084fc22;font-weight:700;color:${dColor};">${dSign}${fmtGmv(Math.abs(delta))}<br><small style="font-weight:400;opacity:.8;">${deltaPct!=='—'?dSign+deltaPct+'%':gmvComp===0&&gmvBase>0?'🆕':gmvBase===0&&gmvComp>0?'❌':'—'}</small></td>`;
+        '<td style="text-align:right;color:#93c5fd;">'+fmtGmv(gc)+'</td>'+
+        '<td style="text-align:right;color:#86efac;">'+fmtGmv(gb)+'</td>'+
+        '<td style="text-align:right;font-weight:700;color:'+dColor+';">'+dSign+fmtGmv(Math.abs(delta))+' ('+pct+')</td>';
     }
 
-    months.forEach((m,i)=>{
-      const val=c.gmv[i]||0;
-      const isBase=i===baseIdx,isComp=hasComp&&i===compIdx;
-      const prev=i>0?c.gmv[i-1]||0:null;
-      const arrow=(!hasComp&&prev!==null)?gmvArrow(val,prev):'';
-      const bg=isBase?'background:#1a332033;':(isComp?'background:#1e3a5f33;':'');
-      const color=val===0?'#475569':isBase?'#86efac':isComp?'#93c5fd':'#e2e8f0';
-      cells+=`<td style="text-align:right;${bg}"><span style="color:${color};">${fmtGmv(val)}</span>${arrow}</td>`;
+    months.forEach(function(m,i){
+      var val=c.gmv[i]||0;
+      var prev=i>0?c.gmv[i-1]||0:null;
+      var arrow=(!hasComp&&prev!==null)?gmvArrow(val,prev):'';
+      var color=val===0?'#475569':i===baseIdx?'#86efac':hasComp&&i===compIdx?'#93c5fd':'#e2e8f0';
+      var bg=i===baseIdx?'background:#1a332033;':hasComp&&i===compIdx?'background:#1e3a5f33;':'';
+      cells+='<td style="text-align:right;'+bg+'"><span class="gmv-val" style="color:'+color+';">'+fmtGmv(val)+'</span>'+arrow+'</td>';
     });
-    const totalGmv=c.gmv.reduce((a,b)=>a+(b||0),0);
-    cells+=`<td style="text-align:right;font-weight:700;color:#f59e0b;border-left:1px solid #2a2f45;">${fmtGmv(totalGmv)}</td>`;
-
+    var totalGmv=c.gmv.reduce(function(a,b){return a+(b||0);},0);
+    cells+='<td style="text-align:right;font-weight:700;color:#f59e0b;border-left:1px solid #2a2f45;">'+fmtGmv(totalGmv)+'</td>';
     tr.innerHTML=cells;
     tbody.appendChild(tr);
   });
