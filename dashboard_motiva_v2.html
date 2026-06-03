@@ -391,13 +391,10 @@ function togglePwd(){
     <div class="kpi purple"><div class="kpi-label" id="cc-cart-lbl">Total Cartões</div><div class="kpi-value" id="cc-cart-val">—</div><div class="kpi-sub">Processados no período</div></div>
     <div class="kpi"><div class="kpi-label">Empresas</div><div class="kpi-value" id="cc-emp-val">—</div><div class="kpi-sub">Clientes ativos no mês</div></div>
   </div>
-  <div class="chart-grid" id="ccChartsSection" style="display:none;margin-bottom:0;">
-    <div class="chart-card"><h3>Valor de Compra — Top Empresas</h3><p class="chart-sub" id="ccChart1Sub"></p><div class="chart-wrap" style="height:280px;"><canvas id="ccChart1"></canvas></div></div>
-    <div class="chart-card"><h3>Economia Líquida — Top Empresas</h3><p class="chart-sub" id="ccChart2Sub"></p><div class="chart-wrap" style="height:280px;"><canvas id="ccChart2"></canvas></div></div>
-  </div>
-  <div class="chart-grid" id="ccChartsSection2" style="display:none;margin-bottom:0;">
-    <div class="chart-card"><h3>Carga Realizada — Top Empresas</h3><p class="chart-sub" id="ccChart3Sub"></p><div class="chart-wrap" style="height:280px;"><canvas id="ccChart3"></canvas></div></div>
-    <div class="chart-card"><h3>Total Cartões — Top Empresas</h3><p class="chart-sub" id="ccChart4Sub"></p><div class="chart-wrap" style="height:280px;"><canvas id="ccChart4"></canvas></div></div>
+  <div class="chart-card" id="ccChartsSection" style="display:none;margin-bottom:0;">
+    <h3 id="ccChartTitle">Comparativo por Empresa</h3>
+    <p class="chart-sub" id="ccChart1Sub">Top 15 empresas · Valor Compra · Proj. Saldo · Carga Realizada · Economia Líquida</p>
+    <div class="chart-wrap" style="height:380px;"><canvas id="ccChart1"></canvas></div>
   </div>
   <div class="table-card" style="margin-top:0;">
     <div class="table-scroll">
@@ -12173,19 +12170,17 @@ function renderCC(){
   var sel=document.getElementById('ccMes');
   var selComp=document.getElementById('ccMesComp');
   var selOrig=document.getElementById('ccOrigem');
-  var compDirEl=document.getElementById('ccOrigem');
   var selMes=sel?parseInt(sel.value):-1;
   var selMesComp=selComp?parseInt(selComp.value):-1;
   var origFilter=selOrig?selOrig.value:'all';
   if(isNaN(selMes)) selMes=Math.max(0,_CC_MESES.length-2);
-  var hasComp=selMesComp>=0&&selMesComp!==selMes;
+  var hasComp=selMesComp>=0&&selMesComp!==selMes&&!isNaN(selMesComp);
+  var mesNm=_CC_MESES[selMes]||''; var compMesNm=hasComp?(_CC_MESES[selMesComp]||''):'';
 
   function getFiltered(mesIdx){
     return _CC.filter(function(r){
-      var mesOk=r[2]===mesIdx;
-      var origOk=origFilter==='all'||parseInt(origFilter)===r[8];
-      var empOk=_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1]);
-      return mesOk&&origOk&&empOk;
+      return r[2]===mesIdx&&(origFilter==='all'||parseInt(origFilter)===r[8])&&
+        (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1]));
     });
   }
   function aggregate(data){
@@ -12200,18 +12195,24 @@ function renderCC(){
     return agg;
   }
 
-  var filtered=getFiltered(selMes);
-  var aggCur=aggregate(filtered);
+  var aggCur=aggregate(getFiltered(selMes));
   var aggPrev=hasComp?aggregate(getFiltered(selMesComp)):{};
-  var rows=Object.values(aggCur).sort(function(a,b){return b.compra-a.compra;});
 
-  // KPIs
-  var totC=rows.reduce(function(s,r){return s+r.compra;},0);
-  var totP=rows.reduce(function(s,r){return s+r.projecao;},0);
-  var totCg=rows.reduce(function(s,r){return s+r.carga;},0);
-  var totE=rows.reduce(function(s,r){return s+r.economia;},0);
-  var totCt=rows.reduce(function(s,r){return s+r.cartoes;},0);
-  var mesNm=_CC_MESES[selMes]||'';
+  // Unir empresas dos dois meses para a tabela
+  var allKeys=new Set(Object.keys(aggCur));
+  if(hasComp) Object.keys(aggPrev).forEach(function(k){allKeys.add(k);});
+  var rows=Array.from(allKeys).map(function(k){
+    var c=aggCur[k]||{cnpj:k.split('||')[0],empresa:k.split('||')[1],compra:0,projecao:0,carga:0,economia:0,cartoes:0,orig:['VT']};
+    var p=aggPrev[k]||null;
+    return {cnpj:c.cnpj,empresa:c.empresa,orig:c.orig,cur:c,prev:p};
+  }).sort(function(a,b){return b.cur.compra-a.cur.compra;});
+
+  // KPIs do mês atual
+  var totC=Object.values(aggCur).reduce(function(s,r){return s+r.compra;},0);
+  var totP=Object.values(aggCur).reduce(function(s,r){return s+r.projecao;},0);
+  var totCg=Object.values(aggCur).reduce(function(s,r){return s+r.carga;},0);
+  var totE=Object.values(aggCur).reduce(function(s,r){return s+r.economia;},0);
+  var totCt=Object.values(aggCur).reduce(function(s,r){return s+r.cartoes;},0);
   document.getElementById('cc-compra-lbl').textContent='Total Compra ('+mesNm+')';
   document.getElementById('cc-compra-val').textContent=fmtCC(totC);
   document.getElementById('cc-projecao-lbl').textContent='Projeção Saldo ('+mesNm+')';
@@ -12222,93 +12223,129 @@ function renderCC(){
   document.getElementById('cc-econ-val').textContent=fmtCC(totE);
   document.getElementById('cc-cart-lbl').textContent='Cartões ('+mesNm+')';
   document.getElementById('cc-cart-val').textContent=totCt.toLocaleString('pt-BR');
-  document.getElementById('cc-emp-val').textContent=rows.length;
+  document.getElementById('cc-emp-val').textContent=Object.keys(aggCur).length;
   document.getElementById('ccCount').textContent=rows.length+' empresa'+(rows.length!==1?'s':'');
 
-  // Gráficos
-  var compMesNm=hasComp?(_CC_MESES[selMesComp]||''):'';
-  var chartsSec=document.getElementById('ccChartsSection');
-  var chartsSec2=document.getElementById('ccChartsSection2');
-  if(chartsSec) chartsSec.style.display='grid';
-  if(chartsSec2) chartsSec2.style.display='grid';
-  var TOP=15;
-  var topRows=rows.slice(0,TOP);
-  var labels=topRows.map(function(r){return r.empresa.length>20?r.empresa.slice(0,19)+'…':r.empresa;});
-  var subTxt=(hasComp?mesNm+' vs '+compMesNm:mesNm)+' · Top '+Math.min(TOP,rows.length)+' empresas';
-  ['ccChart1Sub','ccChart2Sub','ccChart3Sub','ccChart4Sub'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=subTxt;});
-
-  function mkBar(canvasId,labelA,dataA,labelB,dataB,color){
-    var canvas=document.getElementById(canvasId);
-    if(!canvas) return;
+  // === GRÁFICO ÚNICO VERTICAL ===
+  var sec=document.getElementById('ccChartsSection');
+  if(sec) sec.style.display='block';
+  var tit=document.getElementById('ccChartTitle');
+  if(tit) tit.textContent='Comparativo por Empresa'+(hasComp?' — '+mesNm+' vs '+compMesNm:' — '+mesNm);
+  var sub=document.getElementById('ccChart1Sub');
+  if(sub) sub.textContent='Top 15 empresas por valor de compra · Compra · Proj. Saldo · Carga · Economia Líquida';
+  var canvas=document.getElementById('ccChart1');
+  if(canvas){
     if(canvas._ccChart) canvas._ccChart.destroy();
-    var datasets=[{label:labelA,data:dataA,backgroundColor:color+'cc',borderColor:color,borderWidth:1,borderRadius:4}];
-    if(labelB&&dataB) datasets.push({label:labelB,data:dataB,backgroundColor:'#94a3b855',borderColor:'#94a3b8',borderWidth:1,borderRadius:4});
+    var TOP=15; var topRows=rows.slice(0,TOP);
+    var lbls=topRows.map(function(r){return r.empresa.length>18?r.empresa.slice(0,17)+'…':r.empresa;});
+    var C={compra:'#22d3ee',projecao:'#4ade80',carga:'#818cf8',economia:'#f59e0b'};
+    var datasets=[];
+    function ds(label,key,color,prev){
+      var d={label:label+(prev?' ('+compMesNm+')':' ('+mesNm+')'),
+        data:topRows.map(function(r){return prev?(r.prev?r.prev[key]:0):r.cur[key];}),
+        backgroundColor:color+(prev?'55':'cc'),borderColor:color+(prev?'88':''),
+        borderWidth:1,borderRadius:prev?2:4,
+        stack:prev?'prev':'cur'};
+      return d;
+    }
+    if(hasComp){
+      datasets.push(ds('Compra','compra',C.compra,false));
+      datasets.push(ds('Compra','compra',C.compra,true));
+      datasets.push(ds('Carga','carga',C.carga,false));
+      datasets.push(ds('Carga','carga',C.carga,true));
+      datasets.push(ds('Economia','economia',C.economia,false));
+      datasets.push(ds('Economia','economia',C.economia,true));
+    } else {
+      datasets.push(ds('Valor Compra','compra',C.compra,false));
+      datasets.push(ds('Proj. Saldo','projecao',C.projecao,false));
+      datasets.push(ds('Carga Real.','carga',C.carga,false));
+      datasets.push(ds('Economia Líq.','economia',C.economia,false));
+    }
     canvas._ccChart=new Chart(canvas,{
       type:'bar',
-      data:{labels:labels,datasets:datasets},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:!!labelB,labels:{color:'#e2e8f0',usePointStyle:true}},
-          tooltip:{callbacks:{label:function(ctx){return' '+ctx.dataset.label+': R$'+(ctx.parsed.x/1e3).toFixed(1)+'K';}}}},
-        scales:{x:{grid:{color:'#1e2433'},ticks:{callback:function(v){return'R$'+(v/1e3).toFixed(0)+'K';},color:'#94a3b8'}},
-                y:{grid:{display:false},ticks:{color:'#e2e8f0',font:{size:10}}}}}
+      data:{labels:lbls,datasets:datasets},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8,font:{size:11}}},
+          tooltip:{callbacks:{label:function(ctx){
+            var v=ctx.parsed.y;
+            return' '+ctx.dataset.label+': '+(v>=1e6?'R$'+(v/1e6).toFixed(2)+'M':v>=1e3?'R$'+(v/1e3).toFixed(1)+'K':'R$'+v.toFixed(0));
+          }}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:'#e2e8f0',maxRotation:30,font:{size:10}}},
+          y:{grid:{color:'#1e2433'},ticks:{callback:function(v){return v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'K':'R$'+v;},color:'#94a3b8'}}
+        }}
     });
   }
 
-  var prevCompra=hasComp?topRows.map(function(r){var p=aggPrev[r.cnpj+'||'+r.empresa];return p?p.compra:0;}):null;
-  var prevEcon=hasComp?topRows.map(function(r){var p=aggPrev[r.cnpj+'||'+r.empresa];return p?p.economia:0;}):null;
-  var prevCarga=hasComp?topRows.map(function(r){var p=aggPrev[r.cnpj+'||'+r.empresa];return p?p.carga:0;}):null;
-  var prevCart=hasComp?topRows.map(function(r){var p=aggPrev[r.cnpj+'||'+r.empresa];return p?p.cartoes:0;}):null;
-
-  mkBar('ccChart1',mesNm,topRows.map(function(r){return r.compra;}),compMesNm,prevCompra,'#22d3ee');
-  mkBar('ccChart2',mesNm,topRows.map(function(r){return r.economia;}),compMesNm,prevEcon,'#4ade80');
-  mkBar('ccChart3',mesNm,topRows.map(function(r){return r.carga;}),compMesNm,prevCarga,'#818cf8');
-  mkBar('ccChart4',mesNm,topRows.map(function(r){return r.cartoes;}),compMesNm,prevCart,'#c084fc');
-
-  // Tabela
+  // === TABELA (mostra os dois meses quando há comparação) ===
   var thead=document.getElementById('ccHead');
-  var compCols=hasComp?'<th style="text-align:right;padding:8px 12px;color:#60a5fa;">'+compMesNm+' Compra</th><th style="text-align:right;padding:8px 12px;color:#c084fc;">Δ Variação</th>':'';
-  thead.innerHTML='<tr>'+
-    '<th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>'+
-    '<th style="padding:8px 12px;color:#94a3b8;font-size:11px;">CNPJ</th>'+
-    '<th style="padding:8px 12px;">Origem</th>'+
-    '<th style="text-align:right;padding:8px 12px;color:#22d3ee;">Valor Compra</th>'+
-    compCols+
-    '<th style="text-align:right;padding:8px 12px;color:#4ade80;">Proj. Saldo</th>'+
-    '<th style="text-align:right;padding:8px 12px;color:#e2e8f0;">Carga Real.</th>'+
-    '<th style="text-align:right;padding:8px 12px;color:#f59e0b;">Econ. Líquida</th>'+
-    '<th style="text-align:right;padding:8px 12px;color:#c084fc;">Cartões</th></tr>';
+  if(hasComp){
+    thead.innerHTML='<tr>'+
+      '<th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>'+
+      '<th style="padding:8px 12px;color:#94a3b8;font-size:11px;">CNPJ</th>'+
+      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#22d3ee;border-bottom:2px solid #22d3ee;">'+mesNm+'</th>'+
+      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#60a5fa;border-bottom:2px solid #60a5fa;">'+compMesNm+'</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#f59e0b;">Δ Compra</th></tr>'+
+      '<tr>'+
+      '<th style="position:sticky;left:0;background:var(--card);"></th><th></th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Compra</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Proj.Saldo</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Carga</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Economia</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Compra</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Proj.Saldo</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Carga</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Economia</th>'+
+      '<th></th></tr>';
+  } else {
+    thead.innerHTML='<tr>'+
+      '<th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>'+
+      '<th style="padding:8px 12px;color:#94a3b8;font-size:11px;">CNPJ</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#22d3ee;">Valor Compra</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#4ade80;">Proj. Saldo</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#e2e8f0;">Carga Real.</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#f59e0b;">Econ. Líquida</th>'+
+      '<th style="text-align:right;padding:8px 12px;color:#c084fc;">Cartões</th></tr>';
+  }
 
   var tbody=document.getElementById('ccBody'); tbody.innerHTML='';
+  window._ccLastRows=rows; window._ccLastMes=mesNm;
   if(rows.length===0){
-    var cols=8+(hasComp?2:0);
-    tbody.innerHTML='<tr><td colspan="'+cols+'" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum dado para o período</td></tr>';
+    tbody.innerHTML='<tr><td colspan="'+(hasComp?11:7)+'" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum dado</td></tr>';
     return;
   }
-  window._ccLastRows=rows; window._ccLastMes=mesNm;
   rows.forEach(function(r){
     var tr=document.createElement('tr');
-    var prev=aggPrev[r.cnpj+'||'+r.empresa];
-    var econColor=r.economia>0?'#4ade80':r.economia<0?'#f87171':'#94a3b8';
-    var origLabel=r.orig.join('+');
-    var compCells='';
+    var c=r.cur; var p=r.prev;
+    var eColor=c.economia>0?'#4ade80':c.economia<0?'#f87171':'#94a3b8';
     if(hasComp){
-      var prevC=prev?prev.compra:0;
-      var delta=r.compra-prevC;
-      var dPct=prevC>0?((delta/prevC)*100).toFixed(1)+'%':(r.compra>0?'Novo':'—');
+      var delta=c.compra-(p?p.compra:0);
+      var dPct=(p&&p.compra>0)?((delta/p.compra)*100).toFixed(1)+'%':(c.compra>0?'Novo':'—');
       var dColor=delta>0?'#4ade80':delta<0?'#f87171':'#94a3b8';
-      compCells='<td style="text-align:right;padding:8px 12px;color:#60a5fa;">'+fmtCCFull(prevC)+'</td>'+
-                '<td style="text-align:right;padding:8px 12px;font-weight:700;color:'+dColor+';">'+(delta>=0?'+':'')+fmtCC(Math.abs(delta))+' ('+dPct+')</td>';
+      var eColorP=(p&&p.economia>0)?'#4ade80':(p&&p.economia<0)?'#f87171':'#94a3b8';
+      tr.innerHTML=
+        '<td style="padding:8px 12px;font-weight:600;position:sticky;left:0;background:var(--bg);">'+r.empresa+'</td>'+
+        '<td style="padding:6px 8px;color:#64748b;font-size:10px;">'+r.cnpj+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#22d3ee;">'+fmtCC(c.compra)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#4ade80;">'+fmtCC(c.projecao)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+fmtCC(c.carga)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:'+eColor+';">'+fmtCC(c.economia)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#60a5fa;">'+fmtCC(p?p.compra:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#86efac;">'+fmtCC(p?p.projecao:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+fmtCC(p?p.carga:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:'+eColorP+';">'+fmtCC(p?p.economia:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;font-weight:700;color:'+dColor+';">'+(delta>=0?'+':'')+fmtCC(Math.abs(delta))+' <small style="opacity:.7;">'+dPct+'</small></td>';
+    } else {
+      tr.innerHTML=
+        '<td style="padding:8px 12px;font-weight:600;position:sticky;left:0;background:var(--bg);">'+r.empresa+'</td>'+
+        '<td style="padding:8px 12px;color:#64748b;font-size:11px;">'+r.cnpj+'</td>'+
+        '<td style="text-align:right;padding:8px 12px;color:#22d3ee;">'+fmtCCFull(c.compra)+'</td>'+
+        '<td style="text-align:right;padding:8px 12px;color:#4ade80;">'+fmtCCFull(c.projecao)+'</td>'+
+        '<td style="text-align:right;padding:8px 12px;">'+fmtCCFull(c.carga)+'</td>'+
+        '<td style="text-align:right;padding:8px 12px;color:'+eColor+';">'+fmtCCFull(c.economia)+'</td>'+
+        '<td style="text-align:right;padding:8px 12px;color:#c084fc;">'+c.cartoes.toLocaleString('pt-BR')+'</td>';
     }
-    tr.innerHTML=
-      '<td style="padding:8px 12px;font-weight:600;position:sticky;left:0;background:var(--bg);">'+r.empresa+'</td>'+
-      '<td style="padding:8px 12px;color:#64748b;font-size:11px;">'+r.cnpj+'</td>'+
-      '<td style="padding:8px 12px;"><span class="pill" style="background:#1d4ed822;color:#60a5fa;">'+origLabel+'</span></td>'+
-      '<td style="text-align:right;padding:8px 12px;color:#22d3ee;">'+fmtCCFull(r.compra)+'</td>'+
-      compCells+
-      '<td style="text-align:right;padding:8px 12px;color:#4ade80;">'+fmtCCFull(r.projecao)+'</td>'+
-      '<td style="text-align:right;padding:8px 12px;">'+fmtCCFull(r.carga)+'</td>'+
-      '<td style="text-align:right;padding:8px 12px;font-weight:600;color:'+econColor+';">'+fmtCCFull(r.economia)+'</td>'+
-      '<td style="text-align:right;padding:8px 12px;color:#c084fc;">'+r.cartoes.toLocaleString('pt-BR')+'</td>';
     tbody.appendChild(tr);
   });
 }
