@@ -367,7 +367,7 @@ function togglePwd(){
     <select id="ccOrigem" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
       <option value="all">VT + PAT</option>
       <option value="0">VT (Ped. Carga)</option>
-      <option value="1">PAT (Ped. Externo)</option>
+      <option value="1">VT (Ped. Externo)</option>
     </select>
     <label style="margin-left:8px;">🔍 Empresa:</label>
     <div class="client-tag-wrap" id="ccTagWrap" style="min-width:220px;" onclick="document.getElementById('ccTagInput').focus()">
@@ -12076,7 +12076,7 @@ var _CC=[
 var _ccSelectedEmps=[];
 var _ccDdTimer=null;
 
-(function initCC(){
+function initCC(){
   var sel=document.getElementById('ccMes');
   if(!sel) return;
   if(typeof _CC_MESES==='undefined'||!_CC_MESES||!_CC_MESES.length) return;
@@ -12175,7 +12175,7 @@ function renderCC(){
     if(!agg[k]) agg[k]={cnpj:r[0],empresa:r[1],compra:0,projecao:0,carga:0,economia:0,cartoes:0,orig:[]};
     agg[k].compra+=r[3]; agg[k].projecao+=r[4]; agg[k].carga+=r[5];
     agg[k].economia+=r[6]; agg[k].cartoes+=r[7];
-    if(!agg[k].orig.includes(r[8]===0?'VT':'PAT')) agg[k].orig.push(r[8]===0?'VT':'PAT');
+    if(!agg[k].orig.includes(r[8]===0?'VT':'VT Ext')) agg[k].orig.push(r[8]===0?'VT':'VT Ext');
   });
   var rows=Object.values(agg).sort(function(a,b){return b.compra-a.compra;});
 
@@ -12222,8 +12222,8 @@ function renderCC(){
     var tr=document.createElement('tr');
     var econColor=r.economia>0?'#4ade80':r.economia<0?'#f87171':'#94a3b8';
     var origLabel=r.orig.join('+');
-    var origBg=r.orig.length>1?'#7c3aed22':r.orig[0]==='VT'?'#1d4ed822':'#0e736622';
-    var origColor=r.orig.length>1?'#c084fc':r.orig[0]==='VT'?'#60a5fa':'#34d399';
+    var origBg='#1d4ed822';
+    var origColor='#60a5fa';
     tr.innerHTML=
       '<td style="padding:8px 12px;font-weight:600;position:sticky;left:0;background:var(--bg);">'+r.empresa+'</td>'+
       '<td style="padding:8px 12px;color:#64748b;font-size:11px;">'+r.cnpj+'</td>'+
@@ -12241,12 +12241,10 @@ function exportCC(){
   var rows=window._ccLastRows||[];
   var mes=window._ccLastMes||'';
   if(!rows.length){alert('Sem dados para exportar.');return;}
-  var bom='﻿';
+  var bom='\ufeff';
   var hdr=['Empresa','CNPJ','Origem','Valor Compra (R$)','Proj. Saldo (R$)','Carga Real. (R$)','Econ. Liquida (R$)','Cartoes'].join(';');
-  var lines=rows.map(function(r){return['"'+r.empresa.replace(/"/g,'""')+'"','"'+r.cnpj+'"',r.orig.join('+'),r.compra.toFixed(2),r.projecao.toFixed(2),r.carga.toFixed(2),r.economia.toFixed(2),r.cartoes].join(';');});
-  var csv=bom+hdr+'
-'+lines.join('
-');
+  var dataLines=rows.map(function(r){return['"'+r.empresa.replace(/"/g,'""')+'"','"'+r.cnpj+'"',r.orig.join('+'),r.compra.toFixed(2),r.projecao.toFixed(2),r.carga.toFixed(2),r.economia.toFixed(2),r.cartoes].join(';');});
+  var csv=bom+hdr+'\n'+dataLines.join('\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a'); a.href=url; a.download='controle_cliente_'+mes.replace('/','_')+'.csv'; a.click();
