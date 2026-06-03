@@ -12227,86 +12227,74 @@ function renderCC(){
   document.getElementById('cc-emp-val').textContent=Object.keys(aggCur).length;
   document.getElementById('ccCount').textContent=rows.length+' empresa'+(rows.length!==1?'s':'');
 
-  // === GRÁFICO ÚNICO: MÉTRICAS COMO COLUNAS (TOTAIS AGREGADOS) ===
+  // === GRÁFICO: modo varia conforme filtro de empresa ===
   var sec=document.getElementById('ccChartsSection');
   if(sec) sec.style.display='block';
   var tit=document.getElementById('ccChartTitle');
-  if(tit) tit.textContent='Resumo de Métricas'+(hasComp?' — '+mesNm+' vs '+compMesNm:' — '+mesNm);
   var sub=document.getElementById('ccChart1Sub');
-  var nEmps=Object.keys(aggCur).length;
-  if(sub) sub.textContent=(hasComp?mesNm+' vs '+compMesNm+' · ':'')+'Total de '+nEmps+' empresa'+(nEmps!==1?'s':'');
   var canvas=document.getElementById('ccChart1');
+  var multiEmp=_ccSelectedEmps.length>1;
+  var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b'];
+  var metricKeys=['compra','projecao','carga','economia'];
+  var metricLabels=['Valor Compra','Proj. Saldo','Carga Realizada','Economia Líq.'];
+  var fmtTip=function(v){return v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':'R$ '+v.toFixed(2);};
+  var fmtBar=function(v){return v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'K':'R$'+v.toFixed(0);};
+  var barLabelPlugin={id:'ccLbl',afterDatasetsDraw:function(chart){
+    var c2=chart.ctx;
+    chart.data.datasets.forEach(function(ds,di){
+      var meta=chart.getDatasetMeta(di);
+      if(meta.hidden) return;
+      meta.data.forEach(function(bar,idx){
+        var v=ds.data[idx]; if(!v||v===0) return;
+        c2.save(); c2.font='bold 10px Segoe UI,sans-serif'; c2.fillStyle='#e2e8f0';
+        c2.textAlign='center'; c2.textBaseline='bottom';
+        c2.fillText(fmtBar(v),bar.x,bar.y-3); c2.restore();
+      });
+    });
+  }};
+  var nEmps=Object.keys(aggCur).length;
   if(canvas){
     if(canvas._ccChart) canvas._ccChart.destroy();
-    // X axis = métricas, barras = mês atual e mês comparação
-    var lbls=['Valor Compra','Proj. Saldo','Carga Realizada','Economia Líquida'];
-    var dataCur=[
-      Object.values(aggCur).reduce(function(s,r){return s+r.compra;},0),
-      Object.values(aggCur).reduce(function(s,r){return s+r.projecao;},0),
-      Object.values(aggCur).reduce(function(s,r){return s+r.carga;},0),
-      Object.values(aggCur).reduce(function(s,r){return s+r.economia;},0)
-    ];
-    var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b'];
-    var dataPrev=hasComp?[
-      Object.values(aggPrev).reduce(function(s,r){return s+r.compra;},0),
-      Object.values(aggPrev).reduce(function(s,r){return s+r.projecao;},0),
-      Object.values(aggPrev).reduce(function(s,r){return s+r.carga;},0),
-      Object.values(aggPrev).reduce(function(s,r){return s+r.economia;},0)
-    ]:null;
-    // Mês anterior (comparação) sempre primeiro
-    var datasets=[];
-    if(hasComp){
-      datasets.push({
-        label:compMesNm+' (anterior)',
-        data:dataPrev,
-        backgroundColor:colors.map(function(c){return c+'55';}),
-        borderColor:colors.map(function(c){return c+'99';}),
-        borderWidth:2,borderRadius:4
+    var datasets=[]; var lbls=[];
+    if(multiEmp){
+      // MODO EMPRESA: X = empresas filtradas, grupos de barras por métrica
+      if(tit) tit.textContent='Comparativo por Empresa'+(hasComp?' — '+mesNm+' vs '+compMesNm:' — '+mesNm);
+      if(sub) sub.textContent=_ccSelectedEmps.length+' empresas selecionadas · '+metricLabels.join(' · ');
+      var empRows=rows.filter(function(r){return _ccSelectedEmps.includes(r.empresa);});
+      lbls=empRows.map(function(r){return r.empresa.length>16?r.empresa.slice(0,15)+'…':r.empresa;});
+      metricKeys.forEach(function(key,mi){
+        if(hasComp){
+          datasets.push({label:metricLabels[mi]+' ('+compMesNm+')',
+            data:empRows.map(function(r){return r.prev?r.prev[key]:0;}),
+            backgroundColor:colors[mi]+'44',borderColor:colors[mi]+'88',borderWidth:2,borderRadius:3});
+        }
+        datasets.push({label:metricLabels[mi]+(hasComp?' ('+mesNm+')':''),
+          data:empRows.map(function(r){return r.cur[key];}),
+          backgroundColor:colors[mi]+'cc',borderColor:colors[mi],borderWidth:2,borderRadius:5});
       });
+    } else {
+      // MODO MÉTRICA: X = métricas, totais agregados
+      if(tit) tit.textContent='Resumo de Métricas'+(hasComp?' — '+mesNm+' vs '+compMesNm:' — '+mesNm);
+      if(sub) sub.textContent=(hasComp?mesNm+' vs '+compMesNm+' · ':'')+'Total de '+nEmps+' empresa'+(nEmps!==1?'s':'');
+      lbls=metricLabels;
+      var dataCur=metricKeys.map(function(k){return Object.values(aggCur).reduce(function(s,r){return s+r[k];},0);});
+      var dataPrev=hasComp?metricKeys.map(function(k){return Object.values(aggPrev).reduce(function(s,r){return s+r[k];},0);}):null;
+      if(hasComp) datasets.push({label:compMesNm+' (anterior)',data:dataPrev,
+        backgroundColor:colors.map(function(c){return c+'55';}),borderColor:colors.map(function(c){return c+'88';}),borderWidth:2,borderRadius:4});
+      datasets.push({label:mesNm+(hasComp?' (atual)':''),data:dataCur,
+        backgroundColor:colors.map(function(c){return c+'cc';}),borderColor:colors,borderWidth:2,borderRadius:6});
     }
-    datasets.push({
-      label:mesNm+(hasComp?' (atual)':''),
-      data:dataCur,
-      backgroundColor:colors.map(function(c){return c+'cc';}),
-      borderColor:colors,
-      borderWidth:2,borderRadius:6
-    });
     canvas._ccChart=new Chart(canvas,{
-      type:'bar',
-      data:{labels:lbls,datasets:datasets},
+      type:'bar',data:{labels:lbls,datasets:datasets},
       options:{responsive:true,maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:hasComp,labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:10}},
-          tooltip:{callbacks:{label:function(ctx){
-            var v=ctx.parsed.y;
-            return' '+ctx.dataset.label+': '+(v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':'R$ '+v.toFixed(2));
-          }}}},
+        plugins:{legend:{display:multiEmp||hasComp,labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8,font:{size:10}}},
+          tooltip:{callbacks:{label:function(ctx){return' '+ctx.dataset.label+': '+fmtTip(ctx.parsed.y);}}}},
         scales:{
-          x:{grid:{display:false},ticks:{color:'#e2e8f0',font:{size:12}}},
-          y:{grid:{color:'#1e2433'},ticks:{callback:function(v){return v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'K':'R$'+v.toFixed(0);},color:'#94a3b8'}}
+          x:{grid:{display:false},ticks:{color:'#e2e8f0',maxRotation:multiEmp?30:0,font:{size:multiEmp?9:12}}},
+          y:{grid:{color:'#1e2433'},ticks:{callback:function(v){return fmtBar(v);},color:'#94a3b8'}}
         }},
-      plugins:[{
-        id:'ccValueLabels',
-        afterDatasetsDraw:function(chart){
-          var ctx2=chart.ctx;
-          chart.data.datasets.forEach(function(ds,di){
-            var meta=chart.getDatasetMeta(di);
-            if(meta.hidden) return;
-            meta.data.forEach(function(bar,idx){
-              var val=ds.data[idx];
-              if(!val||val===0) return;
-              var label=val>=1e6?'R$'+(val/1e6).toFixed(1)+'M':val>=1e3?'R$'+(val/1e3).toFixed(0)+'K':'R$'+val.toFixed(0);
-              ctx2.save();
-              ctx2.font='bold 11px Segoe UI,sans-serif';
-              ctx2.fillStyle='#e2e8f0';
-              ctx2.textAlign='center';
-              ctx2.textBaseline='bottom';
-              ctx2.fillText(label, bar.x, bar.y-4);
-              ctx2.restore();
-            });
-          });
-        }
-      }]
+      plugins:[barLabelPlugin]
     });
   }
 
@@ -12411,5 +12399,5 @@ setTimeout(initCC, 100);
 
 </script>
 </body>
-<!-- deploy 20260603191921 -->
+<!-- deploy 20260603192118 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
