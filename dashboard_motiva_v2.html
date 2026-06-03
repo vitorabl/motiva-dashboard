@@ -453,7 +453,7 @@ const months = ['Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25','
 const gmvVT    = [3750309,3849420,3791696,3759588,3900582,3974325,4118794,4077965,4102352,3625259,3766626,3610548,3799822,3737189,3533037,4352421,4570791,112195,0,0,0,0,0,0];
 const gmvPAT   = [5955843,7076846,7102068,7214673,7460443,8304357,6607448,7429489,7244888,7297424,7678535,7587766,8066394,9028648,7550483,11946729,0,0,0,0,0,0,0,0];
 const gmvTotal = [9706152,10926267,10893764,10974261,11361025,12278682,10726242,11507454,11347241,10922683,11445161,11198315,11866217,12765837,11083520,16299150,4570791,112195,0,0,0,0,0,0];
-const recVT    = [137579,127310,125771,136723,157639,164853,176993,163724,166104,157607,159160,168521,175801,168163,140158,184865,207146,4982,0,0,0,0,0,0];
+const recVT    = [137579,127311,125375,136054,157637,164853,176992,163723,166104,157607,159160,168521,175801,168162,140158,184865,201987,4982,0,0,0,0,0,0];
 const recPAT   = [34182,41888,41974,43603,43982,49253,38090,43751,42681,42961,44564,45345,47353,54147,44011,71056,0,0,0,0,0,0,0,0];
 
 // Last month index with any data
@@ -756,7 +756,7 @@ function applyRec(){
   document.getElementById('r-tot-val').textContent=fmt(recTotal[li]+(financiamento[li]||0),true);
   document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li]+(financiamento[li]||0),recTotal[pi]+(financiamento[pi]||0),pm);
   document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
-  document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
+    document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
   document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
   document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
