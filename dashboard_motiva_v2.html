@@ -950,13 +950,21 @@ function applyComm(){
 
   // Tabela resumo
   const tb=document.querySelector('#commTable tbody');tb.innerHTML='';
+  let sumAcc=0, sumLast=0;
   sorted.forEach(s=>{
     const lastVal=commSellers[s.name].data[li];
+    sumAcc+=s.total; sumLast+=lastVal;
     const cls=s.status==='Ativo'?'ativo':'inativo';
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td><td>R$ ${lastVal.toLocaleString('pt-BR',{minimumFractionDigits:0})}</td>`;
+    row.innerHTML=`<td><strong>${s.name}</strong></td><td><span class="pill ${cls}">${s.status}</span></td><td>R$ ${s.total.toFixed(2)}</td><td>R$ ${lastVal.toFixed(2)}</td>`;
     tb.appendChild(row);
   });
+  if(sorted.length>1){
+    const tot=document.createElement('tr');
+    tot.style.cssText='border-top:2px solid #334155;background:#1e2433;font-weight:700;';
+    tot.innerHTML=`<td colspan="2"><strong>TOTAL</strong></td><td>R$ ${sumAcc.toFixed(2)}</td><td>R$ ${sumLast.toFixed(2)}</td>`;
+    tb.appendChild(tot);
+  }
 
 }
 
@@ -3032,48 +3040,65 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
     return;
   }
 
-  const companies = VD[vendor] || [];
-  const visMonths = months.slice(fromIdx, toIdx+1);
-
-  // Calcular totais no período selecionado
-  // Estrutura VD: [empresa, cnpj, [gmv_array], [rec_array], [comm_array]]
-  const rows = companies.map(c => {
-    const gmvArr  = Array.isArray(c[2]) ? c[2] : [];
-    const recArr  = Array.isArray(c[3]) ? c[3] : [];
-    const commArr = Array.isArray(c[4]) ? c[4] : [];
-    const gmv   = gmvArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    const rec   = recArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-        const comm  = commArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b,0);
-    return {empresa:c[0], cnpj:c[1], gmv, rec, comm};
-  }).filter(r => r.gmv > 0 || r.comm > 0)
-    .sort((a,b) => b.gmv - a.gmv);
-
-  title.innerHTML = '<span>📋 Empresas de '+vendor+' — '+months[fromIdx]+' a '+months[toIdx]+'</span><button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">&#11015; Exportar CSV</button>';
+  // Mostrar seção IMEDIATAMENTE antes de qualquer processamento
   section.style.display = 'block';
-
   const note = section.querySelector('.info-note');
-  if(note) note.style.display='none';
+  if(note) note.style.display = 'none';
+  title.innerHTML = '<span>📋 Pedidos de <strong>'+vendor+'</strong> — '+months[fromIdx]+' a '+months[toIdx]+'</span>'
+    +'<button onclick="exportCommCSV()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">&#11015; Exportar CSV</button>';
 
-  const fmtV = v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M'
-                  : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'K'
-                  : v > 0    ? 'R$ '+v.toFixed(0)
-                  : '—';
+  try {
+    const companies = (typeof VD !== 'undefined' && VD[vendor]) ? VD[vendor] : [];
+    if(!companies.length){
+      body.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem dados disponíveis para '+vendor+'</td></tr>';
+      return;
+    }
 
-  window._lastCommRows   = rows;
-  window._lastCommVendor = vendor;
-  window._lastCommPeriod = months[fromIdx]+' a '+months[toIdx];
+    const rows = companies.map(c => {
+      const gmvArr  = Array.isArray(c[2]) ? c[2] : [];
+      const recArr  = Array.isArray(c[3]) ? c[3] : [];
+      const commArr = Array.isArray(c[4]) ? c[4] : [];
+      const gmv  = gmvArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b, 0);
+      const rec  = recArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b, 0);
+      const comm = commArr.slice(fromIdx, toIdx+1).reduce((a,b)=>a+b, 0);
+      return {empresa:c[0], cnpj:c[1], gmv, rec, comm};
+    }).filter(r => r.gmv > 0 || r.comm > 0)
+      .sort((a,b) => b.comm - a.comm || b.gmv - a.gmv);
 
-  body.innerHTML = rows.map(r => `
-    <tr>
-      <td><strong>${r.empresa}</strong></td>
-      <td style="color:#64748b;font-size:11px;">${r.cnpj||'—'}</td>
-      <td style="text-align:right;">${fmtV(r.gmv)}</td>
-      <td style="text-align:right;">${fmtV(r.rec)}</td>
-      <td style="text-align:right;color:#fbbf24;">${r.comm > 0 ? 'R$ '+r.comm.toFixed(2) : '—'}</td>
-    </tr>`).join('');
+    window._lastCommRows   = rows;
+    window._lastCommVendor = vendor;
+    window._lastCommPeriod = months[fromIdx]+' a '+months[toIdx];
 
-  if(rows.length === 0){
-    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos no período</td></tr>';
+    const fmtV = v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(2)+'M'
+                    : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(1)+'K'
+                    : v > 0   ? 'R$ '+v.toFixed(2) : '—';
+
+    if(rows.length === 0){
+      body.innerHTML='<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">Sem pedidos com comissão no período</td></tr>';
+      return;
+    }
+
+    const totGmv  = rows.reduce((s,r)=>s+r.gmv, 0);
+    const totRec  = rows.reduce((s,r)=>s+r.rec, 0);
+    const totComm = rows.reduce((s,r)=>s+r.comm, 0);
+
+    body.innerHTML = rows.map(r =>`
+      <tr>
+        <td><strong>${r.empresa}</strong></td>
+        <td style="color:#64748b;font-size:11px;">${r.cnpj||'—'}</td>
+        <td style="text-align:right;">${fmtV(r.gmv)}</td>
+        <td style="text-align:right;">${fmtV(r.rec)}</td>
+        <td style="text-align:right;color:#fbbf24;font-weight:600;">${r.comm>0?'R$ '+r.comm.toFixed(2):'—'}</td>
+      </tr>`).join('')
+      + `<tr style="border-top:2px solid #334155;background:#1e2433;">
+          <td colspan="2"><strong>TOTAL (${rows.length} empresas)</strong></td>
+          <td style="text-align:right;font-weight:700;">${fmtV(totGmv)}</td>
+          <td style="text-align:right;font-weight:700;">${fmtV(totRec)}</td>
+          <td style="text-align:right;color:#fbbf24;font-weight:700;">R$ ${totComm.toFixed(2)}</td>
+        </tr>`;
+
+  } catch(err) {
+    body.innerHTML='<tr><td colspan="5" style="color:#f87171;padding:20px;">Erro ao carregar dados: '+err.message+'</td></tr>';
   }
 }
 
@@ -3314,24 +3339,4 @@ window.showTab = function(name,e){
     <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Arquivos Excel com todos os registros. Clique para baixar diretamente.</p>
   </div>
   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));">
-    <div class="kpi" style="padding:28px;">
-      <div class="kpi-label">📦 Pedido de Carga Completo (VT)</div>
-      <div class="kpi-value" style="font-size:18px;margin:12px 0;">48.492 registros</div>
-      <div class="kpi-sub" style="margin-bottom:16px;">Código, Empresa, CNPJ, Data, Mês, Operadora, Valor Recarga, Taxas, NF, Vendedor</div>
-      <a href="data/pedidos_vt.xlsx" download="pedidos_vt.xlsx"
-        style="display:inline-block;background:var(--accent);color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
-        ⬇️ Baixar Excel
-      </a>
-    </div>
-    <div class="kpi green" style="padding:28px;">
-      <div class="kpi-label">🥗 Pedido Externo (PAT)</div>
-      <div class="kpi-value" style="font-size:18px;margin:12px 0;">1.672 registros</div>
-      <div class="kpi-sub" style="margin-bottom:16px;">Pedido, Cliente, CNPJ, Operadora, Data, Mês, Valor Recarga, Taxas, NF, BaseSK, Vendedor</div>
-      <a href="data/pedidos_pat.xlsx" download="pedidos_pat.xlsx"
-        style="display:inline-block;background:#10b981;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
-        ⬇️ Baixar Excel
-      </a>
-    </div>
-  </div>
-  <div class="info-note" style="margin-top:20px;">
- 
+    <div class="kpi" style
