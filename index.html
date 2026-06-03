@@ -12284,7 +12284,29 @@ function renderCC(){
         scales:{
           x:{grid:{display:false},ticks:{color:'#e2e8f0',font:{size:12}}},
           y:{grid:{color:'#1e2433'},ticks:{callback:function(v){return v>=1e6?'R$'+(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'K':'R$'+v.toFixed(0);},color:'#94a3b8'}}
-        }}
+        }},
+      plugins:[{
+        id:'ccValueLabels',
+        afterDatasetsDraw:function(chart){
+          var ctx2=chart.ctx;
+          chart.data.datasets.forEach(function(ds,di){
+            var meta=chart.getDatasetMeta(di);
+            if(meta.hidden) return;
+            meta.data.forEach(function(bar,idx){
+              var val=ds.data[idx];
+              if(!val||val===0) return;
+              var label=val>=1e6?'R$'+(val/1e6).toFixed(1)+'M':val>=1e3?'R$'+(val/1e3).toFixed(0)+'K':'R$'+val.toFixed(0);
+              ctx2.save();
+              ctx2.font='bold 11px Segoe UI,sans-serif';
+              ctx2.fillStyle='#e2e8f0';
+              ctx2.textAlign='center';
+              ctx2.textBaseline='bottom';
+              ctx2.fillText(label, bar.x, bar.y-4);
+              ctx2.restore();
+            });
+          });
+        }
+      }]
     });
   }
 
@@ -12389,5 +12411,5 @@ setTimeout(initCC, 100);
 
 </script>
 </body>
-<!-- deploy 20260603191438 -->
+<!-- deploy 20260603191652 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
