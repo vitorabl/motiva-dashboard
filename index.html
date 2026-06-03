@@ -285,7 +285,7 @@ function togglePwd(){
     <div class="chart-card"><h3>Margem sobre GMV (%)</h3><p class="chart-sub">Receita ÷ GMV por mês</p><div class="chart-wrap"><canvas id="margemChart"></canvas></div></div>
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
-  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#5b6af0;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega VT</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+  <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#818cf8;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega (2° Via)</th><th style="color:#f97316;">Financiamento</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
 </div>
 
 <!-- ===== CLIENTES ===== -->
@@ -424,7 +424,7 @@ const recCateg = {
 //   Tx Sucesso = Pedido de carga Completo col Q  +  TODAS as linhas do Pedido Externo col O
 //   Tx Entrega = Pedido de carga Completo col S  (Pedido Externo não possui Tx Entrega)
 const vtTxAdm     = [67276,66875,63522,61032,73448,85273,93763,82047,82661,71313,78260,69474,73696,69914,62403,77007,67074,3029,0,0,0,0,0,0];
-const vtTxSucesso = [90203,74622,79758,80267,100153,97709,101153,98141,96765,98757,92287,109463,112305,106926,86760,119449,143462,3234,0,0,0,0,0,0];
+const vtTxSucesso = [80577,65201,71006,70483,89029,85961,81493,88047,87255,89166,83975,99853,103683,98241,78310,107130,121344,3234,0,0,0,0,0,0];
 const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225,405,0,0,0,0,0,0,0];
 const qtdClients  = [781,801,832,871,904,915,927,944,949,966,975,976,989,997,1001,1011,1035,1037,1037,1037,1037,1037,1037,1037];
 const qtdNew      = [9,20,31,39,33,11,12,17,5,17,9,1,13,8,4,10,24,2,0,0,0,0,0,0];
@@ -612,7 +612,7 @@ function applyGmv(){
       scales:{x:{grid},y:{grid,ticks:{callback:v=>parseFloat(v).toFixed(2)+'%'},title:{display:true,text:'Take Rate (%)',color:'#94a3b8'}}}}
   });
 
-  const avgTR_all=vtTxAdm.reduce((s,v,i)=>s+(v+vtTxSucesso[i]+vtTxEntrega[i])/gmvVT[i]*100,0)/vtTxAdm.length;
+  const avgTR_all=vtTxAdm.reduce((s,v,i)=>s+(v+vtTxSucesso[i]+vtTxEntrega[i]+financiamento[i])/gmvVT[i]*100,0)/vtTxAdm.length;
 
   // Plugin customizado: mostra valores nas barras do grafico VT Detalhamento
   const vtBarLabelPlugin = {
@@ -620,7 +620,7 @@ function applyGmv(){
     afterDatasetsDraw(chart){
       const ctx2=chart.ctx;
       chart.data.datasets.forEach((ds,di)=>{
-        if(di>=3)return; // pula linha TR
+        if(di>=4)return; // pula linha TR (0=Adm,1=Sucesso,2=Entrega,3=Financiamento,4=TR)
         const meta=chart.getDatasetMeta(di);
         meta.data.forEach((bar,idx)=>{
           const val=ds.data[idx];
@@ -645,15 +645,16 @@ function applyGmv(){
     data:{labels:months,datasets:[
       {type:'bar',label:'Tx Adm',data:vtTxAdm.map(v=>v/1e3),backgroundColor:C.blue+'cc',borderColor:C.blue,borderWidth:1,stack:'t'},
       {type:'bar',label:'Tx Sucesso',data:vtTxSucesso.map(v=>v/1e3),backgroundColor:C.cyan+'cc',borderColor:C.cyan,borderWidth:1,stack:'t'},
-      {type:'bar',label:'Tx Entrega',data:vtTxEntrega.map(v=>v/1e3),backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'t'},
+      {type:'bar',label:'Tx Entrega (2° Via)',data:vtTxEntrega.map(v=>v/1e3),backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'t'},
+      {type:'bar',label:'Financiamento',data:financiamento.map(v=>v/1e3),backgroundColor:C.orange+'cc',borderColor:C.orange,borderWidth:1,stack:'t'},
       {type:'line',label:`Média TR ${avgTR_all.toFixed(2)}%`,data:months.map(()=>parseFloat(avgTR_all.toFixed(2))),borderColor:C.green,backgroundColor:'transparent',borderDash:[6,3],borderWidth:2,pointRadius:0,pointHoverRadius:4,yAxisID:'yTR'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
         tooltip:{callbacks:{
-          label:ctx=>{if(ctx.datasetIndex===3)return` ${ctx.dataset.label}`;const i=ctx.dataIndex+gFrom;const v=ctx.parsed.y;const p=(v*1000/gmvVT[i]*100).toFixed(2);return` ${ctx.dataset.label}: R$ ${v.toFixed(1)}K (${p}% GMV)`;},
-          footer:items=>{const fi=items[0].dataIndex,gi=fi+gFrom;const tot=(vtTxAdm[gi]+vtTxSucesso[gi]+vtTxEntrega[gi])/1e3;const tr=(tot*1000/gmvVT[gi]*100).toFixed(2);return`Total: R$ ${tot.toFixed(1)}K · Take Rate: ${tr}%`;}
+          label:ctx=>{if(ctx.datasetIndex===4)return` ${ctx.dataset.label}`;const i=ctx.dataIndex+gFrom;const v=ctx.parsed.y;const p=(v*1000/gmvVT[i]*100).toFixed(2);return` ${ctx.dataset.label}: R$ ${v.toFixed(1)}K (${p}% GMV)`;},
+          footer:items=>{const fi=items[0].dataIndex,gi=fi+gFrom;const tot=(vtTxAdm[gi]+vtTxSucesso[gi]+vtTxEntrega[gi]+financiamento[gi])/1e3;const tr=(tot*1000/gmvVT[gi]*100).toFixed(2);return`Total: R$ ${tot.toFixed(1)}K · Take Rate: ${tr}%`;}
         }}},
       scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid,ticks:{callback:v=>'R$'+v+'K'},title:{display:true,text:'R$ mil',color:'#94a3b8'}},yTR:{position:'right',grid:{display:false},ticks:{callback:v=>v+'%'},title:{display:true,text:'TR %',color:C.green}}}}
   });
@@ -703,8 +704,8 @@ function applyRec(){
 
   // KPIs
   document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
-  document.getElementById('r-tot-val').textContent=fmt(recTotal[li]+(financiamento[li]||0),true);
-  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li]+(financiamento[li]||0),recTotal[pi]+(financiamento[pi]||0),pm);
+  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
+  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
   document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
   document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
   document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
@@ -757,7 +758,7 @@ function applyRec(){
     const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
     const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
     tb.appendChild(row);
   });
 }
@@ -3154,11 +3155,4 @@ window.showTab = function(name,e){
     </div>
   </div>
   <div class="info-note" style="margin-top:20px;">
-    ℹ️ Os arquivos são atualizados automaticamente a cada execução diária do dashboard.
-    <br>Última atualização dos dados: <strong id="dl-date"></strong>
-  </div>
-  <script>document.getElementById('dl-date').textContent=new Date().toLocaleDateString('pt-BR');</script>
-</div>
-
-</body>
-</html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
+    ℹ️ Os arquivos são atualizados automaticamente a cada ex
