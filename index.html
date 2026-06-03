@@ -254,7 +254,7 @@ function togglePwd(){
     <div class="kpi amber"><div class="kpi-label" id="g-fin-lbl">Financiamento</div><div class="kpi-value" id="g-fin-val">—</div><div class="kpi-sub">Receita do mês</div><div class="kpi-delta" id="g-fin-d"></div></div>
     <div class="kpi purple"><div class="kpi-label">YoY — GMV</div><div class="kpi-value" id="g-yoy-val">—</div><div class="kpi-sub" id="g-yoy-sub"></div><div class="kpi-yoy"><span id="g-yoy-vt"></span><span id="g-yoy-pat"></span></div></div>
   </div>
-  <div class="info-note">ℹ️ <strong>Nota:</strong> Pedidos "SEM SK" do Pedido Externo excluídos do GMV PAT — já contabilizados no GMV VT via Pedido de Carga Completo.</div>
+  <div class="info-note">ℹ️ <strong>Nota:</strong> Pedido Externo — pedidos <strong>Sem SK</strong>: GMV VT incluso (pedidos VT externos). Pedidos com <strong>número BaseSK</strong>: GMV já no PCC, apenas receita e comissão considerados.</div>
   <div class="chart-grid full"><div class="chart-card"><h3>GMV Mensal — VT vs PAT</h3><p class="chart-sub">Evolução mês a mês em R$ milhões</p><div class="chart-wrap"><canvas id="gmvLineChart"></canvas></div></div></div>
   <div class="chart-grid full"><div class="chart-card"><h3>Composição do GMV por TIPO — Take Rate (%)</h3><p class="chart-sub">Taxa sobre o valor total de VT e PAT · Receita ÷ GMV</p><div class="chart-wrap"><canvas id="takeRateLineChart"></canvas></div></div></div>
   <div class="chart-grid">
