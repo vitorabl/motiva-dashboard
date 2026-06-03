@@ -707,8 +707,9 @@ function applyRec(){
   document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
   document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
   document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
-  document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
-  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
+  const recVT_sf=li=>recVT[li]-(financiamento[li]||0);
+  document.getElementById('r-vt-val').textContent=fmt(recVT_sf(li),true);
+  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT_sf(li),recVT_sf(pi),pm);
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
   document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
   document.getElementById('r-pat-d').innerHTML=deltaMoM(recPAT[li],recPAT[pi],pm);
@@ -3155,4 +3156,4 @@ window.showTab = function(name,e){
     </div>
   </div>
   <div class="info-note" style="margin-top:20px;">
-    ℹ️ Os arquivos são atualizados automaticamente a cada ex
+ 
