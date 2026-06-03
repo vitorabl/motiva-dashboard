@@ -12237,9 +12237,9 @@ function renderCC(){
   var tit=document.getElementById('ccChartTitle');
   var sub=document.getElementById('ccChart1Sub');
   var canvas=document.getElementById('ccChart1');
-  var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b'];
-  var metricKeys=['compra','projecao','carga','economia'];
-  var metricLabels=['Valor Compra','Proj. Saldo','Carga Realizada','Economia Líq.'];
+  var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b','#c084fc'];
+  var metricKeys=['compra','projecao','carga','economia','cartoes'];
+  var metricLabels=['Valor Compra','Proj. Saldo','Carga Realizada','Economia Líq.','Cartões'];
   var nEmps=Object.keys(aggCur).length;
   var nFilt=_ccSelectedEmps.length;
   var descFilt=nFilt>0?(nFilt+' empresa'+(nFilt!==1?'s':'')+' selecionada'+(nFilt!==1?'s':'')):nEmps+' empresa'+(nEmps!==1?'s':'');
@@ -12270,7 +12270,7 @@ function renderCC(){
       options:{responsive:true, maintainAspectRatio:false,
         interaction:{mode:'index', intersect:false},
         plugins:{legend:{display:hasComp, labels:{color:'#e2e8f0', usePointStyle:true, pointStyleWidth:10}},
-          tooltip:{callbacks:{label:function(ctx){return' '+ctx.dataset.label+': '+fmtTip(ctx.parsed.y);}}}},
+          tooltip:{callbacks:{label:function(ctx){var v=ctx.parsed.y;var lbl=ctx.dataset.label||'';var isCart=lbl.includes('Cartão');return' '+lbl+': '+(isCart?v.toLocaleString('pt-BR')+' cartões':fmtTip(v));}}}},
         scales:{
           x:{grid:{display:false}, ticks:{color:'#e2e8f0', font:{size:13}}},
           y:{grid:{color:'#1e2433'}, ticks:{callback:function(v){return fmtBar(v);}, color:'#94a3b8'}}
@@ -12284,7 +12284,8 @@ function renderCC(){
             var v=ds.data[idx]; if(!v||v===0) return;
             c2.save(); c2.font='bold 12px Segoe UI,sans-serif'; c2.fillStyle='#e2e8f0';
             c2.textAlign='center'; c2.textBaseline='bottom';
-            c2.fillText(fmtBar(v), bar.x, bar.y-4); c2.restore();
+            var dsLabel=chart.data.datasets[di].label||'';
+              c2.fillText(dsLabel.includes('Cartão')?v.toLocaleString('pt-BR'):fmtBar(v), bar.x, bar.y-4); c2.restore();
           });
         });
       }}]
@@ -12305,11 +12306,11 @@ function renderCC(){
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Compra</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Proj.Saldo</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Carga</th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Economia</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Economia</th>'+'<th style="text-align:right;padding:6px 8px;color:#c084fc;font-size:11px;">Cartões</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Compra</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Proj.Saldo</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Carga</th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Economia</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Economia</th>'+'<th style="text-align:right;padding:6px 8px;color:#c084fc;font-size:11px;">Cartões</th>'+
       '<th></th></tr>';
   } else {
     thead.innerHTML='<tr>'+
@@ -12343,11 +12344,11 @@ function renderCC(){
         '<td style="text-align:right;padding:6px 8px;color:#60a5fa;">'+fmtCC(p?p.compra:0)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:#86efac;">'+fmtCC(p?p.projecao:0)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;">'+fmtCC(p?p.carga:0)+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;color:'+eColorP+';">'+fmtCC(p?p.economia:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:'+eColorP+';">'+fmtCC(p?p.economia:0)+'</td>'+'<td style="text-align:right;padding:6px 8px;color:#c084fc;">'+(p?p.cartoes:0).toLocaleString('pt-BR')+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:#22d3ee;">'+fmtCC(c.compra)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:#4ade80;">'+fmtCC(c.projecao)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;">'+fmtCC(c.carga)+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;color:'+eColor+';">'+fmtCC(c.economia)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:'+eColor+';">'+fmtCC(c.economia)+'</td>'+'<td style="text-align:right;padding:6px 8px;color:#c084fc;">'+c.cartoes.toLocaleString('pt-BR')+'</td>'+
         '<td style="text-align:right;padding:6px 8px;font-weight:700;color:'+dColor+';">'+(delta>=0?'+':'')+fmtCC(Math.abs(delta))+' <small style="opacity:.7;">'+dPct+'</small></td>';
     } else {
       tr.innerHTML=
@@ -12392,5 +12393,5 @@ setTimeout(initCC, 100);
 
 </script>
 </body>
-<!-- deploy 20260603212630 -->
+<!-- deploy 20260603212945 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
