@@ -12092,7 +12092,8 @@ function initCC(){
   if(typeof _CC_MESES==='undefined'||!_CC_MESES||!_CC_MESES.length) return;
   sel.innerHTML='';
   if(selComp) selComp.innerHTML='<option value="-1">Sem comparação</option>';
-  for(var i=0;i<_CC_MESES.length;i++){
+  // Ordem decrescente: mês mais recente primeiro
+  for(var i=_CC_MESES.length-1;i>=0;i--){
     var o=document.createElement('option');
     o.value=String(i); o.textContent=_CC_MESES[i];
     sel.appendChild(o);
@@ -12246,31 +12247,30 @@ function renderCC(){
       Object.values(aggCur).reduce(function(s,r){return s+r.economia;},0)
     ];
     var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b'];
-    var datasets=[{
-      label:mesNm,
+    var dataPrev=hasComp?[
+      Object.values(aggPrev).reduce(function(s,r){return s+r.compra;},0),
+      Object.values(aggPrev).reduce(function(s,r){return s+r.projecao;},0),
+      Object.values(aggPrev).reduce(function(s,r){return s+r.carga;},0),
+      Object.values(aggPrev).reduce(function(s,r){return s+r.economia;},0)
+    ]:null;
+    // Mês anterior (comparação) sempre primeiro
+    var datasets=[];
+    if(hasComp){
+      datasets.push({
+        label:compMesNm+' (anterior)',
+        data:dataPrev,
+        backgroundColor:colors.map(function(c){return c+'55';}),
+        borderColor:colors.map(function(c){return c+'99';}),
+        borderWidth:2,borderRadius:4
+      });
+    }
+    datasets.push({
+      label:mesNm+(hasComp?' (atual)':''),
       data:dataCur,
       backgroundColor:colors.map(function(c){return c+'cc';}),
       borderColor:colors,
-      borderWidth:2,
-      borderRadius:6
-    }];
-    if(hasComp){
-      var dataPrev=[
-        Object.values(aggPrev).reduce(function(s,r){return s+r.compra;},0),
-        Object.values(aggPrev).reduce(function(s,r){return s+r.projecao;},0),
-        Object.values(aggPrev).reduce(function(s,r){return s+r.carga;},0),
-        Object.values(aggPrev).reduce(function(s,r){return s+r.economia;},0)
-      ];
-      datasets.push({
-        label:compMesNm,
-        data:dataPrev,
-        backgroundColor:colors.map(function(c){return c+'44';}),
-        borderColor:colors.map(function(c){return c+'88';}),
-        borderWidth:2,
-        borderRadius:6,
-        borderDash:[4,3]
-      });
-    }
+      borderWidth:2,borderRadius:6
+    });
     canvas._ccChart=new Chart(canvas,{
       type:'bar',
       data:{labels:lbls,datasets:datasets},
@@ -12316,19 +12316,19 @@ function renderCC(){
     thead.innerHTML='<tr>'+
       '<th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>'+
       '<th style="padding:8px 12px;color:#94a3b8;font-size:11px;">CNPJ</th>'+
-      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#22d3ee;border-bottom:2px solid #22d3ee;">'+mesNm+'</th>'+
-      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#60a5fa;border-bottom:2px solid #60a5fa;">'+compMesNm+'</th>'+
+      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#60a5fa;border-bottom:2px solid #60a5fa;">'+compMesNm+' (anterior)</th>'+
+      '<th colspan="4" style="text-align:center;padding:8px 12px;color:#22d3ee;border-bottom:2px solid #22d3ee;">'+mesNm+' (atual)</th>'+
       '<th style="text-align:right;padding:8px 12px;color:#f59e0b;">Δ Compra</th></tr>'+
       '<tr>'+
       '<th style="position:sticky;left:0;background:var(--card);"></th><th></th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Compra</th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Proj.Saldo</th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Carga</th>'+
-      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Economia</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Compra</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Proj.Saldo</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Carga</th>'+
       '<th style="text-align:right;padding:6px 8px;color:#60a5fa;font-size:11px;">Economia</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Compra</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Proj.Saldo</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Carga</th>'+
+      '<th style="text-align:right;padding:6px 8px;color:#22d3ee;font-size:11px;">Economia</th>'+
       '<th></th></tr>';
   } else {
     thead.innerHTML='<tr>'+
@@ -12359,14 +12359,14 @@ function renderCC(){
       tr.innerHTML=
         '<td style="padding:8px 12px;font-weight:600;position:sticky;left:0;background:var(--bg);">'+r.empresa+'</td>'+
         '<td style="padding:6px 8px;color:#64748b;font-size:10px;">'+r.cnpj+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;color:#22d3ee;">'+fmtCC(c.compra)+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;color:#4ade80;">'+fmtCC(c.projecao)+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;">'+fmtCC(c.carga)+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;color:'+eColor+';">'+fmtCC(c.economia)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:#60a5fa;">'+fmtCC(p?p.compra:0)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:#86efac;">'+fmtCC(p?p.projecao:0)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;">'+fmtCC(p?p.carga:0)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;color:'+eColorP+';">'+fmtCC(p?p.economia:0)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#22d3ee;">'+fmtCC(c.compra)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:#4ade80;">'+fmtCC(c.projecao)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+fmtCC(c.carga)+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;color:'+eColor+';">'+fmtCC(c.economia)+'</td>'+
         '<td style="text-align:right;padding:6px 8px;font-weight:700;color:'+dColor+';">'+(delta>=0?'+':'')+fmtCC(Math.abs(delta))+' <small style="opacity:.7;">'+dPct+'</small></td>';
     } else {
       tr.innerHTML=
@@ -12411,5 +12411,5 @@ setTimeout(initCC, 100);
 
 </script>
 </body>
-<!-- deploy 20260603191652 -->
+<!-- deploy 20260603191921 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
