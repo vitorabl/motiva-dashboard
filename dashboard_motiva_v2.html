@@ -12803,13 +12803,15 @@ function exportCCPDF(){
   function _capCanvas(c){
     if(!c) return '';
     try{
+      var scale=3; // 3x para imagem nítida ao imprimir
       var off=document.createElement('canvas');
-      off.width=c.width; off.height=c.height;
+      off.width=c.width*scale; off.height=c.height*scale;
       var ctx=off.getContext('2d');
+      ctx.scale(scale,scale);
       ctx.fillStyle='#1a1f2e';
-      ctx.fillRect(0,0,off.width,off.height);
+      ctx.fillRect(0,0,c.width,c.height);
       ctx.drawImage(c,0,0);
-      return off.toDataURL('image/png');
+      return off.toDataURL('image/png',1.0);
     }catch(e){ return c.toDataURL('image/png'); }
   }
   CHART_IDS.forEach(function(id,i){
@@ -12839,10 +12841,10 @@ function exportCCPDF(){
   w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px}');
   w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px;color:#f1f5f9}');
   w.document.write('.ks{font-size:9px;color:#64748b}');
-  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}');
-  w.document.write('.cbox{border:1px solid #2d3748;border-radius:8px;padding:14px;break-inside:avoid;background:#1a1f2e}');
+  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:20px}');
+  w.document.write('.cbox{border:1px solid #2d3748;border-radius:8px;padding:16px;break-inside:avoid;background:#1a1f2e;margin-bottom:4px}');
   w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px}');
-  w.document.write('.cimg{width:100%}');
+  w.document.write('.cimg{width:100%;image-rendering:high-quality;display:block}');
   w.document.write('.csub{font-size:9px;color:#64748b;margin-top:4px;text-align:right}');
   w.document.write('.atbl table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}');
   w.document.write('.atbl th,.atbl td{border:1px solid #2d3748;padding:3px 6px;color:#e2e8f0}');
@@ -12855,12 +12857,12 @@ function exportCCPDF(){
   w.document.write('.summary p{font-size:10px;color:#cbd5e1;line-height:1.6;margin-bottom:8px}');
   w.document.write('.summary p:last-child{margin-bottom:0}');
   w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #2d3748;padding-bottom:6px;color:#f1f5f9}');
-  w.document.write('#mainTbl{width:100%;border-collapse:collapse}');
-  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #2d3748;padding:3px 7px;text-align:left;font-size:9px;white-space:nowrap;color:#e2e8f0}');
+  w.document.write('#mainTbl{width:100%;border-collapse:collapse;table-layout:auto}');
+  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #2d3748;padding:2px 5px;text-align:left;font-size:8px;white-space:nowrap;color:#e2e8f0}');
   w.document.write('#mainTbl th{background:#1a1f2e;font-weight:600;color:#94a3b8}');
   w.document.write('#mainTbl tr:nth-child(even){background:#111827}');
   w.document.write('.pbtn{margin-top:20px;padding:9px 24px;background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer}');
-  w.document.write('@media print{.pbtn{display:none}.pg2{page-break-before:always}}');
+  w.document.write('@media print{.pbtn{display:none}.pg2{page-break-before:always}.charts-grid{grid-template-columns:1fr!important}.cbox{page-break-inside:avoid;margin-bottom:12px}.cimg{max-width:100%;height:auto}}');
   w.document.write('</style></head><body>');
 
   // Página 1
@@ -12902,7 +12904,7 @@ function exportCCPDF(){
   if(tblHtml){
     w.document.write('<div class="pg2">');
     w.document.write('<div class="ph">Tabela Detalhada'+(mesLabel?' — '+mesLabel:'')+(entityLabel!=='Todos os clientes'?' · '+entityLabel:'')+'</div>');
-    w.document.write(tblHtml);
+    w.document.write('<div style="overflow-x:auto;width:100%">'+tblHtml+'</div>');
     w.document.write('</div>');
   }
 
