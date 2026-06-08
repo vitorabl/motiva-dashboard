@@ -12788,9 +12788,21 @@ function exportCCPDF(){
   var CHART_IDS  =['ccAnnualChart','ccMonthlyChart','ccEconChart','ccCartChart'];
   var CHART_LBLS =['DEMANDA × PEDIDO × ECONOMIA — ANUAL','DEMANDA × PEDIDO × ECONOMIA — MENSAL','ECONOMIA LÍQUIDA MENSAL','CARTÕES PROCESSADOS — MENSAL'];
   var chartImgs=[];
+  function _capCanvas(c){
+    if(!c) return '';
+    try{
+      var off=document.createElement('canvas');
+      off.width=c.width; off.height=c.height;
+      var ctx=off.getContext('2d');
+      ctx.fillStyle='#1a1f2e';
+      ctx.fillRect(0,0,off.width,off.height);
+      ctx.drawImage(c,0,0);
+      return off.toDataURL('image/png');
+    }catch(e){ return c.toDataURL('image/png'); }
+  }
   CHART_IDS.forEach(function(id,i){
     var c=document.getElementById(id);
-    chartImgs.push({title:CHART_LBLS[i],src:c?c.toDataURL('image/png'):''});
+    chartImgs.push({title:CHART_LBLS[i],src:_capCanvas(c)});
   });
   var annualTblHtml=(document.getElementById('ccAnnualTable')||{}).innerHTML||'';
   var econTotalTxt=(document.getElementById('ccEconTotal')||{}).textContent||'';
@@ -12807,41 +12819,41 @@ function exportCCPDF(){
   w.document.write('<title>'+entityLabel+'</title>');
   w.document.write('<style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
-  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:24px}');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#e2e8f0;background:#0d1117;padding:24px}');
   w.document.write('h1{font-size:20px;font-weight:700;margin-bottom:2px}');
   w.document.write('.sub{font-size:10px;color:#6b7280;margin-bottom:22px}');
   w.document.write('.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}');
-  w.document.write('.kc{border:1px solid #e5e7eb;border-top:3px solid;border-radius:8px;padding:14px}');
-  w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:5px}');
-  w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px}');
-  w.document.write('.ks{font-size:9px;color:#9ca3af}');
+  w.document.write('.kc{border:1px solid #2d3748;border-top:3px solid;border-radius:8px;padding:14px;background:#1a1f2e}');
+  w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px}');
+  w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px;color:#f1f5f9}');
+  w.document.write('.ks{font-size:9px;color:#64748b}');
   w.document.write('.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}');
-  w.document.write('.cbox{border:1px solid #e5e7eb;border-radius:8px;padding:14px;break-inside:avoid}');
-  w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:10px}');
+  w.document.write('.cbox{border:1px solid #2d3748;border-radius:8px;padding:14px;break-inside:avoid;background:#1a1f2e}');
+  w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px}');
   w.document.write('.cimg{width:100%}');
-  w.document.write('.csub{font-size:9px;color:#6b7280;margin-top:4px;text-align:right}');
+  w.document.write('.csub{font-size:9px;color:#64748b;margin-top:4px;text-align:right}');
   w.document.write('.atbl table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}');
-  w.document.write('.atbl th,.atbl td{border:1px solid #e5e7eb;padding:3px 6px}');
+  w.document.write('.atbl th,.atbl td{border:1px solid #2d3748;padding:3px 6px;color:#e2e8f0}');
   w.document.write('.atbl th:first-child,.atbl td:first-child{text-align:left}');
-  w.document.write('.atbl th{background:#f9fafb;font-weight:600;text-align:right}');
+  w.document.write('.atbl th{background:#0d1117;font-weight:600;text-align:right;color:#94a3b8}');
   w.document.write('.atbl td{text-align:right}');
   w.document.write('.pg2{padding-top:24px}');
-  w.document.write('.summary{background:#f0fdf4;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:22px}');
-  w.document.write('.summary h3{font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}');
-  w.document.write('.summary p{font-size:10px;color:#1f2937;line-height:1.6;margin-bottom:8px}');
+  w.document.write('.summary{background:#0d2818;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:22px}');
+  w.document.write('.summary h3{font-size:12px;font-weight:700;color:#34d399;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}');
+  w.document.write('.summary p{font-size:10px;color:#cbd5e1;line-height:1.6;margin-bottom:8px}');
   w.document.write('.summary p:last-child{margin-bottom:0}');
-  w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}');
+  w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #2d3748;padding-bottom:6px;color:#f1f5f9}');
   w.document.write('#mainTbl{width:100%;border-collapse:collapse}');
-  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #d1d5db;padding:3px 7px;text-align:left;font-size:9px;white-space:nowrap}');
-  w.document.write('#mainTbl th{background:#f3f4f6;font-weight:600}');
-  w.document.write('#mainTbl tr:nth-child(even){background:#f9fafb}');
+  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #2d3748;padding:3px 7px;text-align:left;font-size:9px;white-space:nowrap;color:#e2e8f0}');
+  w.document.write('#mainTbl th{background:#1a1f2e;font-weight:600;color:#94a3b8}');
+  w.document.write('#mainTbl tr:nth-child(even){background:#111827}');
   w.document.write('.pbtn{margin-top:20px;padding:9px 24px;background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer}');
   w.document.write('@media print{.pbtn{display:none}.pg2{page-break-before:always}}');
   w.document.write('</style></head><body>');
 
   // Página 1
-  w.document.write('<h1>'+entityLabel+(yrVal?' · '+yrVal:'')+'</h1>');
-  w.document.write('<div class="sub">Controle Cliente · '+now+(mesLabel?' · Mês selecionado: '+mesLabel:'')+'</div>');
+  w.document.write('<h1 style="color:#f1f5f9">'+entityLabel+(yrVal?' · '+yrVal:'')+'</h1>');
+  w.document.write('<div class="sub" style="color:#64748b">Controle Cliente · '+now+(mesLabel?' · Mês selecionado: '+mesLabel:'')+'</div>');
 
   // KPIs
   w.document.write('<div class="kpi-grid">');
