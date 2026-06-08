@@ -12644,6 +12644,99 @@ function initCCGrupo(){
   });
 }
 
+
+function generateCCSummary(allData, entityLabel, yrFilter){
+  if(!allData||!allData.length) return '';
+
+  // Agregar por mês
+  var monthly={};
+  allData.forEach(function(r){
+    var m=r[2];
+    if(!monthly[m]) monthly[m]={compra:0,carga:0,proj:0,econ:0,cart:0,ped:0};
+    monthly[m].compra+=r[3]; monthly[m].carga+=r[5];
+    monthly[m].proj+=r[4];   monthly[m].econ+=r[6]; monthly[m].cart+=r[7];
+    if(r[3]>0) monthly[m].ped++;
+  });
+  var mIdxs=Object.keys(monthly).map(Number).sort(function(a,b){return a-b;});
+  if(!mIdxs.length) return '';
+
+  // Agregar por ano
+  var annual={};
+  mIdxs.forEach(function(i){
+    var yr='20'+((_CC_MESES[i]||'').split('/')[1]||'?');
+    if(!annual[yr]) annual[yr]={compra:0,proj:0,econ:0,cart:0,meses:0};
+    annual[yr].compra+=monthly[i].compra; annual[yr].proj+=monthly[i].proj;
+    annual[yr].econ+=monthly[i].econ;     annual[yr].cart+=monthly[i].cart;
+    annual[yr].meses++;
+  });
+  var yrs=Object.keys(annual).sort();
+
+  // Totais e médias
+  var totCompra=0,totProj=0,totEcon=0,totCart=0;
+  mIdxs.forEach(function(i){ totCompra+=monthly[i].compra; totProj+=monthly[i].proj; totEcon+=monthly[i].econ; totCart+=monthly[i].cart; });
+  var nMes=mIdxs.length;
+  var avgCompra=totCompra/nMes;
+  var txEcon=totCompra>0?(totProj/totCompra*100):0;
+
+  // Melhor e pior mês (por compra)
+  var bestIdx=mIdxs.reduce(function(b,i){return monthly[i].compra>monthly[b].compra?i:b;},mIdxs[0]);
+  var worstIdx=mIdxs.filter(function(i){return monthly[i].compra>0;}).reduce(function(b,i){return monthly[i].compra<monthly[b].compra?i:b;},mIdxs[0]);
+
+  // Tendência: comparar média 1ª metade vs 2ª metade
+  var half=Math.floor(nMes/2);
+  var avg1=mIdxs.slice(0,half).reduce(function(s,i){return s+monthly[i].compra;},0)/Math.max(half,1);
+  var avg2=mIdxs.slice(half).reduce(function(s,i){return s+monthly[i].compra;},0)/Math.max(nMes-half,1);
+  var growthPct=avg1>0?((avg2-avg1)/avg1*100):0;
+
+  // Crescimento YoY (se houver 2 anos)
+  var yoyTxt='';
+  if(yrs.length>=2){
+    var ly=yrs[yrs.length-1], py=yrs[yrs.length-2];
+    var lyC=annual[ly].compra, pyC=annual[py].compra;
+    if(pyC>0){
+      var yoyP=((lyC-pyC)/pyC*100);
+      yoyTxt=yoyP>=0?'crescimento de '+yoyP.toFixed(1)+'% em '+ly+' vs '+py:'queda de '+Math.abs(yoyP).toFixed(1)+'% em '+ly+' vs '+py;
+    }
+  }
+
+  function fmtV(v){ return v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':'R$ '+v.toFixed(0); }
+
+  // Montar parágrafos
+  var lines=[];
+  var entity=entityLabel==='Todos os clientes'?'a base de clientes':entityLabel;
+
+  // Parágrafo 1: visão geral
+  var p1='No período analisado ('+nMes+' '+(nMes===1?'mês':'meses')+'), '+entity+' gerou um volume total de pedidos de '+fmtV(totCompra)+
+    ', com média mensal de '+fmtV(avgCompra)+'. A taxa de economia sobre os pedidos foi de '+txEcon.toFixed(2)+'%, resultando em '+fmtV(totProj)+' de projeção de saldo'+
+    (totEcon>0?' e '+fmtV(totEcon)+' de economia líquida após taxas':'')+'.';
+  lines.push(p1);
+
+  // Parágrafo 2: tendência
+  var trend=growthPct>=5?'crescimento':(growthPct<=-5?'retração':'estabilidade');
+  var p2='A análise de tendência indica '+trend+' no volume de pedidos';
+  if(Math.abs(growthPct)>=2) p2+=' ('+( growthPct>=0?'+':'')+growthPct.toFixed(1)+'% entre a primeira e segunda metade do período)';
+  p2+='. O melhor desempenho foi registrado em '+(_CC_MESES[bestIdx]||'–')+' com '+fmtV(monthly[bestIdx].compra)+
+    (monthly[worstIdx]&&monthly[worstIdx].compra!==monthly[bestIdx].compra?' e o menor volume em '+(_CC_MESES[worstIdx]||'–')+' com '+fmtV(monthly[worstIdx].compra):'')+'.';
+  lines.push(p2);
+
+  // Parágrafo 3: YoY ou cartões
+  if(yoyTxt){
+    lines.push('Comparando anos, houve '+yoyTxt+(totCart>0?', com '+Math.round(totCart/nMes).toLocaleString('pt-BR')+' cartões processados em média por mês':'')+'.'); 
+  } else if(totCart>0){
+    lines.push('Foram processados '+totCart.toLocaleString('pt-BR')+' cartões no total, média de '+Math.round(totCart/nMes).toLocaleString('pt-BR')+' por mês.');
+  }
+
+  // Parágrafo 4: recomendação
+  var rec='';
+  if(growthPct>10) rec='O desempenho crescente sugere boa adesão ao benefício. Recomenda-se avaliar ampliação da base de cartões.';
+  else if(growthPct<-10) rec='A queda no volume indica necessidade de atenção. Recomenda-se contato comercial para entender possíveis causas.';
+  else if(txEcon>30) rec='A taxa de economia acima de 30% demonstra alto valor percebido pelo cliente no benefício Motiva.';
+  else if(txEcon>0&&txEcon<15) rec='A taxa de economia está abaixo da média. Avaliar oportunidades para aumentar a eficiência operacional.';
+  if(rec) lines.push(rec);
+
+  return lines.join('\n\n');
+}
+
 function exportCCPDF(){
   // ── Título: Grupo / Empresa / Todos ──────────────────────────────────────
   var entityLabel='Todos os clientes';
@@ -12652,6 +12745,17 @@ function exportCCPDF(){
   if(grupoEl&&grupoEl.value) entityLabel='Grupo: '+grupoEl.value;
   else if(selEmps.length===1) entityLabel=selEmps[0];
   else if(selEmps.length>1) entityLabel=selEmps.length+' empresas selecionadas';
+
+  // Gerar dados completos para o resumo
+  var origFilter2=(document.getElementById('ccOrigem')||{value:'all'}).value||'all';
+  var grupoFilter2=(grupoEl&&grupoEl.value)||'';
+  var yrVal2=(document.getElementById('ccYearFilter')||{value:''}).value||'';
+  var allPDFData=_CC.filter(function(r){
+    return (origFilter2==='all'||parseInt(origFilter2)===r[8])&&
+           (selEmps.length===0||selEmps.includes(r[1]))&&
+           (!grupoFilter2||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[typeof _cnpjKey==='function'?_cnpjKey(r[0]):r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')===grupoFilter2));
+  });
+  var summaryText=generateCCSummary(allPDFData, entityLabel, yrVal2);
   var yrEl=document.getElementById('ccYearFilter');
   var yrVal=yrEl?yrEl.value:'';
   var mesEl=document.getElementById('ccMes');
@@ -12704,8 +12808,8 @@ function exportCCPDF(){
   w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:5px}');
   w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px}');
   w.document.write('.ks{font-size:9px;color:#9ca3af}');
-  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}');
-  w.document.write('.cbox{border:1px solid #e5e7eb;border-radius:8px;padding:14px}');
+  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}');
+  w.document.write('.cbox{border:1px solid #e5e7eb;border-radius:8px;padding:14px;break-inside:avoid}');
   w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:10px}');
   w.document.write('.cimg{width:100%}');
   w.document.write('.csub{font-size:9px;color:#6b7280;margin-top:4px;text-align:right}');
@@ -12714,7 +12818,11 @@ function exportCCPDF(){
   w.document.write('.atbl th:first-child,.atbl td:first-child{text-align:left}');
   w.document.write('.atbl th{background:#f9fafb;font-weight:600;text-align:right}');
   w.document.write('.atbl td{text-align:right}');
-  w.document.write('.pg2{padding-top:24px}');
+  w.document.write('.pg2{padding-top:24px}'
+  w.document.write('.summary{background:#f0fdf4;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:22px}');
+  w.document.write('.summary h3{font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}');
+  w.document.write('.summary p{font-size:10px;color:#1f2937;line-height:1.6;margin-bottom:8px}');
+  w.document.write('.summary p:last-child{margin-bottom:0}'););
   w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}');
   w.document.write('#mainTbl{width:100%;border-collapse:collapse}');
   w.document.write('#mainTbl th,#mainTbl td{border:1px solid #d1d5db;padding:3px 7px;text-align:left;font-size:9px;white-space:nowrap}');
@@ -12734,6 +12842,15 @@ function exportCCPDF(){
     w.document.write('<div class="kc" style="border-top-color:'+k.bc+'"><div class="kl">'+k.lbl+'</div><div class="kv" style="color:'+k.vc+'">'+k.val+'</div><div class="ks">'+k.sub+'</div></div>');
   });
   w.document.write('</div>');
+
+  // Resumo inteligente
+  if(summaryText){
+    w.document.write('<div class="summary"><h3>📊 Análise do Período</h3>');
+    summaryText.split('\n\n').forEach(function(p){
+      if(p.trim()) w.document.write('<p>'+p.trim()+'</p>');
+    });
+    w.document.write('</div>');
+  }
 
   // Gráficos 2×2
   var secVisible=document.getElementById('ccChartsSection');
@@ -12896,7 +13013,7 @@ function renderCCDashboard(allData, yrFilter){
         ctx.fillStyle=ds.borderColor||'rgba(255,255,255,.7)';
         ctx.font='bold 9px sans-serif';
         ctx.textAlign='center';
-        var lbl=v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':String(Math.round(v));
+        var noR=!!ds._noPrefix; var lbl=v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(noR?(v/1e3).toFixed(0)+'k':'R$'+(v/1e3).toFixed(0)+'k'):String(Math.round(v));
         ctx.fillText(lbl, el.x, el.y-4);
         ctx.restore();
       });
@@ -12920,6 +13037,7 @@ function renderCCDashboard(allData, yrFilter){
   if(ctxA){
     _ccCharts['ccAnnual']=new Chart(ctxA,{
       type:'bar',
+      plugins:[pluginDatalabels],
       data:{labels:yrs,datasets:[
         mkBarDataset('Demanda',yrs.map(function(y){return annual[y].compra;}),'#2d5a8e'),
         mkBarDataset('Pedidos',yrs.map(function(y){return annual[y].carga;}),'#10b981'),
@@ -12949,6 +13067,7 @@ function renderCCDashboard(allData, yrFilter){
   if(ctxM){
     _ccCharts['ccMonthly']=new Chart(ctxM,{
       type:'bar',
+      plugins:[pluginDatalabels],
       data:{labels:mLabels,datasets:[
         mkBarDataset('Demanda',mIdxs.map(function(i){return monthly[i].compra;}),'#2d5a8e'),
         mkBarDataset('Pedidos',mIdxs.map(function(i){return monthly[i].carga;}),'#10b981'),
@@ -12964,6 +13083,7 @@ function renderCCDashboard(allData, yrFilter){
   if(ctxE){
     _ccCharts['ccEcon']=new Chart(ctxE,{
       type:'bar',
+      plugins:[pluginDatalabels],
       data:{labels:mLabels,datasets:[mkBarDataset('Economia Líquida',mIdxs.map(function(i){return monthly[i].econ;}),'#3b82f6')]},
       options:Object.assign({},chartDefaults)
     });
@@ -12977,7 +13097,8 @@ function renderCCDashboard(allData, yrFilter){
   if(ctxC){
     _ccCharts['ccCart']=new Chart(ctxC,{
       type:'bar',
-      data:{labels:mLabels,datasets:[mkBarDataset('Cartões',mIdxs.map(function(i){return monthly[i].cart;}),'#60a5fa')]},
+      plugins:[pluginDatalabels],
+      data:{labels:mLabels,datasets:[{label:'Cartões',data:mIdxs.map(function(i){return monthly[i].cart;}),backgroundColor:'#60a5fa',borderColor:'#60a5fa',borderWidth:0,borderRadius:3,_noPrefix:true}]},
       options:Object.assign({},chartDefaults,{
         scales:Object.assign({},chartDefaults.scales,{
           y:{ticks:{color:txtC,font:{size:9},callback:function(v){return v.toLocaleString('pt-BR');}},grid:{color:gridC}}
