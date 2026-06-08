@@ -379,9 +379,20 @@ function togglePwd(){
       <option value="">Todos os grupos</option>
     </select>
     <label style="margin-left:8px;">📅 Ano:</label>
-    <select id="ccYearFilter" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
+    <select id="ccYearFilter" onchange="onCCYearChange()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
       <option value="">Todos os anos</option>
     </select>
+    <label style="margin-left:8px;">🗓️ Meses:</label>
+    <div style="position:relative;display:inline-block;">
+      <button id="ccMonthBtn" onclick="toggleCCMonthDD(event)" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer;min-width:120px;text-align:left;">Todos os meses ▾</button>
+      <div id="ccMonthDD" style="display:none;position:absolute;top:100%;left:0;z-index:200;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:140px;max-height:220px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.4);">
+        <div style="margin-bottom:6px;display:flex;gap:8px;">
+          <span style="font-size:10px;cursor:pointer;color:var(--accent);" onclick="selectAllCCMonths(true)">Todos</span>
+          <span style="font-size:10px;cursor:pointer;color:var(--text-muted);" onclick="selectAllCCMonths(false)">Nenhum</span>
+        </div>
+        <div id="ccMonthList"></div>
+      </div>
+    </div>
     <button onclick="resetCC()" class="filter-btn">Limpar</button>
     <span class="client-count" id="ccCount" style="margin-left:8px;"></span>
     <button onclick="exportCC()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:auto;">⬇ Exportar CSV</button>
@@ -12637,6 +12648,7 @@ function resetCC(){
   var sg=document.getElementById('ccGrupo'); if(sg) sg.value='';
   var sy=document.getElementById('ccYearFilter');
   if(sy){ var curYr=String(new Date().getFullYear()); if([...sy.options].some(function(o){return o.value===curYr;})) sy.value=curYr; }
+  buildCCMonthList(); // Reconstruir com ano padrão e marcar todos
   renderCC();
 }
 
@@ -12960,6 +12972,85 @@ function _ccFmtFull(v){ return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDig
 function _ccFmtInt(v){ return v.toLocaleString('pt-BR'); }
 function _destroyChart(id){ if(_ccCharts[id]){_ccCharts[id].destroy();_ccCharts[id]=null;} }
 
+
+// ── Filtro de meses (multi-select) ─────────────────────────────────────────
+var _ccMonthDDOpen = false;
+
+function toggleCCMonthDD(e){
+  e.stopPropagation();
+  var dd = document.getElementById('ccMonthDD');
+  if(!dd) return;
+  _ccMonthDDOpen = !_ccMonthDDOpen;
+  dd.style.display = _ccMonthDDOpen ? 'block' : 'none';
+  if(_ccMonthDDOpen){
+    document.addEventListener('click', closeCCMonthDD, {once:true});
+  }
+}
+function closeCCMonthDD(){
+  var dd=document.getElementById('ccMonthDD'); if(dd) dd.style.display='none';
+  _ccMonthDDOpen=false;
+}
+
+function buildCCMonthList(){
+  var list=document.getElementById('ccMonthList'); if(!list) return;
+  var yr=(document.getElementById('ccYearFilter')||{value:''}).value||'';
+  // Coletar meses disponíveis para o ano selecionado
+  var available=[];
+  if(typeof _CC_MESES!=='undefined'){
+    _CC_MESES.forEach(function(lbl,idx){
+      var myr='20'+(lbl.split('/')[1]||'');
+      if(!yr||myr===yr){
+        if(!available.find(function(x){return x.idx===idx;}))
+          available.push({idx:idx,lbl:lbl});
+      }
+    });
+  }
+  // Guardar quais estavam selecionados antes
+  var prev=getCCSelectedMonths();
+  list.innerHTML='';
+  available.forEach(function(m){
+    var checked=prev.length===0||prev.includes(m.idx);
+    var cb=document.createElement('label');
+    cb.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:11px;color:var(--text);white-space:nowrap';
+    var inp=document.createElement('input');
+    inp.type='checkbox'; inp.value=String(m.idx); inp.checked=checked;
+    inp.style.accentColor='#10b981';
+    inp.addEventListener('change',function(){ updateCCMonthBtn(); renderCC(); });
+    cb.appendChild(inp); cb.appendChild(document.createTextNode(m.lbl));
+    list.appendChild(cb);
+  });
+  updateCCMonthBtn();
+}
+
+function getCCSelectedMonths(){
+  var list=document.getElementById('ccMonthList'); if(!list) return [];
+  var checked=[]; 
+  list.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+    if(cb.checked) checked.push(parseInt(cb.value));
+  });
+  // Se todos marcados = sem filtro
+  var total=list.querySelectorAll('input[type=checkbox]').length;
+  return checked.length===total?[]:checked;
+}
+
+function updateCCMonthBtn(){
+  var btn=document.getElementById('ccMonthBtn'); if(!btn) return;
+  var sel=getCCSelectedMonths();
+  var total=document.querySelectorAll('#ccMonthList input[type=checkbox]').length;
+  if(sel.length===0||sel.length===total) btn.textContent='Todos os meses ▾';
+  else btn.textContent=sel.length+' '+(sel.length===1?'mês':'meses')+' ▾';
+}
+
+function selectAllCCMonths(val){
+  document.querySelectorAll('#ccMonthList input[type=checkbox]').forEach(function(cb){cb.checked=val;});
+  updateCCMonthBtn(); renderCC();
+}
+
+function onCCYearChange(){
+  buildCCMonthList(); // Reconstruir lista de meses para o novo ano
+  renderCC();
+}
+
 function renderCCDashboard(allData, yrFilter){
   // Popular dropdown de ano (só na primeira vez)
   var yrSel=document.getElementById('ccYearFilter');
@@ -13273,15 +13364,17 @@ function renderCC(){
 
   // ── Chamar dashboard ao FINAL (garante que KPIs não sejam sobrescritos) ──
   var yrFilter = (document.getElementById('ccYearFilter')||{value:''}).value||'';
+  var selMonths=getCCSelectedMonths();
   var allPeriodData = _CC.filter(function(r){
     if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
     if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
     if(grupoFilter&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[_cnpjKey(r[0])]||'')!==grupoFilter)) return false;
-    // Filtro de ano também para os cards e resumo
     if(yrFilter){
       var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');
       if(myr!==yrFilter) return false;
     }
+    // Filtro de meses selecionados
+    if(selMonths.length>0&&!selMonths.includes(r[2])) return false;
     return true;
   });
   renderCCDashboard(allPeriodData, yrFilter);
@@ -13307,12 +13400,12 @@ window.showTab=function(name,e){
   if(name==='controle'){
     // Inicializar seletor se ainda não foi feito
     var sel=document.getElementById('ccMes');
-    if(sel&&sel.options.length===0){ initCC(); initCCGrupo(); }
+    if(sel&&sel.options.length===0){ initCC(); initCCGrupo(); buildCCMonthList(); }
     renderCC();
   }
 };
 // Inicializar ao carregar a página (para o seletor ficar pronto)
-setTimeout(function(){ initCC(); initCCGrupo(); }, 100);
+setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); }, 100);
 
 </script>
 </body>
