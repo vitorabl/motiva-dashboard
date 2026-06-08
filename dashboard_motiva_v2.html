@@ -12755,163 +12755,217 @@ function generateCCSummary(allData, entityLabel, yrFilter){
 }
 
 function exportCCPDF(){
-  // ── Título: Grupo / Empresa / Todos ──────────────────────────────────────
-  var entityLabel='Todos os clientes';
+  // ── Cabeçalho / filtros ──────────────────────────────────────────────────
   var grupoEl=document.getElementById('ccGrupo');
   var selEmps=typeof _ccSelectedEmps!=='undefined'?_ccSelectedEmps:[];
-  if(grupoEl&&grupoEl.value) entityLabel='Grupo: '+grupoEl.value;
+  var entityLabel='Todos os clientes';
+  if(grupoEl&&grupoEl.value) entityLabel=grupoEl.value;
   else if(selEmps.length===1) entityLabel=selEmps[0];
-  else if(selEmps.length>1) entityLabel=selEmps.length+' empresas selecionadas';
-
-  // Gerar dados completos para o resumo
-  var origFilter2=(document.getElementById('ccOrigem')||{value:'all'}).value||'all';
-  var grupoFilter2=(grupoEl&&grupoEl.value)||'';
-  var yrVal2=(document.getElementById('ccYearFilter')||{value:''}).value||'';
-  var allPDFData=_CC.filter(function(r){
-    if(origFilter2!=='all'&&parseInt(origFilter2)!==r[8]) return false;
-    if(selEmps.length>0&&!selEmps.includes(r[1])) return false;
-    if(grupoFilter2&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')!==grupoFilter2)) return false;
-    if(yrVal2){var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');if(myr!==yrVal2)return false;}
-    return true;
-  });
-  var summaryText=generateCCSummary(allPDFData, entityLabel, yrVal2);
-  var yrEl=document.getElementById('ccYearFilter');
-  var yrVal=yrEl?yrEl.value:'';
-  var mesEl=document.getElementById('ccMes');
-  var mesLabel=mesEl?(_CC_MESES[parseInt(mesEl.value)]||''):'';
+  else if(selEmps.length>1) entityLabel=selEmps.length+' empresas';
+  var yrVal=(document.getElementById('ccYearFilter')||{value:''}).value||'';
+  var selMonths=typeof getCCSelectedMonths==='function'?getCCSelectedMonths():[];
+  var periodoLabel=yrVal||(typeof _CC_MESES!=='undefined'?_CC_MESES[0]+' – '+_CC_MESES[_CC_MESES.length-1]:'');
+  if(selMonths.length>0&&typeof _CC_MESES!=='undefined')
+    periodoLabel=_CC_MESES[selMonths[0]]+(selMonths.length>1?' – '+_CC_MESES[selMonths[selMonths.length-1]]:'');
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
   var kpiColors=['#6b7280','#10b981','#10b981','#6b7280','#818cf8','#6b7280'];
-  var kpiValColors=['#111','#10b981','#10b981','#111','#818cf8','#111'];
+  var kpiValColors=['#f1f5f9','#10b981','#10b981','#f1f5f9','#818cf8','#f1f5f9'];
   var kpiCards=[];
   var kpiGrid=document.getElementById('ccKpis');
   if(kpiGrid){
     kpiGrid.querySelectorAll('.kpi').forEach(function(k,i){
-      kpiCards.push({
-        lbl:(k.querySelector('.kpi-label')||{}).textContent||'',
+      kpiCards.push({lbl:(k.querySelector('.kpi-label')||{}).textContent||'',
         val:(k.querySelector('.kpi-value')||{}).textContent||'—',
         sub:(k.querySelector('.kpi-sub')||{}).textContent||'',
-        bc:kpiColors[i]||'#6b7280', vc:kpiValColors[i]||'#111'
-      });
+        bc:kpiColors[i]||'#6b7280',vc:kpiValColors[i]||'#f1f5f9'});
     });
   }
 
-  // ── Captura 4 gráficos ───────────────────────────────────────────────────
-  var CHART_IDS  =['ccAnnualChart','ccMonthlyChart','ccEconChart','ccCartChart'];
-  var CHART_LBLS =['DEMANDA × PEDIDO × ECONOMIA — ANUAL','DEMANDA × PEDIDO × ECONOMIA — MENSAL','ECONOMIA LÍQUIDA MENSAL','CARTÕES PROCESSADOS — MENSAL'];
-  var chartImgs=[];
-  function _capCanvas(c){
-    if(!c) return '';
-    try{
-      var scale=3; // 3x para imagem nítida ao imprimir
-      var off=document.createElement('canvas');
-      off.width=c.width*scale; off.height=c.height*scale;
-      var ctx=off.getContext('2d');
-      ctx.scale(scale,scale);
-      ctx.fillStyle='#1a1f2e';
-      ctx.fillRect(0,0,c.width,c.height);
-      ctx.drawImage(c,0,0);
-      return off.toDataURL('image/png',1.0);
-    }catch(e){ return c.toDataURL('image/png'); }
-  }
-  CHART_IDS.forEach(function(id,i){
-    var c=document.getElementById(id);
-    chartImgs.push({title:CHART_LBLS[i],src:_capCanvas(c)});
+  // ── Dados para re-render ─────────────────────────────────────────────────
+  var pd=window._ccPDFData||{};
+  var origFilter2=(document.getElementById('ccOrigem')||{value:'all'}).value||'all';
+  var grupoFilter2=(grupoEl&&grupoEl.value)||'';
+  var allPDFData=_CC.filter(function(r){
+    if(origFilter2!=='all'&&parseInt(origFilter2)!==r[8]) return false;
+    if(selEmps.length>0&&!selEmps.includes(r[1])) return false;
+    if(grupoFilter2&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')!==grupoFilter2)) return false;
+    if(yrVal){var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');if(myr!==yrVal)return false;}
+    if(selMonths.length>0&&!selMonths.includes(r[2])) return false;
+    return true;
   });
-  var annualTblHtml=(document.getElementById('ccAnnualTable')||{}).innerHTML||'';
-  var econTotalTxt=(document.getElementById('ccEconTotal')||{}).textContent||'';
-  var cartStatsTxt=(document.getElementById('ccCartStats')||{}).textContent||'';
+  var summaryText=typeof generateCCSummary==='function'?generateCCSummary(allPDFData,entityLabel,yrVal):'';
 
-  // ── Tabela (página 2) ────────────────────────────────────────────────────
+  // ── Serializar dados dos gráficos ────────────────────────────────────────
+  var chartJSON=JSON.stringify(pd);
+  var mesTblEl=document.getElementById('ccMes');
+  var mesLabel=mesTblEl?(_CC_MESES[parseInt(mesTblEl.value)]||''):'';
   var tblEl=document.getElementById('ccTable');
   var tblHtml=tblEl?tblEl.outerHTML.replace('id="ccTable"','id="mainTbl"'):'';
 
-  // ── Montar HTML ──────────────────────────────────────────────────────────
-  var now=new Date().toLocaleString('pt-BR');
-  var w=window.open('','_blank','width=1280,height=900');
+  // ── Abrir janela ─────────────────────────────────────────────────────────
+  var w=window.open('','_blank','width=1100,height=850');
+  var now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
   w.document.write('<!doctype html><html><head><meta charset="utf-8">');
-  w.document.write('<title>'+entityLabel+'</title>');
+  w.document.write('<title>'+entityLabel+' · Controle Cliente</title>');
+  w.document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"><\/script>');
   w.document.write('<style>');
+  w.document.write(':root{--bg:#0d1117;--card:#1a1f2e;--border:#2d3748;--text:#e2e8f0;--muted:#94a3b8;--green:#10b981;--purple:#818cf8}');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
-  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#e2e8f0;background:#0d1117;padding:24px}');
-  w.document.write('h1{font-size:20px;font-weight:700;margin-bottom:2px}');
-  w.document.write('.sub{font-size:10px;color:#6b7280;margin-bottom:22px}');
-  w.document.write('.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}');
-  w.document.write('.kc{border:1px solid #2d3748;border-top:3px solid;border-radius:8px;padding:14px;background:#1a1f2e}');
-  w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px}');
-  w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px;color:#f1f5f9}');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);padding:0}');
+  w.document.write('.page{width:100%;max-width:960px;margin:0 auto;padding:32px 36px;page-break-after:always}');
+  w.document.write('.page:last-child{page-break-after:auto}');
+  // Cabeçalho
+  w.document.write('.hdr{border-bottom:2px solid var(--green);padding-bottom:16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end}');
+  w.document.write('.hdr-left h1{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px}');
+  w.document.write('.hdr-left .sub{font-size:11px;color:var(--muted)}');
+  w.document.write('.hdr-right{text-align:right;font-size:10px;color:var(--muted)}');
+  // KPIs
+  w.document.write('.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}');
+  w.document.write('.kc{border:1px solid var(--border);border-top:3px solid;border-radius:10px;padding:14px;background:var(--card)}');
+  w.document.write('.kl{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}');
+  w.document.write('.kv{font-size:21px;font-weight:700;margin-bottom:3px;line-height:1.2}');
   w.document.write('.ks{font-size:9px;color:#64748b}');
-  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:20px}');
-  w.document.write('.cbox{border:1px solid #2d3748;border-radius:8px;padding:16px;break-inside:avoid;background:#1a1f2e;margin-bottom:4px}');
-  w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px}');
-  w.document.write('.cimg{width:100%;image-rendering:high-quality;display:block}');
-  w.document.write('.csub{font-size:9px;color:#64748b;margin-top:4px;text-align:right}');
-  w.document.write('.atbl table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}');
-  w.document.write('.atbl th,.atbl td{border:1px solid #2d3748;padding:3px 6px;color:#e2e8f0}');
+  // Resumo
+  w.document.write('.summary{background:#0d2818;border-left:4px solid var(--green);border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:24px}');
+  w.document.write('.summary h3{font-size:10px;font-weight:700;color:#34d399;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}');
+  w.document.write('.summary p{font-size:10px;color:#cbd5e1;line-height:1.65;margin-bottom:6px}');
+  w.document.write('.summary p:last-child{margin:0}');
+  // Gráficos
+  w.document.write('.section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--border)}');
+  w.document.write('.chart-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;break-inside:avoid}');
+  w.document.write('.chart-sub{font-size:9px;color:var(--muted);text-align:right;margin-top:6px}');
+  // Tabela anual
+  w.document.write('.atbl{margin-top:10px;overflow-x:auto}');
+  w.document.write('.atbl table{width:100%;border-collapse:collapse;font-size:10px}');
+  w.document.write('.atbl th,.atbl td{border:1px solid var(--border);padding:4px 8px;color:var(--text)}');
   w.document.write('.atbl th:first-child,.atbl td:first-child{text-align:left}');
-  w.document.write('.atbl th{background:#0d1117;font-weight:600;text-align:right;color:#94a3b8}');
+  w.document.write('.atbl th{background:#0d1117;color:var(--muted);font-weight:600;text-align:right}');
   w.document.write('.atbl td{text-align:right}');
-  w.document.write('.pg2{padding-top:24px}');
-  w.document.write('.summary{background:#0d2818;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:22px}');
-  w.document.write('.summary h3{font-size:12px;font-weight:700;color:#34d399;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}');
-  w.document.write('.summary p{font-size:10px;color:#cbd5e1;line-height:1.6;margin-bottom:8px}');
-  w.document.write('.summary p:last-child{margin-bottom:0}');
-  w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #2d3748;padding-bottom:6px;color:#f1f5f9}');
-  w.document.write('#mainTbl{width:100%;border-collapse:collapse;table-layout:auto}');
-  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #2d3748;padding:2px 5px;text-align:left;font-size:8px;white-space:nowrap;color:#e2e8f0}');
-  w.document.write('#mainTbl th{background:#1a1f2e;font-weight:600;color:#94a3b8}');
+  // Tabela principal
+  w.document.write('.tbl-wrap{overflow-x:auto}');
+  w.document.write('#mainTbl{width:100%;border-collapse:collapse;font-size:8px}');
+  w.document.write('#mainTbl th,#mainTbl td{border:1px solid var(--border);padding:3px 6px;color:var(--text);white-space:nowrap}');
+  w.document.write('#mainTbl th{background:#0d1117;color:var(--muted);font-weight:600}');
   w.document.write('#mainTbl tr:nth-child(even){background:#111827}');
-  w.document.write('.pbtn{margin-top:20px;padding:9px 24px;background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer}');
-  w.document.write('@media print{.pbtn{display:none}.pg2{page-break-before:always}.charts-grid{grid-template-columns:1fr!important}.cbox{page-break-inside:avoid;margin-bottom:12px}.cimg{max-width:100%;height:auto}}');
+  // Print
+  w.document.write('.pbtn{margin-top:20px;padding:10px 28px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;display:block;margin-left:auto}');
+  w.document.write('@media print{');
+  w.document.write('body{-webkit-print-color-adjust:exact;print-color-adjust:exact}');
+  w.document.write('.pbtn{display:none}.page{page-break-after:always;padding:20px 24px}.page:last-child{page-break-after:auto}');
+  w.document.write('}');
   w.document.write('</style></head><body>');
 
-  // Página 1
-  w.document.write('<h1 style="color:#f1f5f9">'+entityLabel+(yrVal?' · '+yrVal:'')+'</h1>');
-  w.document.write('<div class="sub" style="color:#64748b">Controle Cliente · '+now+(mesLabel?' · Mês selecionado: '+mesLabel:'')+'</div>');
-
+  // ── PÁG 1: Capa + KPIs + Resumo ──────────────────────────────────────────
+  w.document.write('<div class="page">');
+  w.document.write('<div class="hdr"><div class="hdr-left"><h1>'+entityLabel+'</h1>');
+  w.document.write('<div class="sub">Controle Cliente · Período: '+periodoLabel+'</div></div>');
+  w.document.write('<div class="hdr-right"><div>Motiva Benefícios</div><div>'+now+'</div></div></div>');
   // KPIs
   w.document.write('<div class="kpi-grid">');
   kpiCards.forEach(function(k){
-    w.document.write('<div class="kc" style="border-top-color:'+k.bc+'"><div class="kl">'+k.lbl+'</div><div class="kv" style="color:'+k.vc+'">'+k.val+'</div><div class="ks">'+k.sub+'</div></div>');
+    w.document.write('<div class="kc" style="border-top-color:'+k.bc+'">');
+    w.document.write('<div class="kl">'+k.lbl+'</div>');
+    w.document.write('<div class="kv" style="color:'+k.vc+'">'+k.val+'</div>');
+    w.document.write('<div class="ks">'+k.sub+'</div></div>');
   });
   w.document.write('</div>');
-
-  // Resumo inteligente
+  // Resumo
   if(summaryText){
     w.document.write('<div class="summary"><h3>📊 Análise do Período</h3>');
-    summaryText.split('\n\n').forEach(function(p){
-      if(p.trim()) w.document.write('<p>'+p.trim()+'</p>');
-    });
+    summaryText.split('\n\n').forEach(function(p){if(p.trim())w.document.write('<p>'+p.trim()+'</p>');});
     w.document.write('</div>');
   }
+  w.document.write('</div>');
 
-  // Gráficos 2×2
-  var secVisible=document.getElementById('ccChartsSection');
-  if(secVisible&&secVisible.style.display!=='none'&&chartImgs.some(function(c){return c.src;})){
-    w.document.write('<div class="charts-grid">');
-    chartImgs.forEach(function(ch,i){
-      w.document.write('<div class="cbox"><div class="ctitle">'+ch.title+'</div>');
-      if(ch.src) w.document.write('<img class="cimg" src="'+ch.src+'">');
-      if(i===0&&annualTblHtml) w.document.write('<div class="atbl">'+annualTblHtml+'</div>');
-      if(i===2&&econTotalTxt) w.document.write('<div class="csub">'+econTotalTxt+'</div>');
-      if(i===3&&cartStatsTxt) w.document.write('<div class="csub">'+cartStatsTxt+'</div>');
-      w.document.write('</div>');
-    });
-    w.document.write('</div>');
-  }
+  // ── PÁG 2+3: Gráficos re-renderizados ────────────────────────────────────
+  w.document.write('<div class="page" id="pg-charts"></div>');
 
-  // Página 2: tabela
+  // ── ÚLTIMA PÁG: Tabela ────────────────────────────────────────────────────
   if(tblHtml){
-    w.document.write('<div class="pg2">');
-    w.document.write('<div class="ph">Tabela Detalhada'+(mesLabel?' — '+mesLabel:'')+(entityLabel!=='Todos os clientes'?' · '+entityLabel:'')+'</div>');
-    w.document.write('<div style="overflow-x:auto;width:100%">'+tblHtml+'</div>');
+    w.document.write('<div class="page">');
+    w.document.write('<div class="hdr"><div class="hdr-left"><h1>Tabela Detalhada</h1>');
+    w.document.write('<div class="sub">'+mesLabel+(entityLabel!=='Todos os clientes'?' · '+entityLabel:'')+'</div></div>');
+    w.document.write('<div class="hdr-right"><div>Motiva Benefícios</div><div>'+now+'</div></div></div>');
+    w.document.write('<div class="tbl-wrap">'+tblHtml+'</div>');
     w.document.write('</div>');
   }
-
   w.document.write('<button class="pbtn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function(){w.print();},900);
+
+  // ── Aguardar Chart.js carregar e então renderizar gráficos ─────────────────
+  w.addEventListener('load', function(){
+    var pd2=JSON.parse(chartJSON);
+    var pg=w.document.getElementById('pg-charts');
+    if(!pg||!pd2.mLabels) return;
+
+    var DARK='#0d1117', CARD='#1a1f2e', BORDER='#2d3748';
+    var MUTED='rgba(148,163,184,.6)', WHITE='rgba(226,232,240,.85)';
+    var C = w.Chart;
+    if(!C) return;
+    C.defaults.color=WHITE;
+    C.defaults.borderColor=BORDER;
+    var commonOpts={
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:WHITE,font:{size:10},boxWidth:12,padding:12}},
+               tooltip:{callbacks:{label:function(ctx){var v=ctx.raw; return ' '+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?'R$'+(v/1e3).toFixed(1)+'k':'R$'+Math.round(v));}}}},
+      scales:{x:{ticks:{color:MUTED,font:{size:9}},grid:{color:'rgba(255,255,255,.05)'}},
+              y:{ticks:{color:MUTED,font:{size:9},callback:function(v){return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+v;}},
+                 grid:{color:'rgba(255,255,255,.05)'}}}
+    };
+    function mkDs(label,data,color){return{label:label,data:data,backgroundColor:color,borderColor:color,borderWidth:0,borderRadius:4,datalabels:{display:false}};}
+
+    function addChart(title, subText, canvasId, chartCfg, annualTblHtml, subBottom){
+      var box=w.document.createElement('div'); box.className='chart-box';
+      var t=w.document.createElement('div'); t.className='section-title'; t.textContent=title; box.appendChild(t);
+      var wrap=w.document.createElement('div'); wrap.style.height='260px'; wrap.style.background=CARD;
+      var canvas=w.document.createElement('canvas'); canvas.id=canvasId; canvas.style.width='100%'; canvas.style.height='260px';
+      wrap.appendChild(canvas); box.appendChild(wrap);
+      if(annualTblHtml){var d=w.document.createElement('div');d.className='atbl';d.innerHTML=annualTblHtml;box.appendChild(d);}
+      if(subBottom){var s=w.document.createElement('div');s.className='chart-sub';s.textContent=subBottom;box.appendChild(s);}
+      pg.appendChild(box);
+      new C(canvas, chartCfg);
+    }
+
+    // Gráfico 1: Anual
+    addChart('DEMANDA × PEDIDO × ECONOMIA — ANUAL', '', 'cA', {
+      type:'bar', data:{labels:pd2.yrs, datasets:[
+        mkDs('Demanda',pd2.yDemanda,'#2d5a8e'),
+        mkDs('Pedidos (Carga)',pd2.yCarga,'#10b981'),
+        mkDs('Economia (Projeção)',pd2.yProj,'#c4a45a')
+      ]}, options:JSON.parse(JSON.stringify(commonOpts))
+    }, pd2.annualTbl, '');
+
+    // Gráfico 2: Mensal Demanda×Pedido×Economia
+    addChart('DEMANDA × PEDIDO × ECONOMIA — MENSAL', '', 'cM', {
+      type:'bar', data:{labels:pd2.mLabels, datasets:[
+        mkDs('Demanda',pd2.mDemanda,'#2d5a8e'),
+        mkDs('Pedidos (Carga)',pd2.mCarga,'#10b981'),
+        mkDs('Economia (Projeção)',pd2.mProj,'#c4a45a')
+      ]}, options:JSON.parse(JSON.stringify(commonOpts))
+    }, '', '');
+
+    // Gráfico 3: Economia Líquida Mensal
+    var econOpts=JSON.parse(JSON.stringify(commonOpts));
+    econOpts.plugins.tooltip.callbacks.label=function(ctx){var v=ctx.raw;return ' R$'+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'k':Math.round(v));};
+    addChart('ECONOMIA LÍQUIDA MENSAL', '', 'cE', {
+      type:'bar', data:{labels:pd2.mLabels, datasets:[mkDs('Economia Líquida',pd2.mEcon,'#3b82f6')]},
+      options:econOpts
+    }, '', '');
+
+    // Gráfico 4: Cartões
+    var cartOpts=JSON.parse(JSON.stringify(commonOpts));
+    cartOpts.scales.y.ticks.callback=function(v){return v>=1e3?(v/1e3).toFixed(1)+'k':String(v);};
+    cartOpts.plugins.tooltip.callbacks.label=function(ctx){return ' '+ctx.raw.toLocaleString('pt-BR');};
+    var cartTotal=pd2.mCart?pd2.mCart.reduce(function(s,v){return s+v;},0):0;
+    var cartAvg=pd2.mLabels&&pd2.mLabels.length>0?Math.round(cartTotal/pd2.mLabels.length):0;
+    addChart('CARTÕES PROCESSADOS — MENSAL', '', 'cC', {
+      type:'bar', data:{labels:pd2.mLabels, datasets:[mkDs('Cartões',pd2.mCart,'#60a5fa')]},
+      options:cartOpts
+    }, '', 'Média: '+cartAvg.toLocaleString('pt-BR')+'/mês  ·  Acum: '+cartTotal.toLocaleString('pt-BR'));
+  });
 }
 
 function renderCCTags(){
@@ -13099,6 +13153,20 @@ function renderCCDashboard(allData, yrFilter){
     return yr===yrFilter;
   }):mIdxsAll;
   var mLabels=mIdxs.map(function(i){return _CC_MESES[i]||('M'+i);});
+  // Persistir dados para o exportCCPDF usar (re-render vetorial)
+  window._ccPDFData={
+    mLabels:mLabels,
+    mDemanda:mIdxs.map(function(i){return monthly[i].compra;}),
+    mCarga:mIdxs.map(function(i){return monthly[i].carga;}),
+    mProj:mIdxs.map(function(i){return monthly[i].proj;}),
+    mEcon:mIdxs.map(function(i){return monthly[i].econ;}),
+    mCart:mIdxs.map(function(i){return monthly[i].cart;}),
+    yrs:yrs,
+    yDemanda:yrs.map(function(y){return annual[y].compra;}),
+    yCarga:yrs.map(function(y){return annual[y].carga;}),
+    yProj:yrs.map(function(y){return annual[y].proj;}),
+    annualTbl:(document.getElementById('ccAnnualTable')||{}).innerHTML||''
+  };
 
   // ── Dados anuais ─────────────────────────────────────────────────────────
   var annual={};
