@@ -361,10 +361,8 @@ function togglePwd(){
 
 <!-- ===== CONTROLE CLIENTE ===== -->
 <div class="content" id="tab-controle">
-  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
-    <label>📅 Mês:</label>
-    <select id="ccMes" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
-    <label style="margin-left:8px;">📦 Origem:</label>
+  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <label>📦 Origem:</label>
     <select id="ccOrigem" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
       <option value="all">VT + PAT</option>
       <option value="0">VT (Ped. Carga)</option>
@@ -376,10 +374,6 @@ function togglePwd(){
         oninput="onCCTagInput()" onkeydown="onCCTagKey(event)" onfocus="showCCDropdown()" onblur="hideCCDropdown()">
       <div class="client-dropdown" id="ccDropdown" style="display:none;"></div>
     </div>
-    <label style="margin-left:8px;">🔄 Comparar com:</label>
-    <select id="ccMesComp" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
-      <option value="-1">Sem comparação</option>
-    </select>
     <label style="margin-left:8px;">🔗 Grupo:</label>
     <select id="ccGrupo" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);max-width:200px;">
       <option value="">Todos os grupos</option>
@@ -464,6 +458,15 @@ function togglePwd(){
     </div>
   </div>
 
+  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-top:16px;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid var(--border);">
+    <label style="font-size:11px;font-weight:600;color:var(--text-muted)">📋 Visualização da tabela</label>
+    <label style="margin-left:8px;">📅 Mês:</label>
+    <select id="ccMes" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
+    <label style="margin-left:8px;">🔄 Comparar com:</label>
+    <select id="ccMesComp" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
+      <option value="-1">Sem comparação</option>
+    </select>
+  </div>
   <div class="table-card" style="margin-top:0;">
     <div class="table-scroll">
       <table id="ccTable" style="width:100%;border-collapse:collapse;">
@@ -12632,6 +12635,8 @@ function resetCC(){
   if(sel){var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:_CC_MESES.length-1; sel.value=Math.min(ldi,_CC_MESES.length-1);}
   document.getElementById('ccOrigem').value='all';
   var sg=document.getElementById('ccGrupo'); if(sg) sg.value='';
+  var sy=document.getElementById('ccYearFilter');
+  if(sy){ var curYr=String(new Date().getFullYear()); if([...sy.options].some(function(o){return o.value===curYr;})) sy.value=curYr; }
   renderCC();
 }
 
@@ -12751,9 +12756,11 @@ function exportCCPDF(){
   var grupoFilter2=(grupoEl&&grupoEl.value)||'';
   var yrVal2=(document.getElementById('ccYearFilter')||{value:''}).value||'';
   var allPDFData=_CC.filter(function(r){
-    return (origFilter2==='all'||parseInt(origFilter2)===r[8])&&
-           (selEmps.length===0||selEmps.includes(r[1]))&&
-           (!grupoFilter2||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[typeof _cnpjKey==='function'?_cnpjKey(r[0]):r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')===grupoFilter2));
+    if(origFilter2!=='all'&&parseInt(origFilter2)!==r[8]) return false;
+    if(selEmps.length>0&&!selEmps.includes(r[1])) return false;
+    if(grupoFilter2&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')!==grupoFilter2)) return false;
+    if(yrVal2){var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');if(myr!==yrVal2)return false;}
+    return true;
   });
   var summaryText=generateCCSummary(allPDFData, entityLabel, yrVal2);
   var yrEl=document.getElementById('ccYearFilter');
@@ -13255,9 +13262,15 @@ function renderCC(){
   // ── Chamar dashboard ao FINAL (garante que KPIs não sejam sobrescritos) ──
   var yrFilter = (document.getElementById('ccYearFilter')||{value:''}).value||'';
   var allPeriodData = _CC.filter(function(r){
-    return (origFilter==='all'||parseInt(origFilter)===r[8]) &&
-           (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1])) &&
-           (!grupoFilter||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[_cnpjKey(r[0])]||'')===grupoFilter));
+    if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
+    if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
+    if(grupoFilter&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[_cnpjKey(r[0])]||'')!==grupoFilter)) return false;
+    // Filtro de ano também para os cards e resumo
+    if(yrFilter){
+      var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');
+      if(myr!==yrFilter) return false;
+    }
+    return true;
   });
   renderCCDashboard(allPeriodData, yrFilter);
 }
