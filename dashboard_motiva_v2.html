@@ -380,9 +380,14 @@ function togglePwd(){
     <select id="ccMesComp" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
       <option value="-1">Sem comparação</option>
     </select>
+    <label style="margin-left:8px;">🔗 Grupo:</label>
+    <select id="ccGrupo" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);max-width:200px;">
+      <option value="">Todos os grupos</option>
+    </select>
     <button onclick="resetCC()" class="filter-btn">Limpar</button>
     <span class="client-count" id="ccCount" style="margin-left:8px;"></span>
     <button onclick="exportCC()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:auto;">⬇ Exportar CSV</button>
+    <button onclick="exportCCPDF()" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);color:#818cf8;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">📄 Exportar PDF</button>
   </div>
   <div class="kpi-grid" id="ccKpis">
     <div class="kpi cyan"><div class="kpi-label" id="cc-compra-lbl">Total Compra</div><div class="kpi-value" id="cc-compra-val">—</div><div class="kpi-sub">Valor total de compra</div></div>
@@ -12562,7 +12567,37 @@ function resetCC(){
   var sel=document.getElementById('ccMes');
   if(sel){var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:_CC_MESES.length-1; sel.value=Math.min(ldi,_CC_MESES.length-1);}
   document.getElementById('ccOrigem').value='all';
+  var sg=document.getElementById('ccGrupo'); if(sg) sg.value='';
   renderCC();
+}
+
+function initCCGrupo(){
+  var sel=document.getElementById('ccGrupo'); if(!sel) return;
+  if(typeof VINCULO_MAP==='undefined') return;
+  var grupos=[...new Set(Object.values(VINCULO_MAP))].sort();
+  grupos.forEach(function(g){
+    var o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o);
+  });
+}
+
+function exportCCPDF(){
+  var title='Controle Cliente';
+  var mes=document.getElementById('ccMes');
+  if(mes) title+=' – '+(_CC_MESES[parseInt(mes.value)]||'');
+  var grupo=document.getElementById('ccGrupo');
+  if(grupo&&grupo.value) title+=' · '+grupo.value;
+  var tbl=document.getElementById('ccTable');
+  if(!tbl) return;
+  var w=window.open('','_blank','width=1100,height=700');
+  w.document.write('<html><head><meta charset="utf-8"><title>'+title+'</title>');
+  w.document.write('<style>body{font-family:sans-serif;font-size:11px;color:#111}h2{margin-bottom:8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 7px;text-align:left}th{background:#f3f4f6;font-weight:600}tr:nth-child(even){background:#f9fafb}@media print{button{display:none}}</style>');
+  w.document.write('</head><body>');
+  w.document.write('<h2>'+title+'</h2>');
+  w.document.write(tbl.outerHTML);
+  w.document.write('<br><button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},600);
 }
 
 function renderCCTags(){
@@ -12629,10 +12664,18 @@ function renderCC(){
   var hasComp=selMesComp>=0&&selMesComp!==selMes&&!isNaN(selMesComp);
   var mesNm=_CC_MESES[selMes]||''; var compMesNm=hasComp?(_CC_MESES[selMesComp]||''):'';
 
+  var grupoFilter=(document.getElementById('ccGrupo')||{value:''}).value||'';
   function getFiltered(mesIdx){
     return _CC.filter(function(r){
-      return r[2]===mesIdx&&(origFilter==='all'||parseInt(origFilter)===r[8])&&
-        (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1]));
+      if(r[2]!==mesIdx) return false;
+      if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
+      if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
+      if(grupoFilter){
+        var vm=typeof VINCULO_MAP!=='undefined'?VINCULO_MAP:{};
+        var g=vm[r[0].replace(/\D/g,'')]||vm[r[0]]||'';
+        if(g!==grupoFilter) return false;
+      }
+      return true;
     });
   }
   function aggregate(data){
@@ -12831,12 +12874,12 @@ window.showTab=function(name,e){
   if(name==='controle'){
     // Inicializar seletor se ainda não foi feito
     var sel=document.getElementById('ccMes');
-    if(sel&&sel.options.length===0) initCC();
+    if(sel&&sel.options.length===0){ initCC(); initCCGrupo(); }
     renderCC();
   }
 };
 // Inicializar ao carregar a página (para o seletor ficar pronto)
-setTimeout(initCC, 100);
+setTimeout(function(){ initCC(); initCCGrupo(); }, 100);
 
 </script>
 </body>
