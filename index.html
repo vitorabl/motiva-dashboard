@@ -384,6 +384,10 @@ function togglePwd(){
     <select id="ccGrupo" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);max-width:200px;">
       <option value="">Todos os grupos</option>
     </select>
+    <label style="margin-left:8px;">📅 Ano:</label>
+    <select id="ccYearFilter" onchange="renderCC()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);">
+      <option value="">Todos os anos</option>
+    </select>
     <button onclick="resetCC()" class="filter-btn">Limpar</button>
     <span class="client-count" id="ccCount" style="margin-left:8px;"></span>
     <button onclick="exportCC()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:auto;">⬇ Exportar CSV</button>
@@ -12753,7 +12757,19 @@ function _ccFmtFull(v){ return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDig
 function _ccFmtInt(v){ return v.toLocaleString('pt-BR'); }
 function _destroyChart(id){ if(_ccCharts[id]){_ccCharts[id].destroy();_ccCharts[id]=null;} }
 
-function renderCCDashboard(allData){
+function renderCCDashboard(allData, yrFilter){
+  // Popular dropdown de ano (só na primeira vez)
+  var yrSel=document.getElementById('ccYearFilter');
+  if(yrSel&&yrSel.options.length<=1){
+    var yrs=[...new Set((_CC_MESES||[]).map(function(m){return'20'+(m.split('/')[1]||'');}))].sort();
+    yrs.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;yrSel.appendChild(o);});
+    // Default: ano corrente ou último disponível
+    var curYr=String(new Date().getFullYear());
+    var defYr=yrs.includes(curYr)?curYr:yrs[yrs.length-1];
+    yrSel.value=defYr;
+    if(!yrFilter) yrFilter=defYr;
+  }
+  if(!yrFilter) yrFilter=(yrSel&&yrSel.value)||'';
   // ── Agregar totais ──────────────────────────────────────────────────────
   var totCompra=0,totProj=0,totEcon=0,totCart=0,totPed=0;
   allData.forEach(function(r){
@@ -12777,7 +12793,12 @@ function renderCCDashboard(allData){
     monthly[m].compra+=r[3]; monthly[m].carga+=r[5];
     monthly[m].proj+=r[4];   monthly[m].econ+=r[6]; monthly[m].cart+=r[7];
   });
-  var mIdxs=Object.keys(monthly).map(Number).sort(function(a,b){return a-b;});
+  // Filtrar meses pelo ano selecionado (gráfico mensal só mostra o ano vigente)
+  var mIdxsAll=Object.keys(monthly).map(Number).sort(function(a,b){return a-b;});
+  var mIdxs=yrFilter?mIdxsAll.filter(function(i){
+    var yr='20'+((_CC_MESES[i]||'').split('/')[1]||'');
+    return yr===yrFilter;
+  }):mIdxsAll;
   var mLabels=mIdxs.map(function(i){return _CC_MESES[i]||('M'+i);});
 
   // ── Dados anuais ─────────────────────────────────────────────────────────
@@ -12964,77 +12985,10 @@ function renderCC(){
 
   // KPIs do mês atual
   // ── Dashboard novo: KPIs + 4 gráficos (todos os meses do entity selecionado) ──
-  var allPeriodData = _CC.filter(function(r){
-    return (origFilter==='all'||parseInt(origFilter)===r[8]) &&
-           (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1])) &&
-           (!grupoFilter||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[_cnpjKey(r[0])]||'')===grupoFilter));
-  });
-  renderCCDashboard(allPeriodData);
-
   // ── Contagem de empresas no mês selecionado (para ccCount) ──
   var totC=Object.values(aggCur).reduce(function(s,r){return s+r.compra;},0);
   var totCt=Object.values(aggCur).reduce(function(s,r){return s+r.cartoes;},0);
 
-  // === GRÁFICO ÚNICO: métricas como colunas, valores somados das empresas filtradas ===
-  var sec=document.getElementById('ccChartsSection');
-  if(sec) sec.style.display='block';
-  var tit=document.getElementById('ccChartTitle');
-  var sub=document.getElementById('ccChart1Sub');
-  var canvas=document.getElementById('ccChart1');
-  var colors=['#22d3ee','#4ade80','#818cf8','#f59e0b','#c084fc'];
-  var metricKeys=['compra','projecao','carga','economia','cartoes'];
-  var metricLabels=['Valor Compra','Proj. Saldo','Carga Realizada','Economia Líq.','Cartões'];
-  var nEmps=Object.keys(aggCur).length;
-  var nFilt=_ccSelectedEmps.length;
-  var descFilt=nFilt>0?(nFilt+' empresa'+(nFilt!==1?'s':'')+' selecionada'+(nFilt!==1?'s':'')):nEmps+' empresa'+(nEmps!==1?'s':'');
-  if(tit) tit.textContent='Resumo de Métricas'+(hasComp?' — '+mesNm+' vs '+compMesNm:' — '+mesNm);
-  if(sub) sub.textContent=(hasComp?mesNm+' vs '+compMesNm+' · ':'')+descFilt+' · valores somados';
-  if(canvas){
-    if(canvas._ccChart) canvas._ccChart.destroy();
-    var lbls=metricLabels;
-    // Somar métricas das empresas filtradas (aggCur já tem só as filtradas)
-    var dataCur=metricKeys.map(function(k){return Object.values(aggCur).reduce(function(s,r){return s+r[k];},0);});
-    var dataPrev=hasComp?metricKeys.map(function(k){return Object.values(aggPrev).reduce(function(s,r){return s+r[k];},0);}):null;
-    var datasets=[];
-    if(hasComp) datasets.push({
-      label:compMesNm+' (anterior)', data:dataPrev,
-      backgroundColor:colors.map(function(c){return c+'55';}),
-      borderColor:colors.map(function(c){return c+'88';}),
-      borderWidth:2, borderRadius:4
-    });
-    datasets.push({
-      label:mesNm+(hasComp?' (atual)':''), data:dataCur,
-      backgroundColor:colors.map(function(c){return c+'cc';}),
-      borderColor:colors, borderWidth:2, borderRadius:6
-    });
-    var fmtTip=function(v){return v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':'R$ '+v.toFixed(2);};
-    var fmtBar=function(v){return v>=1e6?'R$'+(v/1e6).toFixed(2)+'M':v>=1e3?'R$'+(v/1e3).toFixed(1)+'K':'R$'+v.toFixed(2);};
-    canvas._ccChart=new Chart(canvas,{
-      type:'bar', data:{labels:lbls, datasets:datasets},
-      options:{responsive:true, maintainAspectRatio:false,
-        interaction:{mode:'index', intersect:false},
-        plugins:{legend:{display:hasComp, labels:{color:'#e2e8f0', usePointStyle:true, pointStyleWidth:10}},
-          tooltip:{callbacks:{label:function(ctx){var v=ctx.parsed.y;var lbl=ctx.dataset.label||'';var isCart=lbl.includes('Cartão');return' '+lbl+': '+(isCart?v.toLocaleString('pt-BR')+' cartões':fmtTip(v));}}}},
-        scales:{
-          x:{grid:{display:false}, ticks:{color:'#e2e8f0', font:{size:13}}},
-          y:{grid:{color:'#1e2433'}, ticks:{callback:function(v){return fmtBar(v);}, color:'#94a3b8'}}
-        }},
-      plugins:[{id:'ccLbl', afterDatasetsDraw:function(chart){
-        var c2=chart.ctx;
-        chart.data.datasets.forEach(function(ds,di){
-          var meta=chart.getDatasetMeta(di);
-          if(meta.hidden) return;
-          meta.data.forEach(function(bar,idx){
-            var v=ds.data[idx]; if(!v||v===0) return;
-            c2.save(); c2.font='bold 12px Segoe UI,sans-serif'; c2.fillStyle='#e2e8f0';
-            c2.textAlign='center'; c2.textBaseline='bottom';
-            var dsLabel=chart.data.datasets[di].label||'';
-              c2.fillText(dsLabel.includes('Cartão')?v.toLocaleString('pt-BR'):fmtBar(v), bar.x, bar.y-4); c2.restore();
-          });
-        });
-      }}]
-    });
-  }
 
   // === TABELA (mostra os dois meses quando há comparação) ===
   var thead=document.getElementById('ccHead');
@@ -13106,6 +13060,15 @@ function renderCC(){
     }
     tbody.appendChild(tr);
   });
+
+  // ── Chamar dashboard ao FINAL (garante que KPIs não sejam sobrescritos) ──
+  var yrFilter = (document.getElementById('ccYearFilter')||{value:''}).value||'';
+  var allPeriodData = _CC.filter(function(r){
+    return (origFilter==='all'||parseInt(origFilter)===r[8]) &&
+           (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1])) &&
+           (!grupoFilter||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[_cnpjKey(r[0])]||'')===grupoFilter));
+  });
+  renderCCDashboard(allPeriodData, yrFilter);
 }
 
 function exportCC(){
