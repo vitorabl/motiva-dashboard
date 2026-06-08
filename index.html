@@ -12645,56 +12645,123 @@ function initCCGrupo(){
 }
 
 function exportCCPDF(){
-  var title='Controle Cliente';
-  var mes=document.getElementById('ccMes');
-  if(mes) title+=' – '+(_CC_MESES[parseInt(mes.value)]||'');
-  var grupo=document.getElementById('ccGrupo');
-  if(grupo&&grupo.value) title+=' · '+grupo.value;
+  // ── Título: Grupo / Empresa / Todos ──────────────────────────────────────
+  var entityLabel='Todos os clientes';
+  var grupoEl=document.getElementById('ccGrupo');
+  var selEmps=typeof _ccSelectedEmps!=='undefined'?_ccSelectedEmps:[];
+  if(grupoEl&&grupoEl.value) entityLabel='Grupo: '+grupoEl.value;
+  else if(selEmps.length===1) entityLabel=selEmps[0];
+  else if(selEmps.length>1) entityLabel=selEmps.length+' empresas selecionadas';
+  var yrEl=document.getElementById('ccYearFilter');
+  var yrVal=yrEl?yrEl.value:'';
+  var mesEl=document.getElementById('ccMes');
+  var mesLabel=mesEl?(_CC_MESES[parseInt(mesEl.value)]||''):'';
 
-  // Captura KPIs
-  var kpiHtml='';
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  var kpiColors=['#6b7280','#10b981','#10b981','#6b7280','#818cf8','#6b7280'];
+  var kpiValColors=['#111','#10b981','#10b981','#111','#818cf8','#111'];
+  var kpiCards=[];
   var kpiGrid=document.getElementById('ccKpis');
   if(kpiGrid){
-    var kpis=kpiGrid.querySelectorAll('.kpi');
-    kpiHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">';
-    kpis.forEach(function(k){
-      var lbl=(k.querySelector('.kpi-label')||{}).textContent||'';
-      var val=(k.querySelector('.kpi-value')||{}).textContent||'';
-      kpiHtml+='<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px"><div style="font-size:10px;color:#6b7280;margin-bottom:4px">'+lbl+'</div><div style="font-size:16px;font-weight:700">'+val+'</div></div>';
+    kpiGrid.querySelectorAll('.kpi').forEach(function(k,i){
+      kpiCards.push({
+        lbl:(k.querySelector('.kpi-label')||{}).textContent||'',
+        val:(k.querySelector('.kpi-value')||{}).textContent||'—',
+        sub:(k.querySelector('.kpi-sub')||{}).textContent||'',
+        bc:kpiColors[i]||'#6b7280', vc:kpiValColors[i]||'#111'
+      });
     });
-    kpiHtml+='</div>';
   }
 
-  // Captura gráfico como imagem (canvas → dataURL)
-  var chartImgHtml='';
-  var chartSec=document.getElementById('ccChartsSection');
-  if(chartSec&&chartSec.style.display!=='none'){
-    var canvas=chartSec.querySelector('canvas');
-    if(canvas){
-      try{
-        var imgData=canvas.toDataURL('image/png');
-        var chartTitle=(document.getElementById('ccChartTitle')||{}).textContent||'';
-        chartImgHtml='<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">'+chartTitle+'</div><img src="'+imgData+'" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px"></div>';
-      }catch(e){}
-    }
+  // ── Captura 4 gráficos ───────────────────────────────────────────────────
+  var CHART_IDS  =['ccAnnualChart','ccMonthlyChart','ccEconChart','ccCartChart'];
+  var CHART_LBLS =['DEMANDA × PEDIDO × ECONOMIA — ANUAL','DEMANDA × PEDIDO × ECONOMIA — MENSAL','ECONOMIA LÍQUIDA MENSAL','CARTÕES PROCESSADOS — MENSAL'];
+  var chartImgs=[];
+  CHART_IDS.forEach(function(id,i){
+    var c=document.getElementById(id);
+    chartImgs.push({title:CHART_LBLS[i],src:c?c.toDataURL('image/png'):''});
+  });
+  var annualTblHtml=(document.getElementById('ccAnnualTable')||{}).innerHTML||'';
+  var econTotalTxt=(document.getElementById('ccEconTotal')||{}).textContent||'';
+  var cartStatsTxt=(document.getElementById('ccCartStats')||{}).textContent||'';
+
+  // ── Tabela (página 2) ────────────────────────────────────────────────────
+  var tblEl=document.getElementById('ccTable');
+  var tblHtml=tblEl?tblEl.outerHTML.replace('id="ccTable"','id="mainTbl"'):'';
+
+  // ── Montar HTML ──────────────────────────────────────────────────────────
+  var now=new Date().toLocaleString('pt-BR');
+  var w=window.open('','_blank','width=1280,height=900');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8">');
+  w.document.write('<title>'+entityLabel+'</title>');
+  w.document.write('<style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:24px}');
+  w.document.write('h1{font-size:20px;font-weight:700;margin-bottom:2px}');
+  w.document.write('.sub{font-size:10px;color:#6b7280;margin-bottom:22px}');
+  w.document.write('.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}');
+  w.document.write('.kc{border:1px solid #e5e7eb;border-top:3px solid;border-radius:8px;padding:14px}');
+  w.document.write('.kl{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:5px}');
+  w.document.write('.kv{font-size:20px;font-weight:700;margin-bottom:3px}');
+  w.document.write('.ks{font-size:9px;color:#9ca3af}');
+  w.document.write('.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}');
+  w.document.write('.cbox{border:1px solid #e5e7eb;border-radius:8px;padding:14px}');
+  w.document.write('.ctitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:10px}');
+  w.document.write('.cimg{width:100%}');
+  w.document.write('.csub{font-size:9px;color:#6b7280;margin-top:4px;text-align:right}');
+  w.document.write('.atbl table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}');
+  w.document.write('.atbl th,.atbl td{border:1px solid #e5e7eb;padding:3px 6px}');
+  w.document.write('.atbl th:first-child,.atbl td:first-child{text-align:left}');
+  w.document.write('.atbl th{background:#f9fafb;font-weight:600;text-align:right}');
+  w.document.write('.atbl td{text-align:right}');
+  w.document.write('.pg2{padding-top:24px}');
+  w.document.write('.ph{font-size:15px;font-weight:700;margin-bottom:14px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}');
+  w.document.write('#mainTbl{width:100%;border-collapse:collapse}');
+  w.document.write('#mainTbl th,#mainTbl td{border:1px solid #d1d5db;padding:3px 7px;text-align:left;font-size:9px;white-space:nowrap}');
+  w.document.write('#mainTbl th{background:#f3f4f6;font-weight:600}');
+  w.document.write('#mainTbl tr:nth-child(even){background:#f9fafb}');
+  w.document.write('.pbtn{margin-top:20px;padding:9px 24px;background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer}');
+  w.document.write('@media print{.pbtn{display:none}.pg2{page-break-before:always}}');
+  w.document.write('</style></head><body>');
+
+  // Página 1
+  w.document.write('<h1>'+entityLabel+(yrVal?' · '+yrVal:'')+'</h1>');
+  w.document.write('<div class="sub">Controle Cliente · '+now+(mesLabel?' · Mês selecionado: '+mesLabel:'')+'</div>');
+
+  // KPIs
+  w.document.write('<div class="kpi-grid">');
+  kpiCards.forEach(function(k){
+    w.document.write('<div class="kc" style="border-top-color:'+k.bc+'"><div class="kl">'+k.lbl+'</div><div class="kv" style="color:'+k.vc+'">'+k.val+'</div><div class="ks">'+k.sub+'</div></div>');
+  });
+  w.document.write('</div>');
+
+  // Gráficos 2×2
+  var secVisible=document.getElementById('ccChartsSection');
+  if(secVisible&&secVisible.style.display!=='none'&&chartImgs.some(function(c){return c.src;})){
+    w.document.write('<div class="charts-grid">');
+    chartImgs.forEach(function(ch,i){
+      w.document.write('<div class="cbox"><div class="ctitle">'+ch.title+'</div>');
+      if(ch.src) w.document.write('<img class="cimg" src="'+ch.src+'">');
+      if(i===0&&annualTblHtml) w.document.write('<div class="atbl">'+annualTblHtml+'</div>');
+      if(i===2&&econTotalTxt) w.document.write('<div class="csub">'+econTotalTxt+'</div>');
+      if(i===3&&cartStatsTxt) w.document.write('<div class="csub">'+cartStatsTxt+'</div>');
+      w.document.write('</div>');
+    });
+    w.document.write('</div>');
   }
 
-  // Tabela
-  var tbl=document.getElementById('ccTable');
-  var tblHtml=tbl?tbl.outerHTML:'';
+  // Página 2: tabela
+  if(tblHtml){
+    w.document.write('<div class="pg2">');
+    w.document.write('<div class="ph">Tabela Detalhada'+(mesLabel?' — '+mesLabel:'')+(entityLabel!=='Todos os clientes'?' · '+entityLabel:'')+'</div>');
+    w.document.write(tblHtml);
+    w.document.write('</div>');
+  }
 
-  var w=window.open('','_blank','width=1200,height=800');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+title+'</title>');
-  w.document.write('<style>*{box-sizing:border-box}body{font-family:sans-serif;font-size:11px;color:#111;padding:20px}h2{margin:0 0 16px;font-size:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d1d5db;padding:4px 8px;text-align:left;white-space:nowrap}th{background:#f3f4f6;font-weight:600;font-size:10px}tr:nth-child(even){background:#f9fafb}.print-btn{margin-top:16px;padding:8px 20px;background:#4f46e5;color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer}@media print{.print-btn{display:none}}</style>');
-  w.document.write('</head><body>');
-  w.document.write('<h2>'+title+'</h2>');
-  w.document.write(kpiHtml);
-  w.document.write(chartImgHtml);
-  w.document.write(tblHtml);
-  w.document.write('<br><button class="print-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>');
+  w.document.write('<button class="pbtn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function(){w.print();},800);
+  setTimeout(function(){w.print();},900);
 }
 
 function renderCCTags(){
