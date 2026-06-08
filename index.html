@@ -389,19 +389,77 @@ function togglePwd(){
     <button onclick="exportCC()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;margin-left:auto;">⬇ Exportar CSV</button>
     <button onclick="exportCCPDF()" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);color:#818cf8;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">📄 Exportar PDF</button>
   </div>
-  <div class="kpi-grid" id="ccKpis">
-    <div class="kpi cyan"><div class="kpi-label" id="cc-compra-lbl">Total Compra</div><div class="kpi-value" id="cc-compra-val">—</div><div class="kpi-sub">Valor total de compra</div></div>
-    <div class="kpi green"><div class="kpi-label" id="cc-projecao-lbl">Projeção de Saldo</div><div class="kpi-value" id="cc-projecao-val">—</div><div class="kpi-sub">Saldo projetado</div></div>
-    <div class="kpi"><div class="kpi-label" id="cc-carga-lbl">Carga Realizada</div><div class="kpi-value" id="cc-carga-val">—</div><div class="kpi-sub">Carga efetivamente realizada</div></div>
-    <div class="kpi amber"><div class="kpi-label" id="cc-econ-lbl">Economia Líquida</div><div class="kpi-value" id="cc-econ-val">—</div><div class="kpi-sub">Projeção − Taxas</div></div>
-    <div class="kpi purple"><div class="kpi-label" id="cc-cart-lbl">Total Cartões</div><div class="kpi-value" id="cc-cart-val">—</div><div class="kpi-sub">Processados no período</div></div>
-    <div class="kpi"><div class="kpi-label">Empresas</div><div class="kpi-value" id="cc-emp-val">—</div><div class="kpi-sub">Clientes ativos no mês</div></div>
+    <!-- ===== KPIs redesenhados ===== -->
+  <div id="ccKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+    <div class="kpi" style="border-top:3px solid var(--border)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em">📄 PEDIDO ORIGINAL</div>
+      <div class="kpi-value" id="cc-pedido-val" style="font-size:1.7rem">—</div>
+      <div class="kpi-sub">Valor solicitado</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid #10b981;background:rgba(16,185,129,.07)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em;color:#10b981">💰 PROJEÇÃO DE SALDO</div>
+      <div class="kpi-value" id="cc-projecao-val" style="font-size:1.7rem;color:#10b981">—</div>
+      <div class="kpi-sub">economia gerada</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid #10b981;background:rgba(16,185,129,.07)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em;color:#10b981">📈 % ECONOMIA</div>
+      <div class="kpi-value" id="cc-pct-val" style="font-size:1.7rem;color:#10b981">—</div>
+      <div class="kpi-sub">sobre pedido original</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid var(--border)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em">💵 ECONOMIA LÍQUIDA</div>
+      <div class="kpi-value" id="cc-econ-val" style="font-size:1.7rem">—</div>
+      <div class="kpi-sub">após taxa Motiva</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid #818cf8;background:rgba(129,140,248,.07)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em">🎴 CARTÕES PROCESSADOS</div>
+      <div class="kpi-value" id="cc-cart-val" style="font-size:1.7rem">—</div>
+      <div class="kpi-sub">colaboradores atendidos</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid var(--border)">
+      <div class="kpi-label" style="font-size:10px;letter-spacing:.05em">📦 PEDIDOS PROCESSADOS</div>
+      <div class="kpi-value" id="cc-ped-val" style="font-size:1.7rem">—</div>
+      <div class="kpi-sub">no período</div>
+    </div>
   </div>
-  <div class="chart-card" id="ccChartsSection" style="display:none;margin-bottom:0;">
-    <h3 id="ccChartTitle">Comparativo por Empresa</h3>
-    <p class="chart-sub" id="ccChart1Sub">Top 15 empresas · Valor Compra · Proj. Saldo · Carga Realizada · Economia Líquida</p>
-    <div class="chart-wrap" style="height:380px;"><canvas id="ccChart1"></canvas></div>
+
+  <!-- ===== 4 gráficos em 2x2 ===== -->
+  <div id="ccChartsSection" style="display:none;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:12px;color:var(--text-muted)">DEMANDA × PEDIDO × ECONOMIA — ANUAL</div>
+        <div style="display:flex;gap:12px;font-size:10px;margin-bottom:8px;color:var(--text-muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#2d5a8e;display:inline-block;border-radius:2px"></span>Demanda</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#10b981;display:inline-block;border-radius:2px"></span>Pedidos</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c4a45a;display:inline-block;border-radius:2px"></span>Economia</span>
+        </div>
+        <div style="height:220px"><canvas id="ccAnnualChart"></canvas></div>
+        <div id="ccAnnualTable" style="margin-top:10px;font-size:11px;overflow-x:auto;"></div>
+      </div>
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:12px;color:var(--text-muted)">DEMANDA × PEDIDO × ECONOMIA — MENSAL</div>
+        <div style="display:flex;gap:12px;font-size:10px;margin-bottom:8px;color:var(--text-muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#2d5a8e;display:inline-block;border-radius:2px"></span>Demanda</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#10b981;display:inline-block;border-radius:2px"></span>Pedidos</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c4a45a;display:inline-block;border-radius:2px"></span>Economia</span>
+        </div>
+        <div style="height:260px"><canvas id="ccMonthlyChart"></canvas></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:12px;color:var(--text-muted)">ECONOMIA LÍQUIDA MENSAL</div>
+        <div style="height:200px"><canvas id="ccEconChart"></canvas></div>
+        <div id="ccEconTotal" style="text-align:right;font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
+      </div>
+      <div class="chart-card" style="padding:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:12px;color:var(--text-muted)">CARTÕES PROCESSADOS — MENSAL</div>
+        <div style="height:200px"><canvas id="ccCartChart"></canvas></div>
+        <div id="ccCartStats" style="text-align:right;font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
+      </div>
+    </div>
   </div>
+
   <div class="table-card" style="margin-top:0;">
     <div class="table-scroll">
       <table id="ccTable" style="width:100%;border-collapse:collapse;">
@@ -12687,6 +12745,161 @@ function onCCTagKey(e){
 function fmtCC(v){if(!v||v===0)return'—';if(v>=1e6)return'R$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'R$'+(v/1e3).toFixed(1)+'K';return'R$'+v.toFixed(2);}
 function fmtCCFull(v){if(!v||v===0)return'R$ 0';return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
+
+// ── Helpers de formatação CC ──────────────────────────────────────────────
+var _ccCharts = {};
+function _ccFmt(v){ if(!v||v===0)return'—'; if(v>=1e6)return'R$'+(v/1e6).toFixed(2)+'M'; if(v>=1e3)return'R$'+(v/1e3).toFixed(1)+'k'; return'R$'+v.toFixed(0); }
+function _ccFmtFull(v){ return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _ccFmtInt(v){ return v.toLocaleString('pt-BR'); }
+function _destroyChart(id){ if(_ccCharts[id]){_ccCharts[id].destroy();_ccCharts[id]=null;} }
+
+function renderCCDashboard(allData){
+  // ── Agregar totais ──────────────────────────────────────────────────────
+  var totCompra=0,totProj=0,totEcon=0,totCart=0,totPed=0;
+  allData.forEach(function(r){
+    totCompra+=r[3]; totProj+=r[4]; totEcon+=r[6]; totCart+=r[7];
+    if(r[3]>0) totPed++;
+  });
+  var pct = totCompra>0?(totProj/totCompra*100):0;
+
+  document.getElementById('cc-pedido-val').textContent  = totCompra>0?_ccFmtFull(totCompra):'—';
+  document.getElementById('cc-pct-val').textContent     = totCompra>0?pct.toFixed(2)+'%':'—';
+  document.getElementById('cc-ped-val').textContent     = totPed>0?_ccFmtInt(totPed):'—';
+
+  if(!allData.length){ document.getElementById('ccChartsSection').style.display='none'; return; }
+  document.getElementById('ccChartsSection').style.display='block';
+
+  // ── Dados mensais ────────────────────────────────────────────────────────
+  var monthly={};
+  allData.forEach(function(r){
+    var m=r[2];
+    if(!monthly[m]) monthly[m]={compra:0,carga:0,proj:0,econ:0,cart:0};
+    monthly[m].compra+=r[3]; monthly[m].carga+=r[5];
+    monthly[m].proj+=r[4];   monthly[m].econ+=r[6]; monthly[m].cart+=r[7];
+  });
+  var mIdxs=Object.keys(monthly).map(Number).sort(function(a,b){return a-b;});
+  var mLabels=mIdxs.map(function(i){return _CC_MESES[i]||('M'+i);});
+
+  // ── Dados anuais ─────────────────────────────────────────────────────────
+  var annual={};
+  mIdxs.forEach(function(i){
+    var yr=(_CC_MESES[i]||'').split('/')[1]||'?'; yr='20'+yr;
+    if(!annual[yr]) annual[yr]={compra:0,carga:0,proj:0,econ:0,cart:0};
+    annual[yr].compra+=monthly[i].compra; annual[yr].carga+=monthly[i].carga;
+    annual[yr].proj+=monthly[i].proj;     annual[yr].econ+=monthly[i].econ;
+    annual[yr].cart+=monthly[i].cart;
+  });
+  var yrs=Object.keys(annual).sort();
+
+  var CC_BG='rgba(16,16,36,.7)';
+  var gridC='rgba(255,255,255,.06)';
+  var txtC='rgba(255,255,255,.55)';
+  var pluginDatalabels={id:'topLabels',afterDatasetsDraw:function(chart){
+    var ctx=chart.ctx;
+    chart.data.datasets.forEach(function(ds,di){
+      var meta=chart.getDatasetMeta(di);
+      if(meta.hidden) return;
+      meta.data.forEach(function(el,j){
+        var v=ds.data[j]; if(!v||v===0) return;
+        ctx.save();
+        ctx.fillStyle=ds.borderColor||'rgba(255,255,255,.7)';
+        ctx.font='bold 9px sans-serif';
+        ctx.textAlign='center';
+        var lbl=v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':String(Math.round(v));
+        ctx.fillText(lbl, el.x, el.y-4);
+        ctx.restore();
+      });
+    });
+  }};
+
+  var chartDefaults={
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+_ccFmt(ctx.raw);}}}},
+    scales:{x:{ticks:{color:txtC,font:{size:9}},grid:{color:gridC}},
+            y:{ticks:{color:txtC,font:{size:9},callback:function(v){return _ccFmt(v);}},grid:{color:gridC}}}
+  };
+
+  function mkBarDataset(label,data,color,hidden){
+    return {label:label,data:data,backgroundColor:color,borderColor:color,borderWidth:0,borderRadius:3,hidden:hidden||false};
+  }
+
+  // ── Gráfico Anual ────────────────────────────────────────────────────────
+  _destroyChart('ccAnnual');
+  var ctxA=document.getElementById('ccAnnualChart');
+  if(ctxA){
+    _ccCharts['ccAnnual']=new Chart(ctxA,{
+      type:'bar',
+      data:{labels:yrs,datasets:[
+        mkBarDataset('Demanda',yrs.map(function(y){return annual[y].compra;}),'#2d5a8e'),
+        mkBarDataset('Pedidos',yrs.map(function(y){return annual[y].carga;}),'#10b981'),
+        mkBarDataset('Economia',yrs.map(function(y){return annual[y].proj;}),'#c4a45a')
+      ]},
+      options:Object.assign({},chartDefaults,{plugins:Object.assign({},chartDefaults.plugins,{datalabels:false})})
+    });
+  }
+  // Tabela anual
+  var tbl='<table style="width:100%;border-collapse:collapse;color:var(--text)">';
+  tbl+='<tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:10px"><th style="text-align:left;padding:3px 6px">Ano</th><th style="text-align:right;padding:3px 6px">Demanda</th><th style="text-align:right;padding:3px 6px">Pedidos</th><th style="text-align:right;padding:3px 6px">Economia</th><th style="text-align:right;padding:3px 6px">%</th></tr>';
+  var sumD=0,sumP=0,sumE=0;
+  yrs.forEach(function(y){
+    var d=annual[y].compra,p=annual[y].carga,e=annual[y].proj;
+    sumD+=d;sumP+=p;sumE+=e;
+    var pc=d>0?(e/d*100):0;
+    tbl+='<tr style="border-bottom:1px solid var(--border);font-size:10px"><td style="padding:3px 6px">'+y+'</td><td style="text-align:right;padding:3px 6px">'+_ccFmt(d)+'</td><td style="text-align:right;padding:3px 6px">'+_ccFmt(p)+'</td><td style="text-align:right;color:#c4a45a;padding:3px 6px">'+_ccFmt(e)+'</td><td style="text-align:right;color:#10b981;padding:3px 6px">'+pc.toFixed(2)+'%</td></tr>';
+  });
+  var pctT=sumD>0?(sumE/sumD*100):0;
+  tbl+='<tr style="font-weight:700;font-size:10px"><td style="padding:3px 6px">Total</td><td style="text-align:right;padding:3px 6px">'+_ccFmt(sumD)+'</td><td style="text-align:right;padding:3px 6px">'+_ccFmt(sumP)+'</td><td style="text-align:right;color:#c4a45a;padding:3px 6px">'+_ccFmt(sumE)+'</td><td style="text-align:right;color:#10b981;padding:3px 6px">'+pctT.toFixed(2)+'%</td></tr>';
+  tbl+='</table>';
+  var annTbl=document.getElementById('ccAnnualTable'); if(annTbl) annTbl.innerHTML=tbl;
+
+  // ── Gráfico Mensal Demanda×Pedido×Economia ───────────────────────────────
+  _destroyChart('ccMonthly');
+  var ctxM=document.getElementById('ccMonthlyChart');
+  if(ctxM){
+    _ccCharts['ccMonthly']=new Chart(ctxM,{
+      type:'bar',
+      data:{labels:mLabels,datasets:[
+        mkBarDataset('Demanda',mIdxs.map(function(i){return monthly[i].compra;}),'#2d5a8e'),
+        mkBarDataset('Pedidos',mIdxs.map(function(i){return monthly[i].carga;}),'#10b981'),
+        mkBarDataset('Economia',mIdxs.map(function(i){return monthly[i].proj;}),'#c4a45a')
+      ]},
+      options:Object.assign({},chartDefaults)
+    });
+  }
+
+  // ── Gráfico Economia Líquida Mensal ──────────────────────────────────────
+  _destroyChart('ccEcon');
+  var ctxE=document.getElementById('ccEconChart');
+  if(ctxE){
+    _ccCharts['ccEcon']=new Chart(ctxE,{
+      type:'bar',
+      data:{labels:mLabels,datasets:[mkBarDataset('Economia Líquida',mIdxs.map(function(i){return monthly[i].econ;}),'#3b82f6')]},
+      options:Object.assign({},chartDefaults)
+    });
+  }
+  var econEl=document.getElementById('ccEconTotal');
+  if(econEl) econEl.textContent='Total: '+_ccFmtFull(totEcon);
+
+  // ── Gráfico Cartões Mensal ────────────────────────────────────────────────
+  _destroyChart('ccCart');
+  var ctxC=document.getElementById('ccCartChart');
+  if(ctxC){
+    _ccCharts['ccCart']=new Chart(ctxC,{
+      type:'bar',
+      data:{labels:mLabels,datasets:[mkBarDataset('Cartões',mIdxs.map(function(i){return monthly[i].cart;}),'#60a5fa')]},
+      options:Object.assign({},chartDefaults,{
+        scales:Object.assign({},chartDefaults.scales,{
+          y:{ticks:{color:txtC,font:{size:9},callback:function(v){return v.toLocaleString('pt-BR');}},grid:{color:gridC}}
+        }),
+        plugins:Object.assign({},chartDefaults.plugins,{tooltip:{callbacks:{label:function(ctx){return ' '+_ccFmtInt(ctx.raw);}}}})
+      })
+    });
+  }
+  var cartEl=document.getElementById('ccCartStats');
+  var cartAvg=mIdxs.length>0?totCart/mIdxs.length:0;
+  if(cartEl) cartEl.textContent='Média: '+Math.round(cartAvg).toLocaleString('pt-BR')+'/mês  ·  Acum: '+_ccFmtInt(totCart);
+}
+
 function renderCC(){
   if(typeof _CC==='undefined') return;
   var sel=document.getElementById('ccMes');
@@ -12750,23 +12963,17 @@ function renderCC(){
   }).sort(function(a,b){return b.cur.compra-a.cur.compra;});
 
   // KPIs do mês atual
+  // ── Dashboard novo: KPIs + 4 gráficos (todos os meses do entity selecionado) ──
+  var allPeriodData = _CC.filter(function(r){
+    return (origFilter==='all'||parseInt(origFilter)===r[8]) &&
+           (_ccSelectedEmps.length===0||_ccSelectedEmps.includes(r[1])) &&
+           (!grupoFilter||(typeof VINCULO_MAP!=='undefined'&&(VINCULO_MAP[_cnpjKey(r[0])]||'')===grupoFilter));
+  });
+  renderCCDashboard(allPeriodData);
+
+  // ── Contagem de empresas no mês selecionado (para ccCount) ──
   var totC=Object.values(aggCur).reduce(function(s,r){return s+r.compra;},0);
-  var totP=Object.values(aggCur).reduce(function(s,r){return s+r.projecao;},0);
-  var totCg=Object.values(aggCur).reduce(function(s,r){return s+r.carga;},0);
-  var totE=Object.values(aggCur).reduce(function(s,r){return s+r.economia;},0);
   var totCt=Object.values(aggCur).reduce(function(s,r){return s+r.cartoes;},0);
-  document.getElementById('cc-compra-lbl').textContent='Total Compra ('+mesNm+')';
-  document.getElementById('cc-compra-val').textContent=fmtCC(totC);
-  document.getElementById('cc-projecao-lbl').textContent='Projeção Saldo ('+mesNm+')';
-  document.getElementById('cc-projecao-val').textContent=fmtCC(totP);
-  document.getElementById('cc-carga-lbl').textContent='Carga Realizada ('+mesNm+')';
-  document.getElementById('cc-carga-val').textContent=fmtCC(totCg);
-  document.getElementById('cc-econ-lbl').textContent='Economia Líquida ('+mesNm+')';
-  document.getElementById('cc-econ-val').textContent=fmtCC(totE);
-  document.getElementById('cc-cart-lbl').textContent='Cartões ('+mesNm+')';
-  document.getElementById('cc-cart-val').textContent=totCt.toLocaleString('pt-BR');
-  document.getElementById('cc-emp-val').textContent=Object.keys(aggCur).length;
-  document.getElementById('ccCount').textContent=rows.length+' empresa'+(rows.length!==1?'s':'');
 
   // === GRÁFICO ÚNICO: métricas como colunas, valores somados das empresas filtradas ===
   var sec=document.getElementById('ccChartsSection');
