@@ -12699,18 +12699,30 @@ function renderCC(){
   var mesNm=_CC_MESES[selMes]||''; var compMesNm=hasComp?(_CC_MESES[selMesComp]||''):'';
 
   var grupoFilter=(document.getElementById('ccGrupo')||{value:''}).value||'';
+  function _cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
   function getFiltered(mesIdx){
-    return _CC.filter(function(r){
+    var base=_CC.filter(function(r){
       if(r[2]!==mesIdx) return false;
       if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
       if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
       if(grupoFilter){
         var vm=typeof VINCULO_MAP!=='undefined'?VINCULO_MAP:{};
-        var g=vm[r[0].replace(/\D/g,'')]||vm[r[0]]||'';
+        var g=vm[_cnpjKey(r[0]))||'';
         if(g!==grupoFilter) return false;
       }
       return true;
     });
+    // Complementar com membros do grupo sem transação no mês
+    if(grupoFilter&&typeof GRUPO_MEMBERS!=='undefined'&&GRUPO_MEMBERS[grupoFilter]){
+      var presentCnpjs=new Set(base.map(function(r){return _cnpjKey(r[0]);}));
+      GRUPO_MEMBERS[grupoFilter].forEach(function(m){
+        if(!presentCnpjs.has(m.c)){
+          // [cnpj, nome, mesIdx, compra, projecao, carga, economia, cartoes, origem]
+          base.push([m.c, m.n, mesIdx, 0, 0, 0, 0, 0, 0]);
+        }
+      });
+    }
+    return base;
   }
   function aggregate(data){
     var agg={};
