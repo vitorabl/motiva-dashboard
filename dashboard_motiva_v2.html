@@ -12708,7 +12708,7 @@ function renderCC(){
       if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
       if(grupoFilter){
         var vm=typeof VINCULO_MAP!=='undefined'?VINCULO_MAP:{};
-        var g=vm[_cnpjKey(r[0]))||'';
+        var g=vm[_cnpjKey(r[0])]||'';
         if(g!==grupoFilter) return false;
       }
       return true;
