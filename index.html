@@ -12746,7 +12746,7 @@ function generateCCSummary(allData, entityLabel, yrFilter){
   // Parágrafo 4: recomendação
   var rec='';
   if(growthPct>10) rec='O desempenho crescente sugere boa adesão ao benefício. Recomenda-se avaliar ampliação da base de cartões.';
-  else if(growthPct<-10) rec='A queda no volume indica necessidade de atenção. Recomenda-se contato comercial para entender possíveis causas.';
+  else if(growthPct<-10) rec='';
   else if(txEcon>30) rec='A taxa de economia acima de 30% demonstra alto valor percebido pelo cliente no benefício Motiva.';
   else if(txEcon>0&&txEcon<15) rec='A taxa de economia está abaixo da média. Avaliar oportunidades para aumentar a eficiência operacional.';
   if(rec) lines.push(rec);
