@@ -12778,9 +12778,12 @@ function renderCCDashboard(allData, yrFilter){
   });
   var pct = totCompra>0?(totProj/totCompra*100):0;
 
-  document.getElementById('cc-pedido-val').textContent  = totCompra>0?_ccFmtFull(totCompra):'—';
-  document.getElementById('cc-pct-val').textContent     = totCompra>0?pct.toFixed(2)+'%':'—';
-  document.getElementById('cc-ped-val').textContent     = totPed>0?_ccFmtInt(totPed):'—';
+  document.getElementById('cc-pedido-val').textContent   = totCompra>0?_ccFmtFull(totCompra):'—';
+  document.getElementById('cc-projecao-val').textContent = totProj>0?_ccFmtFull(totProj):'—';
+  document.getElementById('cc-pct-val').textContent      = totCompra>0?pct.toFixed(2)+'%':'—';
+  document.getElementById('cc-econ-val').textContent     = totEcon>0?_ccFmtFull(totEcon):'—';
+  document.getElementById('cc-cart-val').textContent     = totCart>0?_ccFmtInt(totCart):'—';
+  document.getElementById('cc-ped-val').textContent      = totPed>0?_ccFmtInt(totPed):'—';
 
   if(!allData.length){ document.getElementById('ccChartsSection').style.display='none'; return; }
   document.getElementById('ccChartsSection').style.display='block';
