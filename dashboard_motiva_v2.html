@@ -13313,11 +13313,14 @@ function renderCCDashboard(allData, yrFilter){
       meta.data.forEach(function(el,j){
         var v=ds.data[j]; if(!v||v===0) return;
         ctx.save();
-        ctx.fillStyle=ds.borderColor||'rgba(255,255,255,.7)';
-        ctx.font='bold 9px sans-serif';
+        ctx.fillStyle='rgba(255,255,255,0.95)';
+        ctx.font='bold 10px sans-serif';
         ctx.textAlign='center';
+        ctx.shadowColor='rgba(0,0,0,0.6)';
+        ctx.shadowBlur=3;
         var noR=!!ds._noPrefix; var lbl=v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(noR?(v/1e3).toFixed(0)+'k':'R$'+(v/1e3).toFixed(0)+'k'):String(Math.round(v));
-        ctx.fillText(lbl, el.x, el.y-4);
+        ctx.fillText(lbl, el.x, el.y-5);
+        ctx.shadowBlur=0;
         ctx.restore();
       });
     });
