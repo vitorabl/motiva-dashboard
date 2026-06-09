@@ -186,15 +186,16 @@ var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
 function applyAuthLevel(lvl){
   // full (Executivo): todas as abas
   // geral (CS): apenas Clientes, GMV por Cliente, Controle Cliente
-  var csOnly = ['gmv','receitas','comissoes'];
-  csOnly.forEach(function(name){
-    var tab = document.querySelector('.tab[onclick*="''+name+''"]');
-    if(tab) tab.style.display = (lvl === 'full') ? '' : 'none';
+  var csHidden = ['gmv','receitas','comissoes'];
+  document.querySelectorAll('.tab').forEach(function(tab){
+    var oc = tab.getAttribute('onclick') || '';
+    var isRestricted = csHidden.some(function(n){ return oc.indexOf(n) >= 0; });
+    if(isRestricted) tab.style.display = (lvl === 'full') ? '' : 'none';
   });
   var btn = document.getElementById('btn-logout');
   if(btn) btn.style.display = '';
   if(lvl === 'geral'){
-    var clientesTab = document.querySelector('.tab[onclick*="'clientes'"]');
+    var clientesTab = document.querySelector('.tab[onclick*="clientes"]');
     if(clientesTab) clientesTab.click();
   }
 }
