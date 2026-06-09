@@ -13151,6 +13151,7 @@ function toggleCCMonthDD(e){
 function closeCCMonthDD(){
   var dd=document.getElementById('ccMonthDD'); if(dd) dd.style.display='none';
   _ccMonthDDOpen=false;
+  renderCC();
 }
 
 function buildCCMonthList(){
@@ -13177,7 +13178,7 @@ function buildCCMonthList(){
     var inp=document.createElement('input');
     inp.type='checkbox'; inp.value=String(m.idx); inp.checked=checked;
     inp.style.accentColor='#10b981';
-    inp.addEventListener('change',function(){ updateCCMonthBtn(); renderCC(); });
+    inp.addEventListener('change',function(){ updateCCMonthBtn(); });
     cb.appendChild(inp); cb.appendChild(document.createTextNode(m.lbl));
     list.appendChild(cb);
   });
@@ -13205,7 +13206,7 @@ function updateCCMonthBtn(){
 
 function selectAllCCMonths(val){
   document.querySelectorAll('#ccMonthList input[type=checkbox]').forEach(function(cb){cb.checked=val;});
-  updateCCMonthBtn(); renderCC();
+  updateCCMonthBtn();
 }
 
 function onCCYearChange(){
