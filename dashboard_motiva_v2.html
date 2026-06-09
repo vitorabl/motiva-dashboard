@@ -125,6 +125,19 @@
   .client-dropdown-item .dd-name{color:var(--text);font-weight:500;}
   .client-dropdown-item .dd-cnpj{color:var(--muted);font-size:10px;}
   .client-dropdown-empty{padding:10px 12px;font-size:12px;color:var(--muted);text-align:center;}
+  @page { size: A4 landscape; margin: 10mm; }
+  @media print {
+    #auth-overlay, .tabs, #btn-logout, .filter-bar { display:none !important; }
+    body { font-size: 10px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .content { display: block !important; page-break-before: always; }
+    .content:first-of-type { page-break-before: avoid; }
+    .header { background: var(--card) !important; border-bottom: 1px solid var(--border); }
+    .kpi-grid { grid-template-columns: repeat(4,1fr) !important; }
+    .chart-grid, .chart-grid.thirds { grid-template-columns: 1fr 1fr !important; }
+    canvas { max-height: 180px !important; }
+    .table-scroll, .client-table-wrap { overflow: visible !important; max-height: none !important; }
+    .chart-card, .kpi, .table-card { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -171,19 +184,25 @@ var AUTH_KEY    = 'motiva_auth_level'; // 'geral' | 'full'
 })();
 
 function applyAuthLevel(lvl){
-  var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
-  if(tabComm) tabComm.style.display = (lvl === 'full') ? '' : 'none';
+  // full (Executivo): todas as abas
+  // geral (CS): apenas Clientes, GMV por Cliente, Controle Cliente
+  var csOnly = ['gmv','receitas','comissoes'];
+  csOnly.forEach(function(name){
+    var tab = document.querySelector('.tab[onclick*="''+name+''"]');
+    if(tab) tab.style.display = (lvl === 'full') ? '' : 'none';
+  });
   var btn = document.getElementById('btn-logout');
   if(btn) btn.style.display = '';
+  if(lvl === 'geral'){
+    var clientesTab = document.querySelector('.tab[onclick*="'clientes'"]');
+    if(clientesTab) clientesTab.click();
+  }
 }
 
 function doLogout(){
   sessionStorage.removeItem(AUTH_KEY);
-  var tabComm = document.querySelector('.tab[onclick*="comissoes"]');
-  if(tabComm && tabComm.style.display === 'none'){
-    var gmvTab = document.querySelector(".tab[onclick*=\"'gmv'\"]");
-    if(gmvTab) gmvTab.click();
-  }
+  var gmvTab = document.querySelector(".tab[onclick*=\"'gmv'\"]");
+  if(gmvTab) gmvTab.click();
   var btn = document.getElementById('btn-logout');
   if(btn) btn.style.display = 'none';
   document.getElementById('auth-input').value = '';
@@ -12783,7 +12802,7 @@ function generateCCSummary(allData, entityLabel, yrFilter){
     if(!monthly[m]) monthly[m]={compra:0,carga:0,proj:0,econ:0,cart:0,ped:0};
     monthly[m].compra+=r[3]; monthly[m].carga+=r[5];
     monthly[m].proj+=r[4];   monthly[m].econ+=r[6]; monthly[m].cart+=r[7];
-    if(r[3]>0) monthly[m].ped++;
+    monthly[m].ped+=(r[9]||1);
   });
   var mIdxs=Object.keys(monthly).map(Number).sort(function(a,b){return a-b;});
   if(!mIdxs.length) return '';
@@ -13210,7 +13229,7 @@ function renderCCDashboard(allData, yrFilter){
   var totCompra=0,totProj=0,totEcon=0,totCart=0,totPed=0;
   allData.forEach(function(r){
     totCompra+=r[3]; totProj+=r[4]; totEcon+=r[6]; totCart+=r[7];
-    if(r[3]>0) totPed++;
+    totPed+=(r[9]||1);
   });
   var pct = totCompra>0?(totProj/totCompra*100):0;
 
