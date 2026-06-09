@@ -13239,6 +13239,17 @@ function renderCCDashboard(allData, yrFilter){
     return yr===yrFilter;
   }):mIdxsAll;
   var mLabels=mIdxs.map(function(i){return _CC_MESES[i]||('M'+i);});
+  // ── Dados anuais ─────────────────────────────────────────────────────────
+  var annual={};
+  mIdxs.forEach(function(i){
+    var yr=(_CC_MESES[i]||'').split('/')[1]||'?'; yr='20'+yr;
+    if(!annual[yr]) annual[yr]={compra:0,carga:0,proj:0,econ:0,cart:0};
+    annual[yr].compra+=monthly[i].compra; annual[yr].carga+=monthly[i].carga;
+    annual[yr].proj+=monthly[i].proj;     annual[yr].econ+=monthly[i].econ;
+    annual[yr].cart+=monthly[i].cart;
+  });
+  var yrs=Object.keys(annual).sort();
+
   // Persistir dados para o exportCCPDF usar (re-render vetorial)
   window._ccPDFData={
     mLabels:mLabels,
@@ -13253,17 +13264,6 @@ function renderCCDashboard(allData, yrFilter){
     yProj:yrs.map(function(y){return annual[y].proj;}),
     annualTbl:(document.getElementById('ccAnnualTable')||{}).innerHTML||''
   };
-
-  // ── Dados anuais ─────────────────────────────────────────────────────────
-  var annual={};
-  mIdxs.forEach(function(i){
-    var yr=(_CC_MESES[i]||'').split('/')[1]||'?'; yr='20'+yr;
-    if(!annual[yr]) annual[yr]={compra:0,carga:0,proj:0,econ:0,cart:0};
-    annual[yr].compra+=monthly[i].compra; annual[yr].carga+=monthly[i].carga;
-    annual[yr].proj+=monthly[i].proj;     annual[yr].econ+=monthly[i].econ;
-    annual[yr].cart+=monthly[i].cart;
-  });
-  var yrs=Object.keys(annual).sort();
 
   var CC_BG='rgba(16,16,36,.7)';
   var gridC='rgba(255,255,255,.06)';
