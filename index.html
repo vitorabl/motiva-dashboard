@@ -12891,81 +12891,46 @@ function exportCCPDF(){
     w.document.write('<div class="tbl-wrap">'+tblHtml+'</div>');
     w.document.write('</div>');
   }
+  // Script de renderização injetado inline (roda após Chart.js carregar)
+  var renderScript = [
+    'var pd2=',chartJSON,';',
+    'var DARK="#0d1117",CARD="#1a1f2e",BORDER="#2d3748";',
+    'var MUTED="rgba(148,163,184,.6)",WHITE="rgba(226,232,240,.85)";',
+    'var C=window.Chart;',
+    'C.defaults.color=WHITE; C.defaults.borderColor=BORDER;',
+    'var commonOpts={responsive:true,maintainAspectRatio:false,',
+    '  plugins:{legend:{display:true,labels:{color:WHITE,font:{size:10},boxWidth:12,padding:12}},',
+    '    tooltip:{callbacks:{label:function(ctx){var v=ctx.raw;return " "+(v>=1e6?(v/1e6).toFixed(2)+"M":v>=1e3?"R$"+(v/1e3).toFixed(1)+"k":"R$"+Math.round(v));}}}},',
+    '  scales:{x:{ticks:{color:MUTED,font:{size:9}},grid:{color:"rgba(255,255,255,.05)"}},',
+    '    y:{ticks:{color:MUTED,font:{size:9},callback:function(v){return v>=1e6?(v/1e6).toFixed(1)+"M":v>=1e3?"R$"+(v/1e3).toFixed(0)+"k":"R$"+v;}},',
+    '    grid:{color:"rgba(255,255,255,.05)"}}},animation:{duration:0}};',
+    'function mkDs(l,d,c){return{label:l,data:d,backgroundColor:c,borderColor:c,borderWidth:0,borderRadius:4};}',
+    'function addChart(title,cid,cfg,tblH,sub){',
+    '  var pg=document.getElementById("pg-charts");',
+    '  var box=document.createElement("div");box.className="chart-box";',
+    '  var t=document.createElement("div");t.className="section-title";t.textContent=title;box.appendChild(t);',
+    '  var wrap=document.createElement("div");wrap.style.height="280px";',
+    '  var cv=document.createElement("canvas");cv.id=cid;',
+    '  wrap.appendChild(cv);box.appendChild(wrap);',
+    '  if(tblH){var d=document.createElement("div");d.className="atbl";d.innerHTML=tblH;box.appendChild(d);}',
+    '  if(sub){var s=document.createElement("div");s.className="chart-sub";s.textContent=sub;box.appendChild(s);}',
+    '  pg.appendChild(box);',
+    '  new C(cv,cfg);',
+    '}',
+    'addChart("DEMANDA × PEDIDO × ECONOMIA — ANUAL","cA",{type:"bar",data:{labels:pd2.yrs,datasets:[mkDs("Demanda",pd2.yDemanda,"#2d5a8e"),mkDs("Pedidos (Carga)",pd2.yCarga,"#10b981"),mkDs("Economia",pd2.yProj,"#c4a45a")]},options:JSON.parse(JSON.stringify(commonOpts))},pd2.annualTbl,"");',
+    'addChart("DEMANDA × PEDIDO × ECONOMIA — MENSAL","cM",{type:"bar",data:{labels:pd2.mLabels,datasets:[mkDs("Demanda",pd2.mDemanda,"#2d5a8e"),mkDs("Pedidos (Carga)",pd2.mCarga,"#10b981"),mkDs("Economia",pd2.mProj,"#c4a45a")]},options:JSON.parse(JSON.stringify(commonOpts))},"","");',
+    'var eo=JSON.parse(JSON.stringify(commonOpts));',
+    'addChart("ECONOMIA LÍQUIDA MENSAL","cE",{type:"bar",data:{labels:pd2.mLabels,datasets:[mkDs("Economia Líquida",pd2.mEcon,"#3b82f6")]},options:eo},"","");',
+    'var co=JSON.parse(JSON.stringify(commonOpts));',
+    'co.scales.y.ticks.callback=function(v){return v>=1e3?(v/1e3).toFixed(1)+"k":String(v);};',
+    'var ct=pd2.mCart.reduce(function(s,v){return s+v;},0);',
+    'var ca=pd2.mLabels.length>0?Math.round(ct/pd2.mLabels.length):0;',
+    'addChart("CARTÕES PROCESSADOS — MENSAL","cC",{type:"bar",data:{labels:pd2.mLabels,datasets:[mkDs("Cartões",pd2.mCart,"#60a5fa")]},options:co},"","Média: "+ca.toLocaleString("pt-BR")+"/mês  ·  Acum: "+ct.toLocaleString("pt-BR"));'
+  ].join('\n');
+  w.document.write('<script>'+renderScript+'<\/script>');
   w.document.write('<button class="pbtn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>');
   w.document.write('</body></html>');
   w.document.close();
-
-  // ── Aguardar Chart.js carregar e então renderizar gráficos ─────────────────
-  w.addEventListener('load', function(){
-    var pd2=JSON.parse(chartJSON);
-    var pg=w.document.getElementById('pg-charts');
-    if(!pg||!pd2.mLabels) return;
-
-    var DARK='#0d1117', CARD='#1a1f2e', BORDER='#2d3748';
-    var MUTED='rgba(148,163,184,.6)', WHITE='rgba(226,232,240,.85)';
-    var C = w.Chart;
-    if(!C) return;
-    C.defaults.color=WHITE;
-    C.defaults.borderColor=BORDER;
-    var commonOpts={
-      responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:true,labels:{color:WHITE,font:{size:10},boxWidth:12,padding:12}},
-               tooltip:{callbacks:{label:function(ctx){var v=ctx.raw; return ' '+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?'R$'+(v/1e3).toFixed(1)+'k':'R$'+Math.round(v));}}}},
-      scales:{x:{ticks:{color:MUTED,font:{size:9}},grid:{color:'rgba(255,255,255,.05)'}},
-              y:{ticks:{color:MUTED,font:{size:9},callback:function(v){return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?'R$'+(v/1e3).toFixed(0)+'k':'R$'+v;}},
-                 grid:{color:'rgba(255,255,255,.05)'}}}
-    };
-    function mkDs(label,data,color){return{label:label,data:data,backgroundColor:color,borderColor:color,borderWidth:0,borderRadius:4,datalabels:{display:false}};}
-
-    function addChart(title, subText, canvasId, chartCfg, annualTblHtml, subBottom){
-      var box=w.document.createElement('div'); box.className='chart-box';
-      var t=w.document.createElement('div'); t.className='section-title'; t.textContent=title; box.appendChild(t);
-      var wrap=w.document.createElement('div'); wrap.style.height='260px'; wrap.style.background=CARD;
-      var canvas=w.document.createElement('canvas'); canvas.id=canvasId; canvas.style.width='100%'; canvas.style.height='260px';
-      wrap.appendChild(canvas); box.appendChild(wrap);
-      if(annualTblHtml){var d=w.document.createElement('div');d.className='atbl';d.innerHTML=annualTblHtml;box.appendChild(d);}
-      if(subBottom){var s=w.document.createElement('div');s.className='chart-sub';s.textContent=subBottom;box.appendChild(s);}
-      pg.appendChild(box);
-      new C(canvas, chartCfg);
-    }
-
-    // Gráfico 1: Anual
-    addChart('DEMANDA × PEDIDO × ECONOMIA — ANUAL', '', 'cA', {
-      type:'bar', data:{labels:pd2.yrs, datasets:[
-        mkDs('Demanda',pd2.yDemanda,'#2d5a8e'),
-        mkDs('Pedidos (Carga)',pd2.yCarga,'#10b981'),
-        mkDs('Economia (Projeção)',pd2.yProj,'#c4a45a')
-      ]}, options:JSON.parse(JSON.stringify(commonOpts))
-    }, pd2.annualTbl, '');
-
-    // Gráfico 2: Mensal Demanda×Pedido×Economia
-    addChart('DEMANDA × PEDIDO × ECONOMIA — MENSAL', '', 'cM', {
-      type:'bar', data:{labels:pd2.mLabels, datasets:[
-        mkDs('Demanda',pd2.mDemanda,'#2d5a8e'),
-        mkDs('Pedidos (Carga)',pd2.mCarga,'#10b981'),
-        mkDs('Economia (Projeção)',pd2.mProj,'#c4a45a')
-      ]}, options:JSON.parse(JSON.stringify(commonOpts))
-    }, '', '');
-
-    // Gráfico 3: Economia Líquida Mensal
-    var econOpts=JSON.parse(JSON.stringify(commonOpts));
-    econOpts.plugins.tooltip.callbacks.label=function(ctx){var v=ctx.raw;return ' R$'+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'k':Math.round(v));};
-    addChart('ECONOMIA LÍQUIDA MENSAL', '', 'cE', {
-      type:'bar', data:{labels:pd2.mLabels, datasets:[mkDs('Economia Líquida',pd2.mEcon,'#3b82f6')]},
-      options:econOpts
-    }, '', '');
-
-    // Gráfico 4: Cartões
-    var cartOpts=JSON.parse(JSON.stringify(commonOpts));
-    cartOpts.scales.y.ticks.callback=function(v){return v>=1e3?(v/1e3).toFixed(1)+'k':String(v);};
-    cartOpts.plugins.tooltip.callbacks.label=function(ctx){return ' '+ctx.raw.toLocaleString('pt-BR');};
-    var cartTotal=pd2.mCart?pd2.mCart.reduce(function(s,v){return s+v;},0):0;
-    var cartAvg=pd2.mLabels&&pd2.mLabels.length>0?Math.round(cartTotal/pd2.mLabels.length):0;
-    addChart('CARTÕES PROCESSADOS — MENSAL', '', 'cC', {
-      type:'bar', data:{labels:pd2.mLabels, datasets:[mkDs('Cartões',pd2.mCart,'#60a5fa')]},
-      options:cartOpts
-    }, '', 'Média: '+cartAvg.toLocaleString('pt-BR')+'/mês  ·  Acum: '+cartTotal.toLocaleString('pt-BR'));
-  });
 }
 
 function renderCCTags(){
