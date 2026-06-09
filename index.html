@@ -13145,6 +13145,8 @@ function toggleCCMonthDD(e){
   _ccMonthDDOpen = !_ccMonthDDOpen;
   dd.style.display = _ccMonthDDOpen ? 'block' : 'none';
   if(_ccMonthDDOpen){
+    // Bloquear propagação de cliques dentro do dropdown para não fechar ao marcar checkbox
+    dd.addEventListener('click', function(ev){ ev.stopPropagation(); });
     document.addEventListener('click', closeCCMonthDD, {once:true});
   }
 }
