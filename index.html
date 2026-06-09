@@ -127,11 +127,25 @@
   .client-dropdown-empty{padding:10px 12px;font-size:12px;color:var(--muted);text-align:center;}
   @page { size: A4 landscape; margin: 10mm; }
   @media print {
-    #auth-overlay, .tabs, #btn-logout, .filter-bar { display:none !important; }
-    body { font-size: 10px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    /* Sobrescrever variáveis do tema escuro para impressão legível */
+    :root {
+      --bg: #ffffff; --card: #f8f9fa; --card2: #f0f2f5;
+      --border: #dee2e6; --text: #111827; --muted: #4b5563;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff !important; color: #111 !important; font-size: 10px; }
+    #auth-overlay, .tabs, #btn-logout, .filter-bar { display: none !important; }
+    .header { background: #f8f9fa !important; border-bottom: 1px solid #dee2e6 !important; }
+    .header h1, .header p, .header span { color: #111 !important; }
     .content { display: block !important; page-break-before: always; }
     .content:first-of-type { page-break-before: avoid; }
-    .header { background: var(--card) !important; border-bottom: 1px solid var(--border); }
+    .kpi { background: #f8f9fa !important; border: 1px solid #dee2e6 !important; }
+    .kpi-value { color: #111827 !important; }
+    .kpi-label, .kpi-sub { color: #4b5563 !important; }
+    .chart-card { background: #f8f9fa !important; border: 1px solid #dee2e6 !important; }
+    .chart-card h3 { color: #111 !important; }
+    .table-card { background: #fff !important; border: 1px solid #dee2e6 !important; }
+    table th, table td { color: #111 !important; border-color: #dee2e6 !important; }
     .kpi-grid { grid-template-columns: repeat(4,1fr) !important; }
     .chart-grid, .chart-grid.thirds { grid-template-columns: 1fr 1fr !important; }
     canvas { max-height: 180px !important; }
