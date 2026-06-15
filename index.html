@@ -3115,20 +3115,27 @@ function fecharAutorizacao(){
 }
 function imprimirAutorizacao(){
   const content = document.getElementById('authDoc').innerHTML;
-  const w = window.open('','_blank','width=960,height=750');
-  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head>
-<meta charset="utf-8">
-<title>Autorização de Comissão — Motiva Benefícios</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:Arial,sans-serif;padding:32px 40px;color:#111;background:#fff;}
-  table{border-collapse:collapse;width:100%;}
-  @media print{body{padding:20px 24px;} button{display:none!important;}}
-</style>
-</head><body>${content}</body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ w.print(); }, 400);
+  let iframe = document.getElementById('authPrintFrame');
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = 'authPrintFrame';
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px;top:-9999px;';
+    document.body.appendChild(iframe);
+  }
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html lang="pt-BR"><head>'
+    +'<meta charset="utf-8">'
+    +'<title>Autorização de Comissão — Motiva Benefícios</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{font-family:Arial,sans-serif;padding:32px 40px;color:#111;background:#fff;}'
+    +'table{border-collapse:collapse;width:100%;}'
+    +'@media print{body{padding:20px 24px;}}'
+    +'</style>'
+    +'</head><body>'+content+'</body></html>');
+  doc.close();
+  setTimeout(function(){ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 300);
 }
 
 function exportCommCSV(){
