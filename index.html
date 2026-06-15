@@ -3073,77 +3073,120 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
 // Exportar comissoes
 // ===== AUTORIZAÇÃO DE COMISSÃO =====
 function gerarAutorizacao(){
-  var rows   = window._lastCommRows   || [];
-  var vendor = window._lastCommVendor || '';
-  var period = window._lastCommPeriod || '';
+  var allRows = window._lastCommRows   || [];
+  var vendor  = window._lastCommVendor || '';
+  var period  = window._lastCommPeriod || '';
   if(!vendor || vendor==='all'){ alert('Selecione um vendedor específico para gerar a autorização.'); return; }
-  if(!rows.length){ alert('Sem dados para o período selecionado.'); return; }
-  var fmtFull = function(v){ return v>0?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'; };
+  // Apenas empresas com comissão > 0
+  var rows = allRows.filter(function(r){ return r.comm > 0; });
+  if(!rows.length){ alert('Nenhuma empresa com comissão no período selecionado.'); return; }
+
+  var fmt = function(v){ return v>0?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'; };
   var totComm = rows.reduce(function(s,r){return s+r.comm;},0);
   var totGmv  = rows.reduce(function(s,r){return s+r.gmv;},0);
   var totRec  = rows.reduce(function(s,r){return s+r.rec;},0);
-  var dStr = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  var dStr    = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
   var rowsHtml = rows.map(function(r,i){
-    return '<tr style="background:'+(i%2===0?'#f8fafc':'#fff')+';">'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;color:#94a3b8;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-weight:600;">'+r.empresa+'</td>'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">'+(r.cnpj||'—')+'</td>'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.gmv)+'</td>'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.rec)+'</td>'
-      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#1e40af;">'+fmtFull(r.comm)+'</td>'
+    var bg = i%2===0 ? '#f9fafb' : '#ffffff';
+    return '<tr style="background:'+bg+';">'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;">'+( i+1)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#111827;">'+r.empresa+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:11px;font-family:monospace;">'+( r.cnpj||'—')+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">'+fmt(r.gmv)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">'+fmt(r.rec)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1d4ed8;">'+fmt(r.comm)+'</td>'
       +'</tr>';
   }).join('');
-  rowsHtml += '<tr style="background:#dbeafe;font-weight:700;">'
-    +'<td colspan="3" style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">TOTAL</td>'
-    +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">'+fmtFull(totGmv)+'</td>'
-    +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">'+fmtFull(totRec)+'</td>'
-    +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;color:#1e40af;">'+fmtFull(totComm)+'</td>'
+  rowsHtml += '<tr style="background:#eff6ff;">'
+    +'<td colspan="3" style="padding:10px 12px;border-top:2px solid #bfdbfe;font-weight:700;color:#1e3a8a;text-align:right;font-size:13px;">TOTAL ('+rows.length+' empresa'+(rows.length>1?'s':'')+')</td>'
+    +'<td style="padding:10px 12px;border-top:2px solid #bfdbfe;text-align:right;font-weight:700;color:#1e3a8a;">'+fmt(totGmv)+'</td>'
+    +'<td style="padding:10px 12px;border-top:2px solid #bfdbfe;text-align:right;font-weight:700;color:#1e3a8a;">'+fmt(totRec)+'</td>'
+    +'<td style="padding:10px 12px;border-top:2px solid #bfdbfe;text-align:right;font-weight:700;color:#1d4ed8;font-size:14px;">'+fmt(totComm)+'</td>'
     +'</tr>';
 
   var html = [
     '<!DOCTYPE html><html lang="pt-BR"><head>',
     '<meta charset="utf-8">',
-    '<title>Autorização de Comissão — Motiva Benefícios</title>',
+    '<title>Autorização de Comissão — '+vendor+' — '+period+'</title>',
     '<style>',
-    '*{box-sizing:border-box;margin:0;padding:0;}',
-    'body{font-family:Arial,sans-serif;padding:40px;color:#111;background:#fff;}',
-    'table{border-collapse:collapse;width:100%;}',
-    '.pbtn{display:block;margin:24px auto 0;padding:10px 28px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}',
-    '@media print{.pbtn{display:none!important;}}',
+    '  *{box-sizing:border-box;margin:0;padding:0;}',
+    '  body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;}',
+    '  .page{max-width:900px;margin:32px auto;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden;}',
+    '  .header{background:linear-gradient(135deg,#1e3a8a 0%,#3730a3 100%);padding:28px 36px;display:flex;align-items:center;justify-content:space-between;}',
+    '  .logo{width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.3);}',
+    '  .company h1{color:#fff;font-size:20px;font-weight:700;margin-bottom:2px;}',
+    '  .company p{color:rgba(255,255,255,.7);font-size:12px;}',
+    '  .doc-title{color:#fff;text-align:right;}',
+    '  .doc-title h2{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}',
+    '  .doc-title p{font-size:11px;color:rgba(255,255,255,.6);margin-top:3px;}',
+    '  .meta{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid #e5e7eb;}',
+    '  .meta-cell{padding:16px 24px;border-right:1px solid #e5e7eb;}',
+    '  .meta-cell:last-child{border-right:none;}',
+    '  .meta-cell .label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;font-weight:600;margin-bottom:4px;}',
+    '  .meta-cell .value{font-size:15px;font-weight:700;color:#1e3a8a;}',
+    '  .meta-cell .sub{font-size:11px;color:#6b7280;margin-top:2px;}',
+    '  .section{padding:24px 36px;}',
+    '  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;}',
+    '  table{width:100%;border-collapse:collapse;font-size:12px;}',
+    '  thead tr{background:#f8fafc;}',
+    '  thead th{padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;font-weight:700;border-bottom:2px solid #e5e7eb;}',
+    '  thead th:nth-child(n+4){text-align:right;}',
+    '  .footer{background:#f9fafb;padding:16px 36px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;}',
+    '  .footer p{font-size:10px;color:#9ca3af;}',
+    '  .pbtn{padding:9px 22px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;}',
+    '  .pbtn:hover{background:#1e40af;}',
+    '  @media print{',
+    '    body{background:#fff;}',
+    '    .page{margin:0;border-radius:0;box-shadow:none;}',
+    '    .pbtn{display:none!important;}',
+    '  }',
     '</style></head><body>',
-    '<div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e40af;padding-bottom:18px;margin-bottom:28px;">',
-    '<div style="width:52px;height:52px;background:linear-gradient(135deg,#1e40af,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;">M</div>',
-    '<div><div style="font-size:20px;font-weight:700;color:#1e293b;">Motiva Benefícios</div>',
-    '<div style="font-size:12px;color:#64748b;">Gestão de Benefícios Corporativos</div></div>',
-    '<div style="margin-left:auto;text-align:right;"><div style="font-size:11px;color:#64748b;">Emitido em</div>',
-    '<div style="font-size:13px;font-weight:600;">'+dStr+'</div></div></div>',
-    '<h2 style="text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e293b;margin:0 0 28px;">Relatório de Autorização de Comissão</h2>',
-    '<table style="margin-bottom:28px;font-size:13px;">',
-    '<tr><td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:30%;">Funcionário</td>',
-    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+vendor+'</td>',
-    '<td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:25%;">Mês de Referência</td>',
-    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+period+'</td></tr>',
-    '<tr><td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;">Total Empresas</td>',
-    '<td style="padding:8px 12px;border:1px solid #cbd5e1;">'+rows.length+' empresa(s)</td>',
-    '<td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;">Total Comissão</td>',
-    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+fmtFull(totComm)+'</td></tr>',
-    '</table>',
-    '<div style="margin-bottom:8px;font-size:13px;font-weight:600;color:#334155;">Detalhamento por Empresa</div>',
-    '<table style="font-size:12px;">',
-    '<thead><tr style="background:#1e40af;color:#fff;">',
-    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">#</th>',
-    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">Empresa</th>',
-    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">CNPJ</th>',
-    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">GMV (R$)</th>',
-    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Receita (R$)</th>',
-    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Comissão (R$)</th>',
+    '<div class="page">',
+
+    // Header
+    '<div class="header">',
+    '  <div style="display:flex;align-items:center;gap:14px;">',
+    '    <div class="logo">M</div>',
+    '    <div class="company"><h1>Motiva Benefícios</h1><p>Gestão de Benefícios Corporativos</p></div>',
+    '  </div>',
+    '  <div class="doc-title">',
+    '    <h2>Autorização de Comissão</h2>',
+    '    <p>Emitido em '+dStr+'</p>',
+    '  </div>',
+    '</div>',
+
+    // Meta grid
+    '<div class="meta">',
+    '  <div class="meta-cell"><div class="label">Funcionário</div><div class="value">'+vendor+'</div></div>',
+    '  <div class="meta-cell"><div class="label">Mês de Referência</div><div class="value">'+period+'</div></div>',
+    '  <div class="meta-cell"><div class="label">Empresas Comissionadas</div><div class="value">'+rows.length+'</div></div>',
+    '  <div class="meta-cell"><div class="label">Total de Comissão</div><div class="value" style="color:#1d4ed8;">'+fmt(totComm)+'</div></div>',
+    '</div>',
+
+    // Table
+    '<div class="section">',
+    '<div class="section-title">Detalhamento por Empresa</div>',
+    '<table>',
+    '<thead><tr>',
+    '<th style="width:32px;text-align:center;">#</th>',
+    '<th>Empresa</th>',
+    '<th>CNPJ</th>',
+    '<th style="text-align:right;">GMV</th>',
+    '<th style="text-align:right;">Receita</th>',
+    '<th style="text-align:right;">Comissão</th>',
     '</tr></thead>',
-    '<tbody>'+rowsHtml+'</tbody></table>',
-    '<div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">',
-    'Documento gerado automaticamente pelo Dashboard Motiva Benefícios · Uso interno</div>',
-    '<button class="pbtn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>',
-    '</body></html>'
+    '<tbody>'+rowsHtml+'</tbody>',
+    '</table>',
+    '</div>',
+
+    // Footer
+    '<div class="footer">',
+    '<p>Documento gerado automaticamente · Dashboard Motiva Benefícios · Uso interno</p>',
+    '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>',
+    '</div>',
+
+    '</div></body></html>'
   ].join('\n');
 
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
@@ -3151,6 +3194,7 @@ function gerarAutorizacao(){
   window.open(url,'_blank');
   setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
 }
+
 function fecharAutorizacao(){
   document.getElementById('authModal').style.display='none';
   document.body.style.overflow='';
