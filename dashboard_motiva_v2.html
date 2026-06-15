@@ -158,7 +158,6 @@
   body > *:not(#authModal) { display: none !important; }
   #authModal { display: block !important; position: static !important; background: none !important; padding: 0 !important; }
   #authModalBtns { display: none !important; }
-  #authDoc { box-shadow: none !important; border-radius: 0 !important; }
 }
 </style>
 </head>
@@ -3074,69 +3073,90 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
 // Exportar comissoes
 // ===== AUTORIZAÇÃO DE COMISSÃO =====
 function gerarAutorizacao(){
-  const rows   = window._lastCommRows   || [];
-  const vendor = window._lastCommVendor || '';
-  const period = window._lastCommPeriod || '';
-  if(!vendor || vendor === 'all'){ alert('Selecione um vendedor específico para gerar a autorização.'); return; }
+  var rows   = window._lastCommRows   || [];
+  var vendor = window._lastCommVendor || '';
+  var period = window._lastCommPeriod || '';
+  if(!vendor || vendor==='all'){ alert('Selecione um vendedor específico para gerar a autorização.'); return; }
   if(!rows.length){ alert('Sem dados para o período selecionado.'); return; }
-  const fmtFull = v => v > 0 ? 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const totComm = rows.reduce((s,r)=>s+r.comm,0);
-  const totGmv  = rows.reduce((s,r)=>s+r.gmv,0);
-  const totRec  = rows.reduce((s,r)=>s+r.rec,0);
-  const dStr = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  document.getElementById('authDocDate').textContent   = dStr;
-  document.getElementById('authDocVendor').textContent = vendor;
-  document.getElementById('authDocPeriod').textContent = period;
-  document.getElementById('authDocQtd').textContent    = rows.length + ' empresa(s)';
-  document.getElementById('authDocTotal').textContent  = fmtFull(totComm);
-  const tbody = document.getElementById('authDocBody');
-  let bodyHTML = rows.map((r,i) =>
-    '<tr style="background:'+(i%2===0?'#f8fafc':'#fff')+';"><td style="padding:7px 10px;border:1px solid #e2e8f0;color:#94a3b8;">'+(i+1)+'</td>'
-    +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-weight:600;">'+r.empresa+'</td>'
-    +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">'+(r.cnpj||'—')+'</td>'
-    +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.gmv)+'</td>'
-    +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.rec)+'</td>'
-    +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#1e40af;">'+fmtFull(r.comm)+'</td>'
-    +'</tr>'
-  ).join('');
-  bodyHTML += '<tr style="background:#dbeafe;font-weight:700;">'
+  var fmtFull = function(v){ return v>0?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'; };
+  var totComm = rows.reduce(function(s,r){return s+r.comm;},0);
+  var totGmv  = rows.reduce(function(s,r){return s+r.gmv;},0);
+  var totRec  = rows.reduce(function(s,r){return s+r.rec;},0);
+  var dStr = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  var rowsHtml = rows.map(function(r,i){
+    return '<tr style="background:'+(i%2===0?'#f8fafc':'#fff')+';">'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;color:#94a3b8;">'+(i+1)+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-weight:600;">'+r.empresa+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">'+(r.cnpj||'—')+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.gmv)+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">'+fmtFull(r.rec)+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#1e40af;">'+fmtFull(r.comm)+'</td>'
+      +'</tr>';
+  }).join('');
+  rowsHtml += '<tr style="background:#dbeafe;font-weight:700;">'
     +'<td colspan="3" style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">TOTAL</td>'
     +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">'+fmtFull(totGmv)+'</td>'
     +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;">'+fmtFull(totRec)+'</td>'
     +'<td style="padding:9px 10px;border:1px solid #93c5fd;text-align:right;color:#1e40af;">'+fmtFull(totComm)+'</td>'
     +'</tr>';
-  tbody.innerHTML = bodyHTML;
-  document.getElementById('authModal').style.display = 'block';
-  document.body.style.overflow = 'hidden';
+
+  var html = [
+    '<!DOCTYPE html><html lang="pt-BR"><head>',
+    '<meta charset="utf-8">',
+    '<title>Autorização de Comissão — Motiva Benefícios</title>',
+    '<style>',
+    '*{box-sizing:border-box;margin:0;padding:0;}',
+    'body{font-family:Arial,sans-serif;padding:40px;color:#111;background:#fff;}',
+    'table{border-collapse:collapse;width:100%;}',
+    '.pbtn{display:block;margin:24px auto 0;padding:10px 28px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}',
+    '@media print{.pbtn{display:none!important;}}',
+    '</style></head><body>',
+    '<div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e40af;padding-bottom:18px;margin-bottom:28px;">',
+    '<div style="width:52px;height:52px;background:linear-gradient(135deg,#1e40af,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;">M</div>',
+    '<div><div style="font-size:20px;font-weight:700;color:#1e293b;">Motiva Benefícios</div>',
+    '<div style="font-size:12px;color:#64748b;">Gestão de Benefícios Corporativos</div></div>',
+    '<div style="margin-left:auto;text-align:right;"><div style="font-size:11px;color:#64748b;">Emitido em</div>',
+    '<div style="font-size:13px;font-weight:600;">'+dStr+'</div></div></div>',
+    '<h2 style="text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e293b;margin:0 0 28px;">Relatório de Autorização de Comissão</h2>',
+    '<table style="margin-bottom:28px;font-size:13px;">',
+    '<tr><td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:30%;">Funcionário</td>',
+    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+vendor+'</td>',
+    '<td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:25%;">Mês de Referência</td>',
+    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+period+'</td></tr>',
+    '<tr><td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;">Total Empresas</td>',
+    '<td style="padding:8px 12px;border:1px solid #cbd5e1;">'+rows.length+' empresa(s)</td>',
+    '<td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;">Total Comissão</td>',
+    '<td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;">'+fmtFull(totComm)+'</td></tr>',
+    '</table>',
+    '<div style="margin-bottom:8px;font-size:13px;font-weight:600;color:#334155;">Detalhamento por Empresa</div>',
+    '<table style="font-size:12px;">',
+    '<thead><tr style="background:#1e40af;color:#fff;">',
+    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">#</th>',
+    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">Empresa</th>',
+    '<th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">CNPJ</th>',
+    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">GMV (R$)</th>',
+    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Receita (R$)</th>',
+    '<th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Comissão (R$)</th>',
+    '</tr></thead>',
+    '<tbody>'+rowsHtml+'</tbody></table>',
+    '<div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">',
+    'Documento gerado automaticamente pelo Dashboard Motiva Benefícios · Uso interno</div>',
+    '<button class="pbtn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>',
+    '</body></html>'
+  ].join('\n');
+
+  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
 }
 function fecharAutorizacao(){
-  document.getElementById('authModal').style.display = 'none';
-  document.body.style.overflow = '';
+  document.getElementById('authModal').style.display='none';
+  document.body.style.overflow='';
 }
-function imprimirAutorizacao(){
-  const content = document.getElementById('authDoc').innerHTML;
-  let iframe = document.getElementById('authPrintFrame');
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = 'authPrintFrame';
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px;top:-9999px;';
-    document.body.appendChild(iframe);
-  }
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open();
-  doc.write('<!DOCTYPE html><html lang="pt-BR"><head>'
-    +'<meta charset="utf-8">'
-    +'<title>Autorização de Comissão — Motiva Benefícios</title>'
-    +'<style>'
-    +'*{box-sizing:border-box;margin:0;padding:0;}'
-    +'body{font-family:Arial,sans-serif;padding:32px 40px;color:#111;background:#fff;}'
-    +'table{border-collapse:collapse;width:100%;}'
-    +'@media print{body{padding:20px 24px;}}'
-    +'</style>'
-    +'</head><body>'+content+'</body></html>');
-  doc.close();
-  setTimeout(function(){ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 300);
-}
+// Mantida para não quebrar o botão (não usada mais para PDF)
+function imprimirAutorizacao(){ gerarAutorizacao(); }
 
 function exportCommCSV(){
   const rows   = window._lastCommRows   || [];
@@ -13174,60 +13194,6 @@ function exportCCPDF(){
     '})(0);',
     '<\/script>',
     '
-<!-- ===== MODAL AUTORIZAÇÃO DE COMISSÃO ===== -->
-<div id="authModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);overflow-y:auto;padding:32px 16px;">
-  <div id="authDoc" style="max-width:800px;margin:0 auto;background:#fff;border-radius:12px;padding:40px 48px;color:#111;font-family:Georgia,serif;">
-    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e40af;padding-bottom:18px;margin-bottom:28px;">
-      <div style="width:52px;height:52px;background:linear-gradient(135deg,#1e40af,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;flex-shrink:0;">M</div>
-      <div>
-        <div style="font-size:20px;font-weight:700;color:#1e293b;font-family:Arial,sans-serif;">Motiva Benefícios</div>
-        <div style="font-size:12px;color:#64748b;font-family:Arial,sans-serif;">Gestão de Benefícios Corporativos</div>
-      </div>
-      <div style="margin-left:auto;text-align:right;font-family:Arial,sans-serif;">
-        <div style="font-size:11px;color:#64748b;">Emitido em</div>
-        <div style="font-size:13px;font-weight:600;" id="authDocDate"></div>
-      </div>
-    </div>
-    <h2 style="text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e293b;margin:0 0 28px;font-family:Arial,sans-serif;">
-      Relatório de Autorização de Comissão
-    </h2>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;font-family:Arial,sans-serif;font-size:13px;">
-      <tr>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:30%;color:#334155;">Funcionário</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocVendor"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:25%;color:#334155;">Mês de Referência</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocPeriod"></td>
-      </tr>
-      <tr>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Empresas</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;" id="authDocQtd"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Comissão</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocTotal"></td>
-      </tr>
-    </table>
-    <div style="margin-bottom:8px;font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:#334155;">Detalhamento por Empresa</div>
-    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;" id="authDocTable">
-      <thead>
-        <tr style="background:#1e40af;color:#fff;">
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">#</th>
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">Empresa</th>
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">CNPJ</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">GMV (R$)</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Receita (R$)</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Comissão (R$)</th>
-        </tr>
-      </thead>
-      <tbody id="authDocBody"></tbody>
-    </table>
-    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">
-      Documento gerado automaticamente pelo Dashboard Motiva Benefícios · Uso interno
-    </div>
-  </div>
-  <div id="authModalBtns" style="max-width:800px;margin:16px auto 0;display:flex;gap:12px;justify-content:flex-end;">
-    <button onclick="fecharAutorizacao()" style="background:#334155;border:none;color:#f1f5f9;padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">✕ Fechar</button>
-    <button onclick="imprimirAutorizacao()" style="background:#1e40af;border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;">🖨 Gerar PDF</button>
-  </div>
-</div>
 
 </body></html>'
   ].join('\n');
@@ -13756,6 +13722,61 @@ window.showTab=function(name,e){
 setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); }, 100);
 
 </script>
+
+<!-- ===== MODAL AUTORIZAÇÃO DE COMISSÃO ===== -->
+<div id="authModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);overflow-y:auto;padding:32px 16px;">
+  <div id="authDoc" style="max-width:800px;margin:0 auto;background:#fff;border-radius:12px;padding:40px 48px;color:#111;font-family:Georgia,serif;">
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e40af;padding-bottom:18px;margin-bottom:28px;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#1e40af,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;flex-shrink:0;">M</div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#1e293b;font-family:Arial,sans-serif;">Motiva Benefícios</div>
+        <div style="font-size:12px;color:#64748b;font-family:Arial,sans-serif;">Gestão de Benefícios Corporativos</div>
+      </div>
+      <div style="margin-left:auto;text-align:right;font-family:Arial,sans-serif;">
+        <div style="font-size:11px;color:#64748b;">Emitido em</div>
+        <div style="font-size:13px;font-weight:600;" id="authDocDate"></div>
+      </div>
+    </div>
+    <h2 style="text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e293b;margin:0 0 28px;font-family:Arial,sans-serif;">
+      Relatório de Autorização de Comissão
+    </h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;font-family:Arial,sans-serif;font-size:13px;">
+      <tr>
+        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:30%;color:#334155;">Funcionário</td>
+        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocVendor"></td>
+        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:25%;color:#334155;">Mês de Referência</td>
+        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocPeriod"></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Empresas</td>
+        <td style="padding:8px 12px;border:1px solid #cbd5e1;" id="authDocQtd"></td>
+        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Comissão</td>
+        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocTotal"></td>
+      </tr>
+    </table>
+    <div style="margin-bottom:8px;font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:#334155;">Detalhamento por Empresa</div>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;" id="authDocTable">
+      <thead>
+        <tr style="background:#1e40af;color:#fff;">
+          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">#</th>
+          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">Empresa</th>
+          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">CNPJ</th>
+          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">GMV (R$)</th>
+          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Receita (R$)</th>
+          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Comissão (R$)</th>
+        </tr>
+      </thead>
+      <tbody id="authDocBody"></tbody>
+    </table>
+    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">
+      Documento gerado automaticamente pelo Dashboard Motiva Benefícios · Uso interno
+    </div>
+  </div>
+  <div id="authModalBtns" style="max-width:800px;margin:16px auto 0;display:flex;gap:12px;justify-content:flex-end;">
+    <button onclick="fecharAutorizacao()" style="background:#334155;border:none;color:#f1f5f9;padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">✕ Fechar</button>
+    <button onclick="imprimirAutorizacao()" style="background:#1e40af;border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;">🖨 Gerar PDF</button>
+  </div>
+</div>
 </body>
 <!-- deploy 20260608161718 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
