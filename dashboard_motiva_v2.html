@@ -13119,7 +13119,11 @@ function renderRTags(){
   wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
   _rSelectedEmps.forEach(function(emp){
     var tag=document.createElement('span'); tag.className='client-tag';
-    tag.innerHTML=emp+' <span class="client-tag-x" onclick="removeRTag(''+emp.replace(/'/g,"\'")+'')">&times;</span>';
+    var x=document.createElement('span'); x.className='client-tag-x'; x.textContent='\u00d7';
+    x.dataset.emp=emp;
+    x.onclick=function(){ removeRTag(this.dataset.emp); };
+    tag.textContent=emp+' ';
+    tag.appendChild(x);
     wrap.insertBefore(tag, document.getElementById('rTagInput'));
   });
 }
