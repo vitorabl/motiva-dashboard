@@ -309,13 +309,24 @@ function togglePwd(){
 
 <!-- ===== RECEITAS ===== -->
 <div class="content" id="tab-receitas">
-  <div class="filter-bar">
-    <label>📅 Período Receitas:</label>
+  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <label>📅 Período:</label>
     <select id="rFrom" onchange="applyRec()"></select>
     <span style="color:var(--muted);font-size:12px;">até</span>
     <select id="rTo" onchange="applyRec()"></select>
+    <label style="margin-left:8px;">🔗 Grupo:</label>
+    <select id="rGrupo" onchange="applyRec()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);max-width:200px;">
+      <option value="">Todos os grupos</option>
+    </select>
+    <label style="margin-left:8px;">🔍 Empresa:</label>
+    <div class="client-tag-wrap" id="rTagWrap" style="min-width:220px;" onclick="document.getElementById('rTagInput').focus()">
+      <input class="client-tag-input" id="rTagInput" placeholder="Adicionar empresa..." autocomplete="off"
+        oninput="onRTagInput()" onkeydown="onRTagKey(event)" onfocus="showRDropdown()" onblur="hideRDropdown()">
+      <div class="client-dropdown" id="rDropdown" style="display:none;"></div>
+    </div>
     <button class="filter-btn" onclick="resetRec()">Limpar</button>
   </div>
+  <div id="rFilterBanner" style="display:none;margin-bottom:8px;padding:6px 12px;border-radius:8px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);font-size:12px;color:#818cf8;"></div>
   <div class="kpi-grid">
     <div class="kpi green"><div class="kpi-label" id="r-tot-lbl">Receita Total</div><div class="kpi-value" id="r-tot-val">—</div><div class="kpi-sub">VT + PAT + Fin.</div><div class="kpi-delta" id="r-tot-d"></div></div>
     <div class="kpi"><div class="kpi-label" id="r-vt-lbl">Receita VT</div><div class="kpi-value" id="r-vt-val">—</div><div class="kpi-sub">Taxa adm + operação</div><div class="kpi-delta" id="r-vt-d"></div></div>
@@ -329,6 +340,21 @@ function togglePwd(){
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
   <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#818cf8;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega (2° Via)</th><th style="color:#f97316;">Financiamento</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+  <div id="rEmpSection" style="display:none;margin-top:12px;" class="table-card">
+    <h3 id="rEmpTitle">📊 Detalhe por Empresa</h3>
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>
+        <th style="padding:8px 12px;color:#94a3b8;font-size:11px;">Grupo</th>
+        <th style="text-align:right;padding:8px 12px;color:#60a5fa;">GMV VT (mês)</th>
+        <th style="text-align:right;padding:8px 12px;color:#818cf8;">Taxa VT (mês)</th>
+        <th style="text-align:right;padding:8px 12px;color:#10b981;">GMV VT (período)</th>
+        <th style="text-align:right;padding:8px 12px;color:#22d3ee;">Taxa VT (período)</th>
+        <th style="text-align:right;padding:8px 12px;color:#f59e0b;">Take Rate</th>
+      </tr></thead>
+      <tbody id="rEmpTbody"></tbody>
+    </table></div>
+  </div>
 </div>
 
 <!-- ===== CLIENTES ===== -->
@@ -866,7 +892,13 @@ let cRecLine, cMargem, cRecPie;
   sf.value=0; st.value=ldi;
   rFrom=0; rTo=ldi;
 })();
-function resetRec(){document.getElementById('rFrom').value=0;document.getElementById('rTo').value=lastDataIdx;applyRec();}
+function resetRec(){
+  document.getElementById('rFrom').value=0;
+  document.getElementById('rTo').value=lastDataIdx;
+  var sg=document.getElementById('rGrupo'); if(sg) sg.value='';
+  _rSelectedEmps=[]; renderRTags();
+  applyRec();
+}
 
 function applyRec(){
   var _rf=parseInt(document.getElementById('rFrom')?.value||'0');
@@ -878,23 +910,53 @@ function applyRec(){
   const fm=fl(months),fvt=fl(recVT),fpat=fl(recPAT),ftot=fl(recTotal),fgmv=fl(gmvTotal);
   const li=rTo,pi=rTo>0?rTo-1:0;const pm=months[pi];
 
+  // ── Verificar se há filtro de empresa/grupo ──
+  var vdf=getVDFiltered();
+  var hasFilter=!!vdf;
+  var fltGrupo=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var fltEmps=_rSelectedEmps.slice();
+
+  // Banner de filtro
+  var banner=document.getElementById('rFilterBanner');
+  if(banner){
+    if(hasFilter){
+      var parts=[];
+      if(fltGrupo) parts.push('Grupo: <strong>'+fltGrupo+'</strong>');
+      if(fltEmps.length) parts.push('Empresa(s): <strong>'+fltEmps.join(', ')+'</strong>');
+      banner.innerHTML='🔍 Filtro ativo — '+parts.join(' · ')+' &nbsp;·&nbsp; Dados VT por empresa (GMV e taxa cobrada ao cliente)';
+      banner.style.display='block';
+    } else {
+      banner.style.display='none';
+    }
+  }
+
+  // ── Dados VT: filtrados ou agregados ──
+  var vtForKpi   = hasFilter ? vdf.taxa.slice(rFrom,rTo+1) : fvt;
+  var gmvForKpi  = hasFilter ? vdf.gmv.slice(rFrom,rTo+1) : fgmv;
+  var vtLast     = hasFilter ? vdf.taxa[li] : recVT[li];
+  var vtPrev     = hasFilter ? vdf.taxa[pi] : recVT[pi];
+  var gmvLast    = hasFilter ? vdf.gmv[li] : gmvTotal[li];
+
   // KPIs
-  document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
-  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
-  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
-  document.getElementById('r-vt-lbl').textContent=`Receita VT (${months[li]})`;
-    document.getElementById('r-vt-val').textContent=fmt(recVT[li],true);
-  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
+  document.getElementById('r-tot-lbl').textContent= hasFilter ? `GMV VT Filtrado (${months[li]})` : `Receita Total (${months[li]})`;
+  document.getElementById('r-tot-val').textContent= hasFilter ? fmt(gmvLast,true) : fmt(recTotal[li],true);
+  document.getElementById('r-tot-d').innerHTML= hasFilter ? deltaMoM(vdf.gmv[li],vdf.gmv[pi],pm) : deltaMoM(recTotal[li],recTotal[pi],pm);
+
+  document.getElementById('r-vt-lbl').textContent= hasFilter ? `Taxa VT Filtrada (${months[li]})` : `Receita VT (${months[li]})`;
+  document.getElementById('r-vt-val').textContent=fmt(vtLast,true);
+  document.getElementById('r-vt-d').innerHTML=deltaMoM(vtLast,vtPrev,pm);
+
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
-  document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
-  document.getElementById('r-pat-d').innerHTML=deltaMoM(recPAT[li],recPAT[pi],pm);
+  document.getElementById('r-pat-val').textContent= hasFilter ? '—' : fmt(recPAT[li],true);
+  document.getElementById('r-pat-d').innerHTML= hasFilter ? '<span style="font-size:10px;color:var(--muted)">filtro VT ativo</span>' : deltaMoM(recPAT[li],recPAT[pi],pm);
+
   document.getElementById('r-fin-lbl').textContent='Financiamento ('+months[li]+')';
-  document.getElementById('r-fin-val').textContent=fmt(financiamento[li],true);
-  document.getElementById('r-fin-d').innerHTML=deltaMoM(financiamento[li],financiamento[pi],pm);
+  document.getElementById('r-fin-val').textContent= hasFilter ? '—' : fmt(financiamento[li]||0,true);
+  document.getElementById('r-fin-d').innerHTML= hasFilter ? '' : deltaMoM(financiamento[li]||0,financiamento[pi]||0,pm);
 
   // YoY
   const yoyIdx=li-YOY_OFFSET;
-  if(yoyIdx>=0){
+  if(yoyIdx>=0&&!hasFilter){
     const pyear=months[yoyIdx];
     const totChg=((recTotal[li]-recTotal[yoyIdx])/recTotal[yoyIdx]*100).toFixed(1);
     const col=totChg>=0?'#10b981':'#f87171';
@@ -903,172 +965,118 @@ function applyRec(){
     document.getElementById('r-yoy-vt').innerHTML=`VT: ${yoyArrow(recVT[li],recVT[yoyIdx])}`;
     document.getElementById('r-yoy-pat').innerHTML=`PAT: ${yoyArrow(recPAT[li],recPAT[yoyIdx])}`;
   } else {
-    document.getElementById('r-yoy-val').textContent='—';
-    document.getElementById('r-yoy-sub').textContent='Sem dado do ano anterior';
+    document.getElementById('r-yoy-val').textContent= hasFilter ? '—' : '—';
+    document.getElementById('r-yoy-sub').textContent= hasFilter ? 'Indisponível com filtro ativo' : 'Sem dado do ano anterior';
     ['r-yoy-vt','r-yoy-pat'].forEach(id=>{document.getElementById(id).textContent='';});
   }
 
-  // Charts
+  // Charts — linha
   cRecLine.data.labels=fm;
-  cRecLine.data.datasets[0].data=fvt.map(v=>v/1e3);
-  cRecLine.data.datasets[1].data=fpat.map(v=>v/1e3);
-  cRecLine.data.datasets[2].data=ftot.map(v=>v/1e3);
+  if(hasFilter){
+    var fVdfGmv=vdf.gmv.slice(rFrom,rTo+1);
+    var fVdfTaxa=vdf.taxa.slice(rFrom,rTo+1);
+    cRecLine.data.datasets[0].data=fVdfTaxa.map(v=>v/1e3);
+    cRecLine.data.datasets[0].label='Taxa VT (filtrada)';
+    cRecLine.data.datasets[1].data=fVdfGmv.map(v=>v/1e3);
+    cRecLine.data.datasets[1].label='GMV VT (filtrado)';
+    cRecLine.data.datasets[2].data=fvt.map(v=>v/1e3);
+    cRecLine.data.datasets[2].label='Rec. VT Total';
+  } else {
+    cRecLine.data.datasets[0].data=fvt.map(v=>v/1e3);
+    cRecLine.data.datasets[0].label='Receita VT';
+    cRecLine.data.datasets[1].data=fpat.map(v=>v/1e3);
+    cRecLine.data.datasets[1].label='Receita PAT';
+    cRecLine.data.datasets[2].data=ftot.map(v=>v/1e3);
+    cRecLine.data.datasets[2].label='Total';
+  }
   cRecLine.update();
 
-  const mg=fgmv.map((g,i)=>((ftot[i]/g)*100).toFixed(2));
+  // Margem
+  var mgDen = hasFilter ? gmvForKpi : fgmv;
+  var mgNum = hasFilter ? vtForKpi : ftot;
+  const mg=mgDen.map((g,i)=>g>0?((mgNum[i]/g)*100).toFixed(2):'0');
   cMargem.data.labels=fm;
   cMargem.data.datasets[0].data=mg;
   cMargem.data.datasets[0].backgroundColor=mg.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red);
   cMargem.update();
 
   const lastI2=rTo;
-  const categKeys=Object.keys(recCateg);
-  cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
-  cRecPie.update();
-  document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores reais extraídos do Excel`;
+  if(!hasFilter){
+    const categKeys=Object.keys(recCateg);
+    cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
+    cRecPie.update();
+    document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores reais extraídos do Excel`;
+  }
 
-  // Tabela
+  // Tabela mensal
   const tb=document.getElementById('recTbody');tb.innerHTML='';
   fm.forEach((m,fi)=>{
     const gi=rFrom+fi;
-    const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
+    var vtVal = hasFilter ? vdf.taxa[gi] : recVT[gi];
+    var gmvVal = hasFilter ? vdf.gmv[gi] : gmvTotal[gi];
+    const mg2=gmvVal>0?((vtVal/gmvVal)*100).toFixed(2):'—';
     const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
     const row=document.createElement('tr');
-    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    if(hasFilter){
+      row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#60a5fa;">${fmt(vdf.gmv[gi])}</td><td style="color:#818cf8;font-weight:600;">${fmt(vdf.taxa[gi])}</td><td colspan="6" style="color:var(--muted);font-size:11px;">dados por empresa (VD)</td>`;
+    } else {
+      row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
+    }
     tb.appendChild(row);
   });
+
+  // ── Tabela por empresa (só quando filtro ativo) ──
+  var empSec=document.getElementById('rEmpSection');
+  var empTb=document.getElementById('rEmpTbody');
+  var empTitle=document.getElementById('rEmpTitle');
+  if(empSec&&empTb){
+    if(hasFilter){
+      var emps=getVDFilteredEmps();
+      if(empTitle){
+        var lbl=fltGrupo?('Grupo: '+fltGrupo):(fltEmps.length===1?fltEmps[0]:fltEmps.length+' empresas');
+        empTitle.textContent='📊 Detalhe por Empresa — '+lbl;
+      }
+      empTb.innerHTML='';
+      var totGmvM=0,totTaxaM=0,totGmvP=0,totTaxaP=0;
+      emps.forEach(function(e){
+        var gmvM=e.gmv[li],taxaM=e.taxa[li];
+        var gmvP=e.gmv.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
+        var taxaP=e.taxa.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
+        var tr=gmvP>0?((taxaP/gmvP)*100).toFixed(2):'—';
+        totGmvM+=gmvM; totTaxaM+=taxaM; totGmvP+=gmvP; totTaxaP+=taxaP;
+        var row=document.createElement('tr');
+        row.innerHTML='<td style="text-align:left;padding:6px 12px;position:sticky;left:0;background:var(--card);">'+e.empresa+'</td>'+
+          '<td style="padding:6px 8px;color:#94a3b8;font-size:11px;">'+e.grupo+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(gmvM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(taxaM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#10b981;">'+fmt(gmvP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#22d3ee;">'+fmt(taxaP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#f59e0b;font-weight:600;">'+tr+'%</td>';
+        empTb.appendChild(row);
+      });
+      // Linha de total
+      if(emps.length>1){
+        var trTot=totGmvP>0?((totTaxaP/totGmvP)*100).toFixed(2):'—';
+        var rowTot=document.createElement('tr');
+        rowTot.style.borderTop='2px solid var(--border)';
+        rowTot.style.fontWeight='700';
+        rowTot.innerHTML='<td style="text-align:left;padding:6px 12px;position:sticky;left:0;background:var(--card);">TOTAL</td>'+
+          '<td></td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(totGmvM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(totTaxaM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#10b981;">'+fmt(totGmvP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#22d3ee;">'+fmt(totTaxaP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#f59e0b;font-weight:600;">'+trTot+'%</td>';
+        empTb.appendChild(rowTot);
+      }
+      empSec.style.display='';
+    } else {
+      empSec.style.display='none';
+    }
+  }
 }
 
-(function initRecCharts(){
-  cRecLine=new Chart(document.getElementById('recLineChart'),{
-    type:'line',data:{labels:months,datasets:[
-      {label:'Receita VT',data:recVT.map(v=>v/1e3),borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:4},
-      {label:'Receita PAT',data:recPAT.map(v=>v/1e3),borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:true,tension:.4,pointRadius:4},
-      {label:'Total',data:recTotal.map(v=>v/1e3),borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,borderDash:[6,3],pointRadius:4}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(1)}K`}}},
-      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v+'K'}}}}
-  });
 
-  const mg0=gmvTotal.map((g,i)=>((recTotal[i]/g)*100).toFixed(2));
-  cMargem=new Chart(document.getElementById('margemChart'),{
-    type:'bar',data:{labels:months,datasets:[{label:'Margem %',data:mg0,backgroundColor:mg0.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red),borderRadius:5}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y}%`}}},
-      scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v+'%'}}}}
-  });
-
-  const lastI=lastDataIdx;
-  const categKeys=Object.keys(recCateg);
-  const categColors=[C.blue,C.cyan,C.green,C.amber,C.orange,C.purple];
-  cRecPie=new Chart(document.getElementById('recPieChart'),{
-    type:'doughnut',
-    data:{
-      labels:categKeys,
-      datasets:[{
-        data:categKeys.map(k=>recCateg[k][lastI]),
-        backgroundColor:categColors,
-        borderColor:'#1a1d27',borderWidth:3,hoverOffset:8
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{labels:{color:'#e2e8f0',usePointStyle:true,font:{size:11}}},
-        tooltip:{callbacks:{label:ctx=>{
-          const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
-          return ` ${ctx.label}: R$ ${(ctx.parsed/1e3).toFixed(1)}K (${(ctx.parsed/tot*100).toFixed(1)}%)`;
-        }}}
-      }
-    }
-  });
-
-  applyRec();
-})();
-
-// ===================== CLIENTES TAB =====================
-(function(){
-  // Crescimento base
-  new Chart(document.getElementById('clientsLineChart'),{
-    type:'line',data:{labels:months,datasets:[{label:'Total de Clientes',data:qtdClients,borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} clientes`}}},scales:{x:{grid},y:{grid,min:750}}}
-  });
-
-  // Novos clientes
-  new Chart(document.getElementById('newClientsChart'),{
-    type:'bar',data:{labels:months,datasets:[{label:'Novos Clientes',data:qtdNew,backgroundColor:qtdNew.map(v=>v>=20?C.green:v>=10?C.amber:C.blue),borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} novos clientes`}}},scales:{x:{grid:{display:false}},y:{grid}}}
-  });
-
-  // Ativos vs Inativos por mês — barras empilhadas
-  new Chart(document.getElementById('ativoInativoChart'),{
-    type:'bar',data:{labels:months,datasets:[
-      {label:'Ativos (≤30d)',data:qtdAtivos,backgroundColor:C.green+'cc',borderColor:C.green,borderWidth:1,stack:'base'},
-      {label:'Em Risco (30–90d)',data:qtdRisco,backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'base'},
-      {label:'Inativos (+90d)',data:qtdInativos,backgroundColor:C.red+'cc',borderColor:C.red,borderWidth:1,stack:'base'}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
-        tooltip:{callbacks:{footer:items=>{const tot=items.reduce((s,i)=>s+i.parsed.y,0);return`Total: ${tot} clientes`;},label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
-      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid,ticks:{stepSize:100}}}}
-  });
-
-  // Status donut
-  new Chart(document.getElementById('statusChart'),{
-    type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[480,65,491],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1036*100).toFixed(1)}%)`}}}}
-  });
-
-  // Segmentação composição donut
-  const segLabels=Object.keys(segData),segVals=Object.values(segData);
-  const segColors=[C.purple,C.amber,C.slate,C.orange,'#475569'];
-  new Chart(document.getElementById('segPieChart'),{
-    type:'doughnut',data:{labels:segLabels,datasets:[{data:segVals,backgroundColor:segColors,borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotal*100).toFixed(1)}%)`}}}}
-  });
-
-  // Segmentation detail
-  const segDiv=document.getElementById('segTable');
-  const segFaixas={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
-  const segCls={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
-  segLabels.forEach((k,i)=>{
-    const v=segVals[i],pv=(v/segTotal*100).toFixed(1);
-    segDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segCls[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixas[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColors[i]}"></div></div></div>`;
-  });
-
-  // Inatividade detail
-  const inact=[
-    {label:'Ativos (≤30d)',cls:'ativo',qtd:480},
-    {label:'Em Risco (30–90d)',cls:'risco',qtd:65},
-    {label:'Inativos (+90d)',cls:'inativo',qtd:491},
-  ];
-  const inactDiv=document.getElementById('inactiveTable');
-  inact.forEach(s=>{
-    const pv=(s.qtd/1036*100).toFixed(1);
-    inactDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
-  });
-})();
-
-// ===================== COMISSÕES =====================
-const commSellers={
-  'Karine':  {data:commKarine,  color:C.cyan,   status:'Ativo'},
-  'André':   {data:commAndre,   color:C.green,  status:'Ativo'},
-  'Carol':   {data:commCarol,   color:C.purple, status:'Desligada'},
-  'Lysandra':{data:commLysandra,color:C.amber,  status:'Desligada'},
-  'Vanessa': {data:commVanessa, color:C.orange, status:'Desligada'},
-  'Pedro':   {data:commPedro,   color:C.slate,  status:'Desligado'},
-};
-const commSellerNames=Object.keys(commSellers);
-let cFrom_c=0,cTo_c=lastDataIdx;
-let cCommLine,cCommBar;
-
-(function(){
-  const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
-  sf.innerHTML='';st.innerHTML='';
-  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
-  for(var i=0;i<=ldi;i++){sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;st.innerHTML+=`<option value="${i}">${months[i]}</option>`;}
-  sf.value=0; st.value=ldi; cFrom_c=0; cTo_c=ldi;st.value=lastDataIdx;
-})();
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
 
 function applyComm(){
@@ -12987,6 +12995,148 @@ var _CC=[
 var _ccSelectedEmps=[];
 var _ccDdTimer=null;
 
+// ── Receitas: filtros por empresa/grupo ──
+var _rSelectedEmps=[];
+var _rDdTimer=null;
+var _rAllEmps=[];  // cache de todas as empresas do VD
+
+function initRecGrupo(){
+  var sel=document.getElementById('rGrupo'); if(!sel) return;
+  if(typeof VINCULO_MAP==='undefined') return;
+  var grupos=[...new Set(Object.values(VINCULO_MAP))].sort();
+  grupos.forEach(function(g){
+    var o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o);
+  });
+}
+
+function buildRAllEmps(){
+  if(_rAllEmps.length) return;
+  if(typeof VD==='undefined') return;
+  var set=new Set();
+  Object.values(VD).forEach(function(arr){ arr.forEach(function(e){ set.add(e[0]); }); });
+  _rAllEmps=[...set].sort();
+}
+
+function getVDFiltered(){
+  // Retorna {gmv:[],taxa:[]} somados por mês para as empresas/grupos filtrados
+  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var empF=_rSelectedEmps;
+  var gmv=new Array(months.length).fill(0);
+  var taxa=new Array(months.length).fill(0);
+  if(!grupoF&&!empF.length) return null; // sem filtro
+  if(typeof VD==='undefined') return null;
+  function cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
+  Object.values(VD).forEach(function(arr){
+    arr.forEach(function(e){
+      var empresa=e[0], cnpj=e[1], gmvArr=e[2], taxaArr=e[3];
+      var matchEmp=(!empF.length||empF.includes(empresa));
+      var matchGrupo=(!grupoF||(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[cnpjKey(cnpj)]===grupoF));
+      if(matchEmp&&matchGrupo){
+        gmvArr.forEach(function(v,i){ gmv[i]+=v; });
+        taxaArr.forEach(function(v,i){ taxa[i]+=v; });
+      }
+    });
+  });
+  return {gmv:gmv,taxa:taxa};
+}
+
+function getVDFilteredEmps(){
+  // Retorna lista de {empresa, cnpj, grupo, gmv[], taxa[]} para a tabela
+  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var empF=_rSelectedEmps;
+  if(!grupoF&&!empF.length) return [];
+  if(typeof VD==='undefined') return [];
+  function cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
+  var result={};
+  Object.values(VD).forEach(function(arr){
+    arr.forEach(function(e){
+      var empresa=e[0], cnpj=e[1], gmvArr=e[2], taxaArr=e[3];
+      var matchEmp=(!empF.length||empF.includes(empresa));
+      var ck=cnpjKey(cnpj);
+      var grupo=(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck])||'—';
+      var matchGrupo=(!grupoF||grupo===grupoF);
+      if(matchEmp&&matchGrupo){
+        if(!result[empresa]) result[empresa]={empresa:empresa,cnpj:cnpj,grupo:grupo,gmv:new Array(months.length).fill(0),taxa:new Array(months.length).fill(0)};
+        gmvArr.forEach(function(v,i){ result[empresa].gmv[i]+=v; });
+        taxaArr.forEach(function(v,i){ result[empresa].taxa[i]+=v; });
+      }
+    });
+  });
+  return Object.values(result).sort(function(a,b){ return b.gmv[rTo]-a.gmv[rTo]; });
+}
+
+// ── Tag input Receitas ──
+function renderRTags(){
+  var wrap=document.getElementById('rTagWrap'); if(!wrap) return;
+  wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
+  _rSelectedEmps.forEach(function(emp){
+    var tag=document.createElement('span'); tag.className='client-tag';
+    tag.innerHTML=emp+' <span class="client-tag-x" onclick="removeRTag(''+emp.replace(/'/g,"\'")+'')">&times;</span>';
+    wrap.insertBefore(tag, document.getElementById('rTagInput'));
+  });
+}
+
+function removeRTag(emp){
+  _rSelectedEmps=_rSelectedEmps.filter(function(e){return e!==emp;});
+  renderRTags(); applyRec();
+}
+
+function onRTagInput(){
+  buildRAllEmps();
+  var q=document.getElementById('rTagInput').value.toLowerCase().trim();
+  var dd=document.getElementById('rDropdown'); if(!dd) return;
+  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var matches=_rAllEmps.filter(function(e){
+    if(_rSelectedEmps.includes(e)) return false;
+    if(grupoF&&typeof VD!=='undefined'){
+      // filtrar apenas empresas do grupo
+      var found=false;
+      Object.values(VD).forEach(function(arr){
+        arr.forEach(function(en){
+          if(en[0]===e){
+            var ck=String(en[1]).replace(/\.0$/,'').replace(/\D/g,'');
+            if(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck]===grupoF) found=true;
+          }
+        });
+      });
+      if(!found) return false;
+    }
+    return !q||e.toLowerCase().includes(q);
+  }).slice(0,12);
+  dd.innerHTML=''; dd.style.display=matches.length?'block':'none';
+  matches.forEach(function(e){
+    var item=document.createElement('div'); item.className='client-dropdown-item';
+    item.textContent=e;
+    item.onmousedown=function(ev){ev.preventDefault(); addRTag(e);};
+    dd.appendChild(item);
+  });
+}
+
+function addRTag(emp){
+  if(!_rSelectedEmps.includes(emp)) _rSelectedEmps.push(emp);
+  document.getElementById('rTagInput').value='';
+  document.getElementById('rDropdown').style.display='none';
+  renderRTags(); applyRec();
+}
+
+function showRDropdown(){ onRTagInput(); }
+function hideRDropdown(){
+  _rDdTimer=setTimeout(function(){ var dd=document.getElementById('rDropdown'); if(dd) dd.style.display='none'; },200);
+}
+
+function onRTagKey(ev){
+  if(ev.key==='Enter'||ev.key===','){
+    ev.preventDefault();
+    var q=document.getElementById('rTagInput').value.trim();
+    var dd=document.getElementById('rDropdown');
+    var first=dd&&dd.querySelector('.client-dropdown-item');
+    if(first) first.onmousedown(ev);
+    else if(q&&_rAllEmps.includes(q)) addRTag(q);
+  } else if(ev.key==='Backspace'&&!document.getElementById('rTagInput').value&&_rSelectedEmps.length){
+    _rSelectedEmps.pop(); renderRTags(); applyRec();
+  }
+}
+
 function initCC(){
   var sel=document.getElementById('ccMes');
   var selComp=document.getElementById('ccMesComp');
@@ -13845,7 +13995,7 @@ window.showTab=function(name,e){
   }
 };
 // Inicializar ao carregar a página (para o seletor ficar pronto)
-setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); }, 100);
+setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo(); buildRAllEmps(); }, 100);
 
 </script>
 
