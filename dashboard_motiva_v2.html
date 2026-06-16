@@ -879,6 +879,7 @@ function applyGmv(){
 // ===================== RECEITAS TAB =====================
 let rFrom=0, rTo=lastDataIdx;
 let cRecLine, cMargem, cRecPie;
+var _rSelectedEmps=[]; var _rDdTimer=null; var _rAllEmps=[]; // filtros receitas (early init)
 
 (function(){
   var sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
@@ -914,7 +915,7 @@ function applyRec(){
   var vdf=getVDFiltered();
   var hasFilter=!!vdf;
   var fltGrupo=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var fltEmps=_rSelectedEmps.slice();
+  var fltEmps=(_rSelectedEmps||[]).slice();
 
   // Banner de filtro
   var banner=document.getElementById('rFilterBanner');
@@ -13067,7 +13068,7 @@ function buildRAllEmps(){
 function getVDFiltered(){
   // Retorna {gmv:[],taxa:[]} somados por mês para as empresas/grupos filtrados
   var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var empF=_rSelectedEmps;
+  var empF=(_rSelectedEmps||[]);
   var gmv=new Array(months.length).fill(0);
   var taxa=new Array(months.length).fill(0);
   if(!grupoF&&!empF.length) return null; // sem filtro
@@ -13090,7 +13091,7 @@ function getVDFiltered(){
 function getVDFilteredEmps(){
   // Retorna lista de {empresa, cnpj, grupo, gmv[], taxa[]} para a tabela
   var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var empF=_rSelectedEmps;
+  var empF=(_rSelectedEmps||[]);
   if(!grupoF&&!empF.length) return [];
   if(typeof VD==='undefined') return [];
   function cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
