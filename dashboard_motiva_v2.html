@@ -13075,27 +13075,21 @@ function removeRTag(emp){
 }
 
 function onRTagInput(){
-  buildRAllEmps();
   var q=document.getElementById('rTagInput').value.toLowerCase().trim();
   var dd=document.getElementById('rDropdown'); if(!dd) return;
   var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var matches=_rAllEmps.filter(function(e){
-    if(_rSelectedEmps.includes(e)) return false;
-    if(grupoF&&typeof VD!=='undefined'){
-      // filtrar apenas empresas do grupo
-      var found=false;
-      Object.values(VD).forEach(function(arr){
-        arr.forEach(function(en){
-          if(en[0]===e){
-            var ck=String(en[1]).replace(/\.0$/,'').replace(/\D/g,'');
-            if(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck]===grupoF) found=true;
-          }
-        });
-      });
-      if(!found) return false;
-    }
+  var pool=[];
+  if(grupoF&&typeof GRUPO_MEMBERS!=='undefined'&&GRUPO_MEMBERS[grupoF]){
+    // Usa GRUPO_MEMBERS para listar empresas do grupo selecionado
+    pool=GRUPO_MEMBERS[grupoF].map(function(m){return m.n;});
+  } else {
+    buildRAllEmps();
+    pool=_rAllEmps.slice();
+  }
+  var matches=pool.filter(function(e){
+    if((_rSelectedEmps||[]).includes(e)) return false;
     return !q||e.toLowerCase().includes(q);
-  }).slice(0,12);
+  }).slice(0,15);
   dd.innerHTML=''; dd.style.display=matches.length?'block':'none';
   matches.forEach(function(e){
     var item=document.createElement('div'); item.className='client-dropdown-item';
