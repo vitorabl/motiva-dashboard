@@ -910,54 +910,42 @@ function applyRec(){
   const fl=a=>a.slice(rFrom,rTo+1);
   const fm=fl(months),fvt=fl(recVT),fpat=fl(recPAT),ftot=fl(recTotal),fgmv=fl(gmvTotal);
   const li=rTo,pi=rTo>0?rTo-1:0;const pm=months[pi];
-
-  // ── Verificar se há filtro de empresa/grupo ──
-  var vdf=getVDFiltered();
-  var hasFilter=!!vdf;
-  var fltGrupo=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var fltEmps=(_rSelectedEmps||[]).slice();
-
-  // Banner de filtro
-  var banner=document.getElementById('rFilterBanner');
-  if(banner){
-    if(hasFilter){
-      var parts=[];
-      if(fltGrupo) parts.push('Grupo: <strong>'+fltGrupo+'</strong>');
-      if(fltEmps.length) parts.push('Empresa(s): <strong>'+fltEmps.join(', ')+'</strong>');
-      banner.innerHTML='🔍 Filtro ativo — '+parts.join(' · ')+' &nbsp;·&nbsp; Dados VT por empresa (GMV e taxa cobrada ao cliente)';
-      banner.style.display='block';
-    } else {
-      banner.style.display='none';
-    }
+  // ── Filtro empresa/grupo ──
+  var _rGrupoEl = document.getElementById('rGrupo');
+  var _rGrupoVal = _rGrupoEl ? _rGrupoEl.value : '';
+  var _rEmpVal   = typeof _rSelectedEmps !== 'undefined' ? _rSelectedEmps : [];
+  var _vdf = (_rGrupoVal || _rEmpVal.length) ? getVDFiltered() : null;
+  var _hasFilter = !!_vdf;
+  var _banner = document.getElementById('rFilterBanner');
+  if(_banner){
+    if(_hasFilter){
+      var _parts=[];
+      if(_rGrupoVal) _parts.push('Grupo: <strong>'+_rGrupoVal+'</strong>');
+      if(_rEmpVal.length) _parts.push('Empresa(s): <strong>'+_rEmpVal.join(', ')+'</strong>');
+      _banner.innerHTML='Filtro ativo: '+_parts.join(' e ')+' (dados VT por empresa)';
+      _banner.style.display='block';
+    } else { _banner.style.display='none'; }
   }
-
-  // ── Dados VT: filtrados ou agregados ──
-  var vtForKpi   = hasFilter ? vdf.taxa.slice(rFrom,rTo+1) : fvt;
-  var gmvForKpi  = hasFilter ? vdf.gmv.slice(rFrom,rTo+1) : fgmv;
-  var vtLast     = hasFilter ? vdf.taxa[li] : recVT[li];
-  var vtPrev     = hasFilter ? vdf.taxa[pi] : recVT[pi];
-  var gmvLast    = hasFilter ? vdf.gmv[li] : gmvTotal[li];
+  var _liVt=_hasFilter?_vdf.taxa[li]:null;
+  var _liGmv=_hasFilter?_vdf.gmv[li]:null;
 
   // KPIs
-  document.getElementById('r-tot-lbl').textContent= hasFilter ? `GMV VT Filtrado (${months[li]})` : `Receita Total (${months[li]})`;
-  document.getElementById('r-tot-val').textContent= hasFilter ? fmt(gmvLast,true) : fmt(recTotal[li],true);
-  document.getElementById('r-tot-d').innerHTML= hasFilter ? deltaMoM(vdf.gmv[li],vdf.gmv[pi],pm) : deltaMoM(recTotal[li],recTotal[pi],pm);
-
-  document.getElementById('r-vt-lbl').textContent= hasFilter ? `Taxa VT Filtrada (${months[li]})` : `Receita VT (${months[li]})`;
-  document.getElementById('r-vt-val').textContent=fmt(vtLast,true);
-  document.getElementById('r-vt-d').innerHTML=deltaMoM(vtLast,vtPrev,pm);
-
+  document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
+  document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
+  document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
+  document.getElementById('r-vt-lbl').textContent=_hasFilter?'Taxa VT Filtrada ('+months[li]+')':'Receita VT ('+months[li]+')';
+  document.getElementById('r-vt-val').textContent=_hasFilter&&_liVt!=null?fmt(_liVt,true):fmt(recVT[li],true);
+  document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
-  document.getElementById('r-pat-val').textContent= hasFilter ? '—' : fmt(recPAT[li],true);
-  document.getElementById('r-pat-d').innerHTML= hasFilter ? '<span style="font-size:10px;color:var(--muted)">filtro VT ativo</span>' : deltaMoM(recPAT[li],recPAT[pi],pm);
-
+  document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
+  document.getElementById('r-pat-d').innerHTML=deltaMoM(recPAT[li],recPAT[pi],pm);
   document.getElementById('r-fin-lbl').textContent='Financiamento ('+months[li]+')';
-  document.getElementById('r-fin-val').textContent= hasFilter ? '—' : fmt(financiamento[li]||0,true);
-  document.getElementById('r-fin-d').innerHTML= hasFilter ? '' : deltaMoM(financiamento[li]||0,financiamento[pi]||0,pm);
+  document.getElementById('r-fin-val').textContent=fmt(financiamento[li],true);
+  document.getElementById('r-fin-d').innerHTML=deltaMoM(financiamento[li],financiamento[pi],pm);
 
   // YoY
   const yoyIdx=li-YOY_OFFSET;
-  if(yoyIdx>=0&&!hasFilter){
+  if(yoyIdx>=0){
     const pyear=months[yoyIdx];
     const totChg=((recTotal[li]-recTotal[yoyIdx])/recTotal[yoyIdx]*100).toFixed(1);
     const col=totChg>=0?'#10b981':'#f87171';
@@ -966,116 +954,69 @@ function applyRec(){
     document.getElementById('r-yoy-vt').innerHTML=`VT: ${yoyArrow(recVT[li],recVT[yoyIdx])}`;
     document.getElementById('r-yoy-pat').innerHTML=`PAT: ${yoyArrow(recPAT[li],recPAT[yoyIdx])}`;
   } else {
-    document.getElementById('r-yoy-val').textContent= hasFilter ? '—' : '—';
-    document.getElementById('r-yoy-sub').textContent= hasFilter ? 'Indisponível com filtro ativo' : 'Sem dado do ano anterior';
+    document.getElementById('r-yoy-val').textContent='—';
+    document.getElementById('r-yoy-sub').textContent='Sem dado do ano anterior';
     ['r-yoy-vt','r-yoy-pat'].forEach(id=>{document.getElementById(id).textContent='';});
   }
 
-  // Charts — linha
+  // Charts
   cRecLine.data.labels=fm;
-  if(hasFilter){
-    var fVdfGmv=vdf.gmv.slice(rFrom,rTo+1);
-    var fVdfTaxa=vdf.taxa.slice(rFrom,rTo+1);
-    cRecLine.data.datasets[0].data=fVdfTaxa.map(v=>v/1e3);
-    cRecLine.data.datasets[0].label='Taxa VT (filtrada)';
-    cRecLine.data.datasets[1].data=fVdfGmv.map(v=>v/1e3);
-    cRecLine.data.datasets[1].label='GMV VT (filtrado)';
-    cRecLine.data.datasets[2].data=fvt.map(v=>v/1e3);
-    cRecLine.data.datasets[2].label='Rec. VT Total';
-  } else {
-    cRecLine.data.datasets[0].data=fvt.map(v=>v/1e3);
-    cRecLine.data.datasets[0].label='Receita VT';
-    cRecLine.data.datasets[1].data=fpat.map(v=>v/1e3);
-    cRecLine.data.datasets[1].label='Receita PAT';
-    cRecLine.data.datasets[2].data=ftot.map(v=>v/1e3);
-    cRecLine.data.datasets[2].label='Total';
-  }
+  cRecLine.data.datasets[0].data=fvt.map(v=>v/1e3);
+  cRecLine.data.datasets[1].data=fpat.map(v=>v/1e3);
+  cRecLine.data.datasets[2].data=ftot.map(v=>v/1e3);
   cRecLine.update();
 
-  // Margem
-  var mgDen = hasFilter ? gmvForKpi : fgmv;
-  var mgNum = hasFilter ? vtForKpi : ftot;
-  const mg=mgDen.map((g,i)=>g>0?((mgNum[i]/g)*100).toFixed(2):'0');
+  const mg=fgmv.map((g,i)=>((ftot[i]/g)*100).toFixed(2));
   cMargem.data.labels=fm;
   cMargem.data.datasets[0].data=mg;
   cMargem.data.datasets[0].backgroundColor=mg.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red);
   cMargem.update();
 
   const lastI2=rTo;
-  if(!hasFilter){
-    const categKeys=Object.keys(recCateg);
-    cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
-    cRecPie.update();
-    document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores reais extraídos do Excel`;
-  }
+  const categKeys=Object.keys(recCateg);
+  cRecPie.data.datasets[0].data=categKeys.map(k=>recCateg[k][lastI2]);
+  cRecPie.update();
+  document.getElementById('r-pie-sub').textContent=`${fm[fm.length-1]} · valores reais extraídos do Excel`;
 
-  // Tabela mensal
+  // Tabela
   const tb=document.getElementById('recTbody');tb.innerHTML='';
   fm.forEach((m,fi)=>{
     const gi=rFrom+fi;
-    var vtVal = hasFilter ? vdf.taxa[gi] : recVT[gi];
-    var gmvVal = hasFilter ? vdf.gmv[gi] : gmvTotal[gi];
-    const mg2=gmvVal>0?((vtVal/gmvVal)*100).toFixed(2):'—';
+    const mg2=((recTotal[gi]/gmvTotal[gi])*100).toFixed(2);
     const mgCol=mg2>1.8?C.green:mg2>1.5?C.amber:C.red;
     const row=document.createElement('tr');
-    if(hasFilter){
-      row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#60a5fa;">${fmt(vdf.gmv[gi])}</td><td style="color:#818cf8;font-weight:600;">${fmt(vdf.taxa[gi])}</td><td colspan="6" style="color:var(--muted);font-size:11px;">dados por empresa (VD)</td>`;
-    } else {
-      row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
-    }
+    row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
     tb.appendChild(row);
   });
 
-  // ── Tabela por empresa (só quando filtro ativo) ──
-  var empSec=document.getElementById('rEmpSection');
-  var empTb=document.getElementById('rEmpTbody');
-  var empTitle=document.getElementById('rEmpTitle');
-  if(empSec&&empTb){
-    if(hasFilter){
-      var emps=getVDFilteredEmps();
-      if(empTitle){
-        var lbl=fltGrupo?('Grupo: '+fltGrupo):(fltEmps.length===1?fltEmps[0]:fltEmps.length+' empresas');
-        empTitle.textContent='📊 Detalhe por Empresa — '+lbl;
-      }
-      empTb.innerHTML='';
-      var totGmvM=0,totTaxaM=0,totGmvP=0,totTaxaP=0;
-      emps.forEach(function(e){
-        var gmvM=e.gmv[li],taxaM=e.taxa[li];
-        var gmvP=e.gmv.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
-        var taxaP=e.taxa.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
-        var tr=gmvP>0?((taxaP/gmvP)*100).toFixed(2):'—';
-        totGmvM+=gmvM; totTaxaM+=taxaM; totGmvP+=gmvP; totTaxaP+=taxaP;
-        var row=document.createElement('tr');
-        row.innerHTML='<td style="text-align:left;padding:6px 12px;position:sticky;left:0;background:var(--card);">'+e.empresa+'</td>'+
+  // ── Tabela por empresa ──
+  var _es=document.getElementById('rEmpSection');
+  var _et=document.getElementById('rEmpTbody');
+  var _etl=document.getElementById('rEmpTitle');
+  if(_es&&_et){
+    if(_hasFilter){
+      var _emps=getVDFilteredEmps();
+      if(_etl) _etl.textContent='Detalhe por Empresa'+((_rGrupoVal)?' — Grupo: '+_rGrupoVal:(_rEmpVal.length?' — '+_rEmpVal.join(', '):''));
+      _et.innerHTML='';
+      _emps.forEach(function(e){
+        var gM=e.gmv[li],tM=e.taxa[li];
+        var gP=e.gmv.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
+        var tP=e.taxa.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
+        var _r=document.createElement('tr');
+        _r.innerHTML='<td style="text-align:left;padding:6px 12px;">'+e.empresa+'</td>'+
           '<td style="padding:6px 8px;color:#94a3b8;font-size:11px;">'+e.grupo+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(gmvM)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(taxaM)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#10b981;">'+fmt(gmvP)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#22d3ee;">'+fmt(taxaP)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#f59e0b;font-weight:600;">'+tr+'%</td>';
-        empTb.appendChild(row);
+          '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(gM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(tM)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#10b981;">'+fmt(gP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#22d3ee;">'+fmt(tP)+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;color:#f59e0b;">'+(gP>0?((tP/gP)*100).toFixed(2)+'%':'—')+'</td>';
+        _et.appendChild(_r);
       });
-      // Linha de total
-      if(emps.length>1){
-        var trTot=totGmvP>0?((totTaxaP/totGmvP)*100).toFixed(2):'—';
-        var rowTot=document.createElement('tr');
-        rowTot.style.borderTop='2px solid var(--border)';
-        rowTot.style.fontWeight='700';
-        rowTot.innerHTML='<td style="text-align:left;padding:6px 12px;position:sticky;left:0;background:var(--card);">TOTAL</td>'+
-          '<td></td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(totGmvM)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(totTaxaM)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#10b981;">'+fmt(totGmvP)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#22d3ee;">'+fmt(totTaxaP)+'</td>'+
-          '<td style="text-align:right;padding:6px 12px;color:#f59e0b;font-weight:600;">'+trTot+'%</td>';
-        empTb.appendChild(rowTot);
-      }
-      empSec.style.display='';
-    } else {
-      empSec.style.display='none';
-    }
+      _es.style.display='';
+    } else { _es.style.display='none'; }
   }
 }
+
 
 (function initRecCharts(){
   cRecLine=new Chart(document.getElementById('recLineChart'),{
