@@ -309,24 +309,24 @@ function togglePwd(){
 
 <!-- ===== RECEITAS ===== -->
 <div class="content" id="tab-receitas">
-  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+  <div class="filter-bar" style="flex-wrap:wrap;gap:8px;">
     <label>📅 Período:</label>
     <select id="rFrom" onchange="applyRec()"></select>
     <span style="color:var(--muted);font-size:12px;">até</span>
     <select id="rTo" onchange="applyRec()"></select>
-    <label style="margin-left:8px;">🔗 Grupo:</label>
+    <label style="margin-left:6px;">🔗 Grupo:</label>
     <select id="rGrupo" onchange="applyRec()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);max-width:200px;">
       <option value="">Todos os grupos</option>
     </select>
-    <label style="margin-left:8px;">🔍 Empresa:</label>
-    <div class="client-tag-wrap" id="rTagWrap" style="min-width:220px;" onclick="document.getElementById('rTagInput').focus()">
+    <label style="margin-left:6px;">🔍 Empresa:</label>
+    <div class="client-tag-wrap" id="rTagWrap" style="min-width:200px;" onclick="document.getElementById('rTagInput').focus()">
       <input class="client-tag-input" id="rTagInput" placeholder="Adicionar empresa..." autocomplete="off"
         oninput="onRTagInput()" onkeydown="onRTagKey(event)" onfocus="showRDropdown()" onblur="hideRDropdown()">
       <div class="client-dropdown" id="rDropdown" style="display:none;"></div>
     </div>
     <button class="filter-btn" onclick="resetRec()">Limpar</button>
   </div>
-  <div id="rFilterBanner" style="display:none;margin-bottom:8px;padding:6px 12px;border-radius:8px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);font-size:12px;color:#818cf8;"></div>
+  <div id="rBanner" style="display:none;margin-bottom:8px;padding:6px 12px;border-radius:8px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);font-size:12px;color:#818cf8;"></div>
   <div class="kpi-grid">
     <div class="kpi green"><div class="kpi-label" id="r-tot-lbl">Receita Total</div><div class="kpi-value" id="r-tot-val">—</div><div class="kpi-sub">VT + PAT + Fin.</div><div class="kpi-delta" id="r-tot-d"></div></div>
     <div class="kpi"><div class="kpi-label" id="r-vt-lbl">Receita VT</div><div class="kpi-value" id="r-vt-val">—</div><div class="kpi-sub">Taxa adm + operação</div><div class="kpi-delta" id="r-vt-d"></div></div>
@@ -340,11 +340,11 @@ function togglePwd(){
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
   <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#818cf8;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega (2° Via)</th><th style="color:#f97316;">Financiamento</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
-  <div id="rEmpSection" style="display:none;margin-top:12px;" class="table-card">
-    <h3 id="rEmpTitle">📊 Detalhe por Empresa</h3>
+  <div id="rEmpSec" style="display:none;margin-top:12px;" class="table-card">
+    <h3 id="rEmpTitle">Detalhe por Empresa</h3>
     <div class="table-scroll"><table>
       <thead><tr>
-        <th style="text-align:left;padding:8px 12px;position:sticky;left:0;background:var(--card);z-index:2;">Empresa</th>
+        <th style="text-align:left;padding:8px 12px;">Empresa</th>
         <th style="padding:8px 12px;color:#94a3b8;font-size:11px;">Grupo</th>
         <th style="text-align:right;padding:8px 12px;color:#60a5fa;">GMV VT (mês)</th>
         <th style="text-align:right;padding:8px 12px;color:#818cf8;">Taxa VT (mês)</th>
@@ -876,10 +876,124 @@ function applyGmv(){
   applyGmv();
 })();
 
+// ── Receitas: filtros por empresa/grupo ──
+var _rSel=[];  // empresas selecionadas no filtro
+var _rAllEmps=[];
+
+function buildRAllEmps(){
+  if(_rAllEmps.length) return;
+  if(typeof VD==='undefined') return;
+  var s=new Set();
+  Object.values(VD).forEach(function(a){a.forEach(function(e){s.add(e[0]);});});
+  _rAllEmps=[...s].sort();
+}
+
+function initRecGrupo(){
+  var sel=document.getElementById('rGrupo'); if(!sel) return;
+  if(typeof VINCULO_MAP==='undefined') return;
+  var grupos=[...new Set(Object.values(VINCULO_MAP))].sort();
+  grupos.forEach(function(g){var o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o);});
+}
+
+function getVDFiltered(){
+  var gF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var eF=_rSel;
+  if(!gF&&!eF.length) return null;
+  if(typeof VD==='undefined') return null;
+  function ck(v){return String(v).replace(/\.0$/,'').replace(/\D/g,'');}
+  var gmv=new Array(months.length).fill(0);
+  var taxa=new Array(months.length).fill(0);
+  Object.values(VD).forEach(function(arr){
+    arr.forEach(function(e){
+      var mE=(!eF.length||eF.includes(e[0]));
+      var mG=(!gF||(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck(e[1])]===gF));
+      if(mE&&mG){e[2].forEach(function(v,i){gmv[i]+=v;});e[3].forEach(function(v,i){taxa[i]+=v;});}
+    });
+  });
+  return {gmv:gmv,taxa:taxa};
+}
+
+function getVDFilteredEmps(){
+  var gF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var eF=_rSel;
+  if(!gF&&!eF.length) return [];
+  if(typeof VD==='undefined') return [];
+  function ck(v){return String(v).replace(/\.0$/,'').replace(/\D/g,'');}
+  var res={};
+  Object.values(VD).forEach(function(arr){
+    arr.forEach(function(e){
+      var mE=(!eF.length||eF.includes(e[0]));
+      var cKey=ck(e[1]);
+      var grupo=(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[cKey])||'—';
+      var mG=(!gF||grupo===gF);
+      if(mE&&mG){
+        if(!res[e[0]]) res[e[0]]={empresa:e[0],grupo:grupo,gmv:new Array(months.length).fill(0),taxa:new Array(months.length).fill(0)};
+        e[2].forEach(function(v,i){res[e[0]].gmv[i]+=v;});
+        e[3].forEach(function(v,i){res[e[0]].taxa[i]+=v;});
+      }
+    });
+  });
+  return Object.values(res).sort(function(a,b){return b.gmv[rTo]-a.gmv[rTo];});
+}
+
+function renderRTags(){
+  var wrap=document.getElementById('rTagWrap'); if(!wrap) return;
+  wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
+  _rSel.forEach(function(emp){
+    var tag=document.createElement('span'); tag.className='client-tag';
+    var x=document.createElement('span'); x.className='client-tag-x'; x.textContent='×';
+    x.dataset.emp=emp; x.onclick=function(){removeRTag(this.dataset.emp);};
+    tag.textContent=emp+' '; tag.appendChild(x);
+    wrap.insertBefore(tag,document.getElementById('rTagInput'));
+  });
+}
+
+function removeRTag(emp){_rSel=_rSel.filter(function(e){return e!==emp;}); renderRTags(); applyRec();}
+
+function onRTagInput(){
+  var q=document.getElementById('rTagInput').value.toLowerCase().trim();
+  var dd=document.getElementById('rDropdown'); if(!dd) return;
+  var gF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var pool=[];
+  if(gF&&typeof GRUPO_MEMBERS!=='undefined'&&GRUPO_MEMBERS[gF]){
+    pool=GRUPO_MEMBERS[gF].map(function(m){return m.n;});
+  } else { buildRAllEmps(); pool=_rAllEmps.slice(); }
+  var matches=pool.filter(function(e){
+    if(_rSel.includes(e)) return false;
+    return !q||e.toLowerCase().includes(q);
+  }).slice(0,15);
+  dd.innerHTML=''; dd.style.display=matches.length?'block':'none';
+  matches.forEach(function(e){
+    var item=document.createElement('div'); item.className='client-dropdown-item'; item.textContent=e;
+    item.onmousedown=function(ev){ev.preventDefault();addRTag(e);};
+    dd.appendChild(item);
+  });
+}
+
+function addRTag(emp){
+  if(!_rSel.includes(emp)) _rSel.push(emp);
+  document.getElementById('rTagInput').value='';
+  document.getElementById('rDropdown').style.display='none';
+  renderRTags(); applyRec();
+}
+
+function showRDropdown(){onRTagInput();}
+function hideRDropdown(){setTimeout(function(){var dd=document.getElementById('rDropdown');if(dd)dd.style.display='none';},200);}
+
+function onRTagKey(ev){
+  if((ev.key==='Enter'||ev.key===',')&&document.getElementById('rTagInput').value.trim()){
+    ev.preventDefault();
+    var dd=document.getElementById('rDropdown');
+    var first=dd&&dd.querySelector('.client-dropdown-item');
+    if(first) first.onmousedown(ev);
+  } else if(ev.key==='Backspace'&&!document.getElementById('rTagInput').value&&_rSel.length){
+    _rSel.pop(); renderRTags(); applyRec();
+  }
+}
+
 // ===================== RECEITAS TAB =====================
 let rFrom=0, rTo=lastDataIdx;
 let cRecLine, cMargem, cRecPie;
-var _rSelectedEmps=[]; var _rDdTimer=null; var _rAllEmps=[]; // filtros receitas (early init)
 
 (function(){
   var sf=document.getElementById('rFrom'),st=document.getElementById('rTo');
@@ -897,8 +1011,7 @@ function resetRec(){
   document.getElementById('rFrom').value=0;
   document.getElementById('rTo').value=lastDataIdx;
   var sg=document.getElementById('rGrupo'); if(sg) sg.value='';
-  _rSelectedEmps=[]; renderRTags();
-  applyRec();
+  _rSel=[]; renderRTags(); applyRec();
 }
 
 function applyRec(){
@@ -910,31 +1023,27 @@ function applyRec(){
   const fl=a=>a.slice(rFrom,rTo+1);
   const fm=fl(months),fvt=fl(recVT),fpat=fl(recPAT),ftot=fl(recTotal),fgmv=fl(gmvTotal);
   const li=rTo,pi=rTo>0?rTo-1:0;const pm=months[pi];
-  // ── Filtro empresa/grupo ──
-  var _rGrupoEl = document.getElementById('rGrupo');
-  var _rGrupoVal = _rGrupoEl ? _rGrupoEl.value : '';
-  var _rEmpVal   = typeof _rSelectedEmps !== 'undefined' ? _rSelectedEmps : [];
-  var _vdf = (_rGrupoVal || _rEmpVal.length) ? getVDFiltered() : null;
-  var _hasFilter = !!_vdf;
-  var _banner = document.getElementById('rFilterBanner');
-  if(_banner){
-    if(_hasFilter){
-      var _parts=[];
-      if(_rGrupoVal) _parts.push('Grupo: <strong>'+_rGrupoVal+'</strong>');
-      if(_rEmpVal.length) _parts.push('Empresa(s): <strong>'+_rEmpVal.join(', ')+'</strong>');
-      _banner.innerHTML='Filtro ativo: '+_parts.join(' e ')+' (dados VT por empresa)';
-      _banner.style.display='block';
-    } else { _banner.style.display='none'; }
+  // ── Filtros Receitas ──
+  var _rGF=(document.getElementById('rGrupo')||{value:''}).value||'';
+  var _rVDF=(_rGF||_rSel.length)?getVDFiltered():null;
+  var _rHF=!!_rVDF;
+  var _rBn=document.getElementById('rBanner');
+  if(_rBn){
+    if(_rHF){
+      var _p=[];
+      if(_rGF) _p.push('Grupo: <b>'+_rGF+'</b>');
+      if(_rSel.length) _p.push('Empresa(s): <b>'+_rSel.join(', ')+'</b>');
+      _rBn.innerHTML='🔍 '+_p.join(' · ');
+      _rBn.style.display='block';
+    } else { _rBn.style.display='none'; }
   }
-  var _liVt=_hasFilter?_vdf.taxa[li]:null;
-  var _liGmv=_hasFilter?_vdf.gmv[li]:null;
 
   // KPIs
   document.getElementById('r-tot-lbl').textContent=`Receita Total (${months[li]})`;
   document.getElementById('r-tot-val').textContent=fmt(recTotal[li],true);
   document.getElementById('r-tot-d').innerHTML=deltaMoM(recTotal[li],recTotal[pi],pm);
-  document.getElementById('r-vt-lbl').textContent=_hasFilter?'Taxa VT Filtrada ('+months[li]+')':'Receita VT ('+months[li]+')';
-  document.getElementById('r-vt-val').textContent=_hasFilter&&_liVt!=null?fmt(_liVt,true):fmt(recVT[li],true);
+  document.getElementById('r-vt-lbl').textContent=_rHF?'Taxa VT Filtrada ('+months[li]+')':'Receita VT ('+months[li]+')';
+  document.getElementById('r-vt-val').textContent=_rHF?fmt(_rVDF.taxa[li],true):fmt(recVT[li],true);
   document.getElementById('r-vt-d').innerHTML=deltaMoM(recVT[li],recVT[pi],pm);
   document.getElementById('r-pat-lbl').textContent=`Receita PAT (${months[li]})`;
   document.getElementById('r-pat-val').textContent=fmt(recPAT[li],true);
@@ -988,22 +1097,23 @@ function applyRec(){
     row.innerHTML=`<td><strong>${m}</strong></td><td style="color:#818cf8;">${fmt(vtTxAdm[gi])}</td><td style="color:#22d3ee;">${fmt(vtTxSucesso[gi])}</td><td style="color:#f59e0b;">${fmt(vtTxEntrega[gi]||0)}</td><td style="color:#f97316;">${fmt(financiamento[gi]||0)}</td><td>${fmt(recVT[gi])}</td><td>${fmt(recPAT[gi])}</td><td>${fmt(recTotal[gi])}</td><td style="color:${mgCol};font-weight:600;">${mg2}%</td>`;
     tb.appendChild(row);
   });
-
-  // ── Tabela por empresa ──
-  var _es=document.getElementById('rEmpSection');
+  // ── Tabela por empresa quando filtro ativo ──
+  var _es=document.getElementById('rEmpSec');
   var _et=document.getElementById('rEmpTbody');
-  var _etl=document.getElementById('rEmpTitle');
   if(_es&&_et){
-    if(_hasFilter){
+    if(_rHF){
+      var _etl=document.getElementById('rEmpTitle');
+      if(_etl) _etl.textContent='Detalhe por Empresa'+(_rGF?' — '+_rGF:'');
       var _emps=getVDFilteredEmps();
-      if(_etl) _etl.textContent='Detalhe por Empresa'+((_rGrupoVal)?' — Grupo: '+_rGrupoVal:(_rEmpVal.length?' — '+_rEmpVal.join(', '):''));
       _et.innerHTML='';
+      var _tG=0,_tT=0,_tGP=0,_tTP=0;
       _emps.forEach(function(e){
         var gM=e.gmv[li],tM=e.taxa[li];
         var gP=e.gmv.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
         var tP=e.taxa.slice(rFrom,rTo+1).reduce(function(a,b){return a+b;},0);
+        _tG+=gM;_tT+=tM;_tGP+=gP;_tTP+=tP;
         var _r=document.createElement('tr');
-        _r.innerHTML='<td style="text-align:left;padding:6px 12px;">'+e.empresa+'</td>'+
+        _r.innerHTML='<td style="padding:6px 12px;">'+e.empresa+'</td>'+
           '<td style="padding:6px 8px;color:#94a3b8;font-size:11px;">'+e.grupo+'</td>'+
           '<td style="text-align:right;padding:6px 12px;color:#60a5fa;">'+fmt(gM)+'</td>'+
           '<td style="text-align:right;padding:6px 12px;color:#818cf8;">'+fmt(tM)+'</td>'+
@@ -1016,7 +1126,6 @@ function applyRec(){
     } else { _es.style.display='none'; }
   }
 }
-
 
 (function initRecCharts(){
   cRecLine=new Chart(document.getElementById('recLineChart'),{
@@ -1065,7 +1174,89 @@ function applyRec(){
   applyRec();
 })();
 
+// ===================== CLIENTES TAB =====================
+(function(){
+  // Crescimento base
+  new Chart(document.getElementById('clientsLineChart'),{
+    type:'line',data:{labels:months,datasets:[{label:'Total de Clientes',data:qtdClients,borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} clientes`}}},scales:{x:{grid},y:{grid,min:750}}}
+  });
 
+  // Novos clientes
+  new Chart(document.getElementById('newClientsChart'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Novos Clientes',data:qtdNew,backgroundColor:qtdNew.map(v=>v>=20?C.green:v>=10?C.amber:C.blue),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} novos clientes`}}},scales:{x:{grid:{display:false}},y:{grid}}}
+  });
+
+  // Ativos vs Inativos por mês — barras empilhadas
+  new Chart(document.getElementById('ativoInativoChart'),{
+    type:'bar',data:{labels:months,datasets:[
+      {label:'Ativos (≤30d)',data:qtdAtivos,backgroundColor:C.green+'cc',borderColor:C.green,borderWidth:1,stack:'base'},
+      {label:'Em Risco (30–90d)',data:qtdRisco,backgroundColor:C.amber+'cc',borderColor:C.amber,borderWidth:1,stack:'base'},
+      {label:'Inativos (+90d)',data:qtdInativos,backgroundColor:C.red+'cc',borderColor:C.red,borderWidth:1,stack:'base'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{footer:items=>{const tot=items.reduce((s,i)=>s+i.parsed.y,0);return`Total: ${tot} clientes`;},label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
+      scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid,ticks:{stepSize:100}}}}
+  });
+
+  // Status donut
+  new Chart(document.getElementById('statusChart'),{
+    type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[480,65,491],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1036*100).toFixed(1)}%)`}}}}
+  });
+
+  // Segmentação composição donut
+  const segLabels=Object.keys(segData),segVals=Object.values(segData);
+  const segColors=[C.purple,C.amber,C.slate,C.orange,'#475569'];
+  new Chart(document.getElementById('segPieChart'),{
+    type:'doughnut',data:{labels:segLabels,datasets:[{data:segVals,backgroundColor:segColors,borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotal*100).toFixed(1)}%)`}}}}
+  });
+
+  // Segmentation detail
+  const segDiv=document.getElementById('segTable');
+  const segFaixas={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
+  const segCls={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+  segLabels.forEach((k,i)=>{
+    const v=segVals[i],pv=(v/segTotal*100).toFixed(1);
+    segDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segCls[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixas[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColors[i]}"></div></div></div>`;
+  });
+
+  // Inatividade detail
+  const inact=[
+    {label:'Ativos (≤30d)',cls:'ativo',qtd:480},
+    {label:'Em Risco (30–90d)',cls:'risco',qtd:65},
+    {label:'Inativos (+90d)',cls:'inativo',qtd:491},
+  ];
+  const inactDiv=document.getElementById('inactiveTable');
+  inact.forEach(s=>{
+    const pv=(s.qtd/1036*100).toFixed(1);
+    inactDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
+  });
+})();
+
+// ===================== COMISSÕES =====================
+const commSellers={
+  'Karine':  {data:commKarine,  color:C.cyan,   status:'Ativo'},
+  'André':   {data:commAndre,   color:C.green,  status:'Ativo'},
+  'Carol':   {data:commCarol,   color:C.purple, status:'Desligada'},
+  'Lysandra':{data:commLysandra,color:C.amber,  status:'Desligada'},
+  'Vanessa': {data:commVanessa, color:C.orange, status:'Desligada'},
+  'Pedro':   {data:commPedro,   color:C.slate,  status:'Desligado'},
+};
+const commSellerNames=Object.keys(commSellers);
+let cFrom_c=0,cTo_c=lastDataIdx;
+let cCommLine,cCommBar;
+
+(function(){
+  const sf=document.getElementById('cFrom'),st=document.getElementById('cTo');
+  sf.innerHTML='';st.innerHTML='';
+  var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1;
+  for(var i=0;i<=ldi;i++){sf.innerHTML+=`<option value="${i}">${months[i]}</option>`;st.innerHTML+=`<option value="${i}">${months[i]}</option>`;}
+  sf.value=0; st.value=ldi; cFrom_c=0; cTo_c=ldi;st.value=lastDataIdx;
+})();
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
 
 function applyComm(){
@@ -12983,146 +13174,6 @@ var _CC=[
 // Seletores e estado
 var _ccSelectedEmps=[];
 var _ccDdTimer=null;
-
-// ── Receitas: filtros por empresa/grupo ──
-var _rSelectedEmps=[];
-var _rDdTimer=null;
-var _rAllEmps=[];  // cache de todas as empresas do VD
-
-function initRecGrupo(){
-  var sel=document.getElementById('rGrupo'); if(!sel) return;
-  if(typeof VINCULO_MAP==='undefined') return;
-  var grupos=[...new Set(Object.values(VINCULO_MAP))].sort();
-  grupos.forEach(function(g){
-    var o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o);
-  });
-}
-
-function buildRAllEmps(){
-  if(_rAllEmps.length) return;
-  if(typeof VD==='undefined') return;
-  var set=new Set();
-  Object.values(VD).forEach(function(arr){ arr.forEach(function(e){ set.add(e[0]); }); });
-  _rAllEmps=[...set].sort();
-}
-
-function getVDFiltered(){
-  // Retorna {gmv:[],taxa:[]} somados por mês para as empresas/grupos filtrados
-  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var empF=(_rSelectedEmps||[]);
-  var gmv=new Array(months.length).fill(0);
-  var taxa=new Array(months.length).fill(0);
-  if(!grupoF&&!empF.length) return null; // sem filtro
-  if(typeof VD==='undefined') return null;
-  function cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
-  Object.values(VD).forEach(function(arr){
-    arr.forEach(function(e){
-      var empresa=e[0], cnpj=e[1], gmvArr=e[2], taxaArr=e[3];
-      var matchEmp=(!empF.length||empF.includes(empresa));
-      var matchGrupo=(!grupoF||(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[cnpjKey(cnpj)]===grupoF));
-      if(matchEmp&&matchGrupo){
-        gmvArr.forEach(function(v,i){ gmv[i]+=v; });
-        taxaArr.forEach(function(v,i){ taxa[i]+=v; });
-      }
-    });
-  });
-  return {gmv:gmv,taxa:taxa};
-}
-
-function getVDFilteredEmps(){
-  // Retorna lista de {empresa, cnpj, grupo, gmv[], taxa[]} para a tabela
-  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var empF=(_rSelectedEmps||[]);
-  if(!grupoF&&!empF.length) return [];
-  if(typeof VD==='undefined') return [];
-  function cnpjKey(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,''); }
-  var result={};
-  Object.values(VD).forEach(function(arr){
-    arr.forEach(function(e){
-      var empresa=e[0], cnpj=e[1], gmvArr=e[2], taxaArr=e[3];
-      var matchEmp=(!empF.length||empF.includes(empresa));
-      var ck=cnpjKey(cnpj);
-      var grupo=(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck])||'—';
-      var matchGrupo=(!grupoF||grupo===grupoF);
-      if(matchEmp&&matchGrupo){
-        if(!result[empresa]) result[empresa]={empresa:empresa,cnpj:cnpj,grupo:grupo,gmv:new Array(months.length).fill(0),taxa:new Array(months.length).fill(0)};
-        gmvArr.forEach(function(v,i){ result[empresa].gmv[i]+=v; });
-        taxaArr.forEach(function(v,i){ result[empresa].taxa[i]+=v; });
-      }
-    });
-  });
-  return Object.values(result).sort(function(a,b){ return b.gmv[rTo]-a.gmv[rTo]; });
-}
-
-// ── Tag input Receitas ──
-function renderRTags(){
-  var wrap=document.getElementById('rTagWrap'); if(!wrap) return;
-  wrap.querySelectorAll('.client-tag').forEach(function(t){t.remove();});
-  _rSelectedEmps.forEach(function(emp){
-    var tag=document.createElement('span'); tag.className='client-tag';
-    var x=document.createElement('span'); x.className='client-tag-x'; x.textContent='\u00d7';
-    x.dataset.emp=emp;
-    x.onclick=function(){ removeRTag(this.dataset.emp); };
-    tag.textContent=emp+' ';
-    tag.appendChild(x);
-    wrap.insertBefore(tag, document.getElementById('rTagInput'));
-  });
-}
-
-function removeRTag(emp){
-  _rSelectedEmps=_rSelectedEmps.filter(function(e){return e!==emp;});
-  renderRTags(); applyRec();
-}
-
-function onRTagInput(){
-  var q=document.getElementById('rTagInput').value.toLowerCase().trim();
-  var dd=document.getElementById('rDropdown'); if(!dd) return;
-  var grupoF=(document.getElementById('rGrupo')||{value:''}).value||'';
-  var pool=[];
-  if(grupoF&&typeof GRUPO_MEMBERS!=='undefined'&&GRUPO_MEMBERS[grupoF]){
-    // Usa GRUPO_MEMBERS para listar empresas do grupo selecionado
-    pool=GRUPO_MEMBERS[grupoF].map(function(m){return m.n;});
-  } else {
-    buildRAllEmps();
-    pool=_rAllEmps.slice();
-  }
-  var matches=pool.filter(function(e){
-    if((_rSelectedEmps||[]).includes(e)) return false;
-    return !q||e.toLowerCase().includes(q);
-  }).slice(0,15);
-  dd.innerHTML=''; dd.style.display=matches.length?'block':'none';
-  matches.forEach(function(e){
-    var item=document.createElement('div'); item.className='client-dropdown-item';
-    item.textContent=e;
-    item.onmousedown=function(ev){ev.preventDefault(); addRTag(e);};
-    dd.appendChild(item);
-  });
-}
-
-function addRTag(emp){
-  if(!_rSelectedEmps.includes(emp)) _rSelectedEmps.push(emp);
-  document.getElementById('rTagInput').value='';
-  document.getElementById('rDropdown').style.display='none';
-  renderRTags(); applyRec();
-}
-
-function showRDropdown(){ onRTagInput(); }
-function hideRDropdown(){
-  _rDdTimer=setTimeout(function(){ var dd=document.getElementById('rDropdown'); if(dd) dd.style.display='none'; },200);
-}
-
-function onRTagKey(ev){
-  if(ev.key==='Enter'||ev.key===','){
-    ev.preventDefault();
-    var q=document.getElementById('rTagInput').value.trim();
-    var dd=document.getElementById('rDropdown');
-    var first=dd&&dd.querySelector('.client-dropdown-item');
-    if(first) first.onmousedown(ev);
-    else if(q&&_rAllEmps.includes(q)) addRTag(q);
-  } else if(ev.key==='Backspace'&&!document.getElementById('rTagInput').value&&_rSelectedEmps.length){
-    _rSelectedEmps.pop(); renderRTags(); applyRec();
-  }
-}
 
 function initCC(){
   var sel=document.getElementById('ccMes');
