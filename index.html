@@ -1076,6 +1076,53 @@ function applyRec(){
   }
 }
 
+(function initRecCharts(){
+  cRecLine=new Chart(document.getElementById('recLineChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Receita VT',data:recVT.map(v=>v/1e3),borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:4},
+      {label:'Receita PAT',data:recPAT.map(v=>v/1e3),borderColor:C.cyan,backgroundColor:C.cyan+'22',fill:true,tension:.4,pointRadius:4},
+      {label:'Total',data:recTotal.map(v=>v/1e3),borderColor:C.green,backgroundColor:'transparent',fill:false,tension:.4,borderDash:[6,3],pointRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toFixed(1)}K`}}},
+      scales:{x:{grid},y:{grid,ticks:{callback:v=>'R$'+v+'K'}}}}
+  });
+
+  const mg0=gmvTotal.map((g,i)=>((recTotal[i]/g)*100).toFixed(2));
+  cMargem=new Chart(document.getElementById('margemChart'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Margem %',data:mg0,backgroundColor:mg0.map(v=>v>1.8?C.green:v>1.5?C.amber:C.red),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y}%`}}},
+      scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  const lastI=lastDataIdx;
+  const categKeys=Object.keys(recCateg);
+  const categColors=[C.blue,C.cyan,C.green,C.amber,C.orange,C.purple];
+  cRecPie=new Chart(document.getElementById('recPieChart'),{
+    type:'doughnut',
+    data:{
+      labels:categKeys,
+      datasets:[{
+        data:categKeys.map(k=>recCateg[k][lastI]),
+        backgroundColor:categColors,
+        borderColor:'#1a1d27',borderWidth:3,hoverOffset:8
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#e2e8f0',usePointStyle:true,font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>{
+          const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${ctx.label}: R$ ${(ctx.parsed/1e3).toFixed(1)}K (${(ctx.parsed/tot*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+
+  applyRec();
+})();
+
 
 function resetComm(){document.getElementById('cFrom').value=0;document.getElementById('cTo').value=lastDataIdx;document.getElementById('cVendor').value='all';applyComm();}
 
