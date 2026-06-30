@@ -623,7 +623,7 @@ const clientCutIdx = (()=>{
 // Preenche KPI cards de clientes dinamicamente
 function renderClienteKPIs() {
   const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
-  const compI = Math.max(0, curI - 2); // comparação: 2 meses atrás
+  const compI = Math.max(0, curI - 1); // comparação: mês anterior
   const mesNm = months[curI] || '';
   const mesComp = months[compI] || '';
   function fmt(n){ return n.toLocaleString('pt-BR'); }
@@ -14388,4 +14388,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
       <tr>
         <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Empresas</td>
         <td style="padding:8px 12px;border:1px solid #cbd5e1;" id="authDocQtd"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;b
+        <td style="padding:8px 12px;background:#f1f5f9;bo
