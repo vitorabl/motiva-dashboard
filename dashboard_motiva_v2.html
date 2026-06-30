@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Motiva Benefícios 2025–2026</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
@@ -1178,7 +1178,7 @@ function applyRec(){
 (function(){
   // Crescimento base
   new Chart(document.getElementById('clientsLineChart'),{
-    type:'line',data:{labels:months,datasets:[{label:'Total de Clientes',data:qtdClients,borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
+    type:'line',data:{labels:months.slice(0,_CC_MESES.length),datasets:[{label:'Total de Clientes',data:qtdClients.slice(0,_CC_MESES.length),borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} clientes`}}},scales:{x:{grid},y:{grid,min:750}}}
   });
 
@@ -13475,7 +13475,7 @@ function resetCC(){
   _ccSelectedEmps=[];
   renderCCTags();
   var sel=document.getElementById('ccMes');
-  if(sel){var ldi=typeof lastDataIdx!=='undefined'?lastDataIdx:_CC_MESES.length-1; sel.value=Math.min(ldi,_CC_MESES.length-1);}
+  if(sel){ sel.value=_CC_MESES.length-1; }
   document.getElementById('ccOrigem').value='all';
   var sg=document.getElementById('ccGrupo'); if(sg) sg.value='';
   var sy=document.getElementById('ccYearFilter');
@@ -14370,3 +14370,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 </body>
 <!-- deploy 20260608161718 -->
 </html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
+                                 
