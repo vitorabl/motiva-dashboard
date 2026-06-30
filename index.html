@@ -360,10 +360,10 @@ function togglePwd(){
 <!-- ===== CLIENTES ===== -->
 <div class="content" id="tab-clientes">
   <div class="kpi-grid">
-    <div class="kpi green"><div class="kpi-label">Clientes Ativos (Mai/26)</div><div class="kpi-value">480</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta down">↓ -6 vs Mar/26</div></div>
-    <div class="kpi amber"><div class="kpi-label">Em Risco 30–90d (Mai/26)</div><div class="kpi-value">65</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta down">↓ -3 vs Mar/26</div></div>
-    <div class="kpi red"><div class="kpi-label">Inativos +90d (Mai/26)</div><div class="kpi-value">491</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta down">↑ +19 vs Mar/26</div></div>
-    <div class="kpi cyan"><div class="kpi-label">Base Total (Mai/26)</div><div class="kpi-value">1.036</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta up">↑ +10 vs Mar/26</div></div>
+    <div class="kpi green" id="kpi-ativos"><div class="kpi-label" id="kpi-ativos-lbl">Clientes Ativos</div><div class="kpi-value" id="kpi-ativos-val">—</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta" id="kpi-ativos-delta"></div></div>
+    <div class="kpi amber" id="kpi-risco"><div class="kpi-label" id="kpi-risco-lbl">Em Risco 30–90d</div><div class="kpi-value" id="kpi-risco-val">—</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta" id="kpi-risco-delta"></div></div>
+    <div class="kpi red" id="kpi-inativos"><div class="kpi-label" id="kpi-inativos-lbl">Inativos +90d</div><div class="kpi-value" id="kpi-inativos-val">—</div><div class="kpi-sub">Sem compra há +90 dias</div><div class="kpi-delta" id="kpi-inativos-delta"></div></div>
+    <div class="kpi cyan" id="kpi-base"><div class="kpi-label" id="kpi-base-lbl">Base Total</div><div class="kpi-value" id="kpi-base-val">—</div><div class="kpi-sub">Crescimento acumulado</div><div class="kpi-delta" id="kpi-base-delta"></div></div>
     <div class="kpi purple"><div class="kpi-label">Concentração da Base</div><div class="kpi-value">Bronze-PP</div><div class="kpi-sub">Segmento dominante</div><div class="kpi-pct amber">46,0% da base</div></div>
     <div class="kpi"><div class="kpi-label">Maior Segmento em Vol.</div><div class="kpi-value">Bronze-P</div><div class="kpi-sub">331 clientes (32,5%)</div><div class="kpi-pct blue">GMV R$ 1K–5K/mês</div></div>
   </div>
@@ -620,6 +620,45 @@ const clientCutIdx = (()=>{
   return idx >= 0 ? idx + 1 : lastDataIdx + 1;
 })();
 
+// Preenche KPI cards de clientes dinamicamente
+function renderClienteKPIs() {
+  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+  const compI = Math.max(0, curI - 2); // comparação: 2 meses atrás
+  const mesNm = months[curI] || '';
+  const mesComp = months[compI] || '';
+  function fmt(n){ return n.toLocaleString('pt-BR'); }
+  function delta(cur, comp, invertGood){
+    const d = cur - comp;
+    if(d === 0) return '';
+    const sign = d > 0 ? '↑ +' : '↓ ';
+    const good = invertGood ? d < 0 : d > 0;
+    return `<span class="kpi-delta ${good?'up':'down'}">${sign}${Math.abs(d)} vs ${mesComp}</span>`;
+  }
+  const sets = [
+    ['kpi-ativos', 'Clientes Ativos', qtdAtivos, false, curI],
+    ['kpi-risco',  'Em Risco 30–90d', qtdRisco,  true,  curI],
+    ['kpi-inativos','Inativos +90d',  qtdInativos, true, curI],
+    ['kpi-base',   'Base Total',      qtdClients, false, curI],
+  ];
+  sets.forEach(([id, label, arr, invertGood, ci]) => {
+    const lbl = document.getElementById(id+'-lbl');
+    const val = document.getElementById(id+'-val');
+    const del = document.getElementById(id+'-delta');
+    if(!lbl||!val) return;
+    const cur = arr[ci] || 0;
+    const comp = arr[compI] || 0;
+    lbl.textContent = label + ' (' + mesNm + ')';
+    val.textContent = fmt(cur);
+    if(del) del.innerHTML = delta(cur, comp, invertGood);
+  });
+}
+// Executar após DOM pronto
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderClienteKPIs);
+} else {
+  renderClienteKPIs();
+}
+
 const recTotal=recVT.map((v,i)=>v+(recPAT[i]||0)+(financiamento[i]||0));
 // NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
 const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,162099,133960,177956,195508,174001,0,0,0,0,0,0];
@@ -638,9 +677,9 @@ const vtTxEntrega = [0,0,0,0,0,0,0,15,30,240,200,120,330,195,225,225,405,255,0,0
 const qtdClients  = [780,800,831,870,902,913,925,942,947,964,972,973,985,990,994,1004,1027,1038,1038,1038,1038,1038,1038,1038];
 const qtdNew      = [9,20,31,39,32,11,12,17,5,17,8,1,12,5,4,10,23,11,0,0,0,0,0,0];
 // Ativos (≤30d), Em risco (30-90d), Inativos (+90d) — calculados da aba Clientes
-const qtdAtivos   = [555,563,578,601,611,576,555,564,560,560,562,548,549,540,531,525,480];
-const qtdRisco    = [10,11,12,9,14,52,73,36,15,24,23,19,22,23,27,24,65];
-const qtdInativos = [216,227,242,261,279,287,299,344,374,382,390,409,418,434,443,462,491];
+const qtdAtivos   = [555,563,578,601,611,576,555,564,560,560,562,548,549,540,531,525,480,521];
+const qtdRisco    = [10,11,12,9,14,52,73,36,15,24,23,19,22,23,27,24,65,40];
+const qtdInativos = [216,227,242,261,279,287,299,344,374,382,390,409,418,434,443,462,491,477];
 const commTotal   = [520.22,642.91,1159.66,793.64,1035.06,1136.2,1049.78,1704.97,2222.37,2550.32,1858.81,1645.02,2053.57,1985.23,1916.83,1841.93,2410.9,1480.17,0,0,0,0,0,0];
 const commKarine  = [109.38,479.45,551.26,618.49,480.63,1004.35,966.1,1579.43,2103.46,2106.64,1691.76,1602.88,1898.38,1928.29,1820.21,1791.33,2270.69,1428.77,0,0,0,0,0,0];
 const commCarol   = [0,0,0,0,0,9.93,23.51,46.16,53.85,374.17,106.61,0,0,0,0,0,0,0,0,0,0,0,0,0];
@@ -14349,27 +14388,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
       <tr>
         <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Empresas</td>
         <td style="padding:8px 12px;border:1px solid #cbd5e1;" id="authDocQtd"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Comissão</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocTotal"></td>
-      </tr>
-    </table>
-    <div style="margin-bottom:8px;font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:#334155;">Detalhamento por Empresa</div>
-    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;" id="authDocTable">
-      <thead>
-        <tr style="background:#1e40af;color:#fff;">
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">#</th>
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">Empresa</th>
-          <th style="padding:9px 10px;text-align:left;border:1px solid #1e40af;">CNPJ</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">GMV (R$)</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Receita (R$)</th>
-          <th style="padding:9px 10px;text-align:right;border:1px solid #1e40af;">Comissão (R$)</th>
-        </tr>
-      </thead>
-      <tbody id="authDocBody"></tbody>
-    </table>
-    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">
-      Documento gerado automaticamente pelo Dashboard Motiva Benefícios · Uso interno
-    </div>
-  </div>
-  <div id="authModalBtns" style="max-width:800px;margin:16px auto 0;display:flex;gap:12px;justify-content:flex-end;">
-    <button onclick="fecharAutorizacao()" style="background:#334155;border:none;color:#f1f5f9;padding:10px 22px;border-radius:8px;font-size:13px;cursor:po
+        <td style="padding:8px 12px;background:#f1f5f9;bor
