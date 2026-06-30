@@ -14805,11 +14805,11 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 <!-- ===== QUINZENA ===== -->
 <div class="content" id="tab-quinzena">
   <div class="kpi-grid" id="qz-kpi-grid">
-    <div class="kpi green"><div class="kpi-label">Padrão 1ª Quinzena</div><div class="kpi-value" id="qz-q1pad">—</div><div class="kpi-sub">Compram dias 1–15</div></div>
-    <div class="kpi cyan"><div class="kpi-label">Padrão 2ª Quinzena</div><div class="kpi-value" id="qz-q2pad">—</div><div class="kpi-sub">Compram dias 16–31</div></div>
-    <div class="kpi" style="--accent:var(--accent4)"><div class="kpi-label">Compraram no Padrão</div><div class="kpi-value" id="qz-ok">—</div><div class="kpi-sub" id="qz-ok-sub">Jun/26</div><div class="kpi-delta up" id="qz-ok-pct"></div></div>
-    <div class="kpi amber"><div class="kpi-label">Fora da Quinzena</div><div class="kpi-value" id="qz-mudou">—</div><div class="kpi-sub">Mudaram de quinzena</div></div>
-    <div class="kpi red"><div class="kpi-label">Não Compraram</div><div class="kpi-value" id="qz-ausente">—</div><div class="kpi-sub">Ausentes no mês</div></div>
+    <div class="kpi" style="--accent:var(--accent)"><div class="kpi-label">Padrão 1ª Quinzena</div><div class="kpi-value" id="qz-q1pad">425</div><div class="kpi-sub">Compram dias 1–15</div></div>
+    <div class="kpi" style="--accent:var(--accent2)"><div class="kpi-label">Padrão 2ª Quinzena</div><div class="kpi-value" id="qz-q2pad">390</div><div class="kpi-sub">Compram dias 16–31</div></div>
+    <div class="kpi" style="--accent:var(--accent4)"><div class="kpi-label">Compraram no Padrão</div><div class="kpi-value" id="qz-ok">386</div><div class="kpi-sub">Jun/26</div><div class="kpi-delta up" id="qz-ok-pct">47% do total</div></div>
+    <div class="kpi" style="--accent:var(--accent3)"><div class="kpi-label">Fora da Quinzena</div><div class="kpi-value" id="qz-mudou">121</div><div class="kpi-sub">Mudaram de quinzena</div></div>
+    <div class="kpi" style="--accent:var(--danger)"><div class="kpi-label">Não Compraram</div><div class="kpi-value" id="qz-ausente">308</div><div class="kpi-sub">Ausentes no mês</div></div>
   </div>
 
   <div class="chart-card" style="margin-bottom:24px">
@@ -14912,8 +14912,8 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
         data: {
           labels: QZ_MONTHS,
           datasets: [
-            {label:'1\u00aa Quinzena (dias 1\u201315)', data:QZ_Q1, backgroundColor:'rgba(99,102,241,0.75)', borderColor:'#6366f1', borderWidth:1},
-            {label:'2\u00aa Quinzena (dias 16\u201331)', data:QZ_Q2, backgroundColor:'rgba(251,146,60,0.75)', borderColor:'#fb923c', borderWidth:1}
+            {label:'1ª Quinzena (dias 1–15)', data:QZ_Q1, backgroundColor:'rgba(91,106,240,0.75)', borderColor:'#5b6af0', borderWidth:1},
+            {label:'2ª Quinzena (dias 16–31)', data:QZ_Q2, backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#f59e0b', borderWidth:1}
           ]
         },
         options:{
