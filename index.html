@@ -653,9 +653,6 @@ function renderClienteKPIs() {
     if(del) del.innerHTML = delta(cur, comp, invertGood);
   });
 }
-// Executar após DOM pronto (sempre via DOMContentLoaded para evitar TDZ de const)
-document.addEventListener('DOMContentLoaded', renderClienteKPIs);
-
 var QZ_MONTHS  = ["Jan/25","Fev/25","Mar/25","Abr/25","Mai/25","Jun/25","Jul/25","Ago/25","Set/25","Out/25","Nov/25","Dez/25","Jan/26","Fev/26","Mar/26","Abr/26","Mai/26","Jun/26"];
 var QZ_Q1      = [322,312,300,317,355,315,300,292,306,272,267,273,255,270,266,270,267,269];
 var QZ_Q2      = [250,258,275,263,245,228,192,221,210,242,239,214,245,227,236,230,241,252];
@@ -1113,6 +1110,11 @@ const qtdNew      = [9,20,31,39,32,11,12,17,5,17,8,1,12,5,4,10,23,11,0,0,0,0,0,0
 const qtdAtivos   = [493,501,516,542,576,529,490,513,516,514,506,487,500,497,502,500,508,521];
 const qtdRisco    = [0,34,54,53,52,106,134,77,39,52,56,58,47,49,46,41,47,40];
 const qtdInativos = [287,265,261,275,274,278,301,352,392,398,410,428,438,444,446,463,472,477];
+// Executar renderClienteKPIs após todas as const declaradas (evita TDZ)
+(function(){ 
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderClienteKPIs);
+  else renderClienteKPIs();
+})();
 const commTotal   = [520.22,642.91,1159.66,793.64,1035.06,1136.2,1049.78,1704.97,2222.37,2550.32,1858.81,1645.02,2053.57,1985.23,1916.83,1841.93,2410.9,1480.17,0,0,0,0,0,0];
 const commKarine  = [109.38,479.45,551.26,618.49,480.63,1004.35,966.1,1579.43,2103.46,2106.64,1691.76,1602.88,1898.38,1928.29,1820.21,1791.33,2270.69,1428.77,0,0,0,0,0,0];
 const commCarol   = [0,0,0,0,0,9.93,23.51,46.16,53.85,374.17,106.61,0,0,0,0,0,0,0,0,0,0,0,0,0];
