@@ -14802,14 +14802,22 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
 (function(){
   if(typeof QZ_SUMMARY==='undefined') return;
 
-  // KPI cards
-  document.getElementById('qz-q1pad').textContent=QZ_SUMMARY.q1pad.toLocaleString('pt-BR');
-  document.getElementById('qz-q2pad').textContent=QZ_SUMMARY.q2pad.toLocaleString('pt-BR');
-  document.getElementById('qz-ok').textContent=QZ_SUMMARY.ok.toLocaleString('pt-BR');
-  const total=QZ_SUMMARY.ok+QZ_SUMMARY.ausente+QZ_SUMMARY.mudou;
-  document.getElementById('qz-ok-pct').textContent=total>0?Math.round(QZ_SUMMARY.ok/total*100)+'% do total':'';
-  document.getElementById('qz-mudou').textContent=QZ_SUMMARY.mudou.toLocaleString('pt-BR');
-  document.getElementById('qz-ausente').textContent=QZ_SUMMARY.ausente.toLocaleString('pt-BR');
+  function _fillQzKpis(){
+    var el=document.getElementById('qz-q1pad');
+    if(!el) return; // DOM not ready yet
+    el.textContent=QZ_SUMMARY.q1pad.toLocaleString('pt-BR');
+    document.getElementById('qz-q2pad').textContent=QZ_SUMMARY.q2pad.toLocaleString('pt-BR');
+    document.getElementById('qz-ok').textContent=QZ_SUMMARY.ok.toLocaleString('pt-BR');
+    var total=QZ_SUMMARY.ok+QZ_SUMMARY.ausente+QZ_SUMMARY.mudou;
+    document.getElementById('qz-ok-pct').textContent=total>0?Math.round(QZ_SUMMARY.ok/total*100)+'% do total':'';
+    document.getElementById('qz-mudou').textContent=QZ_SUMMARY.mudou.toLocaleString('pt-BR');
+    document.getElementById('qz-ausente').textContent=QZ_SUMMARY.ausente.toLocaleString('pt-BR');
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',_fillQzKpis);
+  } else {
+    _fillQzKpis();
+  }
 
   // Table render
   let _qzFilter='todos';
