@@ -653,12 +653,8 @@ function renderClienteKPIs() {
     if(del) del.innerHTML = delta(cur, comp, invertGood);
   });
 }
-// Executar após DOM pronto
-if(document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderClienteKPIs);
-} else {
-  renderClienteKPIs();
-}
+// Executar após DOM pronto (sempre via DOMContentLoaded para evitar TDZ de const)
+document.addEventListener('DOMContentLoaded', renderClienteKPIs);
 
 var QZ_MONTHS  = ["Jan/25","Fev/25","Mar/25","Abr/25","Mai/25","Jun/25","Jul/25","Ago/25","Set/25","Out/25","Nov/25","Dez/25","Jan/26","Fev/26","Mar/26","Abr/26","Mai/26","Jun/26"];
 var QZ_Q1      = [322,312,300,317,355,315,300,292,306,272,267,273,255,270,266,270,267,269];
@@ -14929,10 +14925,13 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
   }
   // Attach directly to the Quinzena tab button — no showTab override needed
   document.addEventListener('DOMContentLoaded', function(){
+    // Pre-populate table so it's ready when tab opens
+    if(window.qzFilter) window.qzFilter('todos');
+    // Also wire up tab button click for chart init
     var qzTabBtn = document.querySelector(".tab[onclick*=\"quinzena\"]");
     if(qzTabBtn){
       qzTabBtn.addEventListener('click', function(){
-        window.qzFilter('todos');
+        if(window.qzFilter) window.qzFilter('todos');
         _initQzChart();
       });
     }
