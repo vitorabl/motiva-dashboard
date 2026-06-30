@@ -659,6 +659,442 @@ if(document.readyState === 'loading') {
   renderClienteKPIs();
 }
 
+const QZ_MONTHS  = ["Jan/25","Fev/25","Mar/25","Abr/25","Mai/25","Jun/25","Jul/25","Ago/25","Set/25","Out/25","Nov/25","Dez/25","Jan/26","Fev/26","Mar/26","Abr/26","Mai/26","Jun/26"];
+const QZ_Q1      = [322,312,300,317,355,315,300,292,306,272,267,273,255,270,266,270,267,269];
+const QZ_Q2      = [250,258,275,263,245,228,192,221,210,242,239,214,245,227,236,230,241,252];
+const QZ_SUMMARY = {q1pad:425,q2pad:390,ok:386,ausente:308,mudou:121};
+const QZ_ALERTAS = [
+["03447242...",2,0,0,0]
+["04064650...",2,0,0,33]
+["05897520...",2,0,0,50]
+["07128081...",2,0,0,33]
+["09396401...",2,0,0,50]
+["09396401...",1,0,0,67]
+["11512298...",2,0,0,0]
+["13776762...",1,0,0,100]
+["15007455...",1,0,0,80]
+["17138140...",2,0,0,25]
+["17745613...",2,0,0,20]
+["17745613...",2,0,0,40]
+["18536831...",2,0,0,50]
+["21273172...",1,0,0,83]
+["21800896...",2,0,0,25]
+["22383433...",2,0,0,0]
+["23958369...",1,0,0,100]
+["24344495...",1,0,0,100]
+["24731978...",1,0,0,100]
+["24735169...",1,0,0,80]
+["24895547...",1,0,0,100]
+["25285494...",1,0,0,67]
+["30575672...",2,0,0,0]
+["30680370...",1,0,0,100]
+["31108403...",1,0,0,100]
+["31774863...",2,0,0,0]
+["32870697...",1,0,0,67]
+["33418612...",1,0,0,67]
+["33444386...",2,0,0,50]
+["33955652...",2,0,0,0]
+["34158450...",1,0,0,100]
+["35561397...",1,0,0,100]
+["37208724...",1,0,0,80]
+["40136331...",2,0,0,0]
+["40915552...",2,0,0,50]
+["42923573...",1,0,0,75]
+["49515375...",1,0,0,100]
+["49885988...",2,0,0,50]
+["52.189.282 ROMULO ANDRADE REIS",1,0,0,100]
+["55306954...",1,0,0,100]
+["56.224.452 EDSON ROBERTO DE CAMPOS JUNIO",1,0,0,100]
+["58303516...",1,0,0,100]
+["86454741...",2,0,0,33]
+["AASPA ASS",2,0,0,17]
+["AC/DC SERV. ELETRICOS LTDA",2,0,0,43]
+["AGEP USINAGEM LTDA",2,0,0,13]
+["AGILIT ASSESSORIA EMPRESARIAL",2,0,0,0]
+["ALBERGUE SANTO ANTONIOI",1,0,0,80]
+["ALESAM ASSOCIACAO",1,0,0,64]
+["ALFA ALUMINIO & FACHADAS LTDA",1,0,0,100]
+["ALMAVIVA DO BRASIL TELEMARKETI",1,0,0,100]
+["AMIGOS RESTAURANTE EIRELI - EP",1,0,0,57]
+["AMORSAUDE SAO JOAO DEL REI SERVICOS MEDI",1,0,0,100]
+["AMPM SERVIÇOS",1,0,0,100]
+["APAC FEMININA",1,0,0,60]
+["APAC masculina",1,0,0,80]
+["APAE - SJDR",1,0,0,80]
+["AR TECNOLOGIA E CLIMATIZAÇÃO L",1,0,0,62]
+["ARMAZEM 356 EMPREENDIMENTO IMO",1,0,0,100]
+["ASCENARIO ENERGIA",2,0,0,50]
+["ASSIS TEIXEIRA",2,0,0,0]
+["ASSOCIACAO DE APOIO A PESSOA ONCOLOGICA",1,0,0,100]
+["AUTTE PORTARIA E SERVICOS",1,0,0,71]
+["AZOUGUE PARRILLA",2,0,0,50]
+["BENTO EMPREENDIMENTOS E CONSTR",1,0,0,92]
+["BHS ESCOLA DE IDIOMAS LTDA",1,0,0,55]
+["BK PATIO MATOSINHOS",2,0,0,33]
+["BOLDRINI MOTA ENGENHARIA ELETRICA",1,0,0,80]
+["BY MOTO - BETIM",1,0,0,100]
+["BY MOTO - BH",1,0,0,100]
+["BY MOTO - DREAM",1,0,0,100]
+["BY MOTO - GECAR CONSULTORIA EMPRESARIAL",1,0,0,100]
+["BY MOTO - NOVA LIMA",1,0,0,100]
+["BY MOTO - OTOBAI LTDA",1,0,0,100]
+["BY MOTO - RIBEIRO VEICULOS E PEÇAS LTDA",1,0,0,100]
+["BY MOTO - SANTA LUZIA",1,0,0,100]
+["BY MOTO - VENDA NOVA",1,0,0,91]
+["CAFEXO ltda",2,0,0,0]
+["CAMPANA DEL VENTO",2,0,0,25]
+["CANDIDO REABILITACAO, SAUDE E QUALIDADE",1,0,0,56]
+["Cartão de TODOS",2,0,0,50]
+["CASA DAS LATAS GELATERIA",2,0,0,40]
+["CASA DAS LATAS PRACA",2,0,0,20]
+["CASH CONNECT CONSULTORIA FINAN",1,0,0,100]
+["CASSEL RUZZARIN 02",2,0,0,0]
+["CASTANHA PRIMERS",2,0,0,0]
+["CASTANHAS PRIME COMERCIO DE PR",2,0,0,0]
+["CEDRUS TRANSPORTADORA LTDA",1,0,0,100]
+["CENTRAL SERVICOS LTDA",1,0,0,80]
+["CHARTH COMERCIO",1,0,0,100]
+["CHOCOLATERIA PURO CACAU",2,0,0,20]
+["CL BRASIL - 0006-06",2,0,0,0]
+["CL BRASIL - 0009-40",1,0,0,100]
+["CLICK DIGITAL SOLUTIONS LTDA",2,0,0,25]
+["CLINICA SAO LUCAS",1,0,0,100]
+["COMERCIAL JOYBRI LTDA",2,0,0,15]
+["COMERCIAL SI X FOOD LTDA",1,0,0,100]
+["COMPANHIA DE ESQUADRIAS VITARK",1,0,0,100]
+["COMPLEMENTO SMART",2,0,0,20]
+["COND.BH SHOPPING",1,0,0,67]
+["CONDOMINIO BOSSA NOVA PARK",2,0,0,12]
+["Condominio do Edificio Firenze",2,0,0,0]
+["CONDOMINIO DO EDIFICIO OTAISA",1,0,0,100]
+["CONDOMINIO DO EDIFICIO SANTORINI",1,0,0,100]
+["Condominio do Edificio Sao Bento",2,0,0,8]
+["CONDOMINIO SELENIO DE AROEIRA",2,0,0,47]
+["CONNECTA BPO",1,0,0,100]
+["CONNECTA SERVICOS",1,0,0,100]
+["CONSERVADORA AUTTE LTDA",1,0,0,70]
+["CONSERVADORA CIDADE LTDA",1,0,0,100]
+["CONSORCIO PCS - RIBEIRAO PAMPULHA",1,0,0,75]
+["CONSTRUPAV ENGENHARIA",1,0,0,67]
+["CONSTRUTORA BMB",2,0,0,0]
+["CORREGO SANTA INES",2,0,0,20]
+["COZINHA DE FOGO",1,0,0,62]
+["COZINHA DE FOGO RESTAURANTE LT",2,0,0,29]
+["Del Rey",2,0,0,50]
+["DEPOSITO CARMO SION LTDA",2,0,0,0]
+["DETAILER PAINT LTDA",2,0,0,0]
+["DISTRIBUIDORA VITORELLI",1,0,0,100]
+["DM2 ECOMMERCE LTDA",2,0,0,0]
+["DR PISOS",1,0,0,92]
+["DU AMARAL COMERCIO DE COLCHOES",2,0,0,50]
+["DUDA APOIO EMPRESARIAL",1,0,0,100]
+["DUO MOVEIS E DECORAÇÃO",1,0,0,100]
+["ECA - ESPACO DE CULTURA E ARTE",1,0,0,73]
+["EDIFÍCIO ESSENCE III",1,0,0,67]
+["EDUCAODO - CENTRO DE BEM ESTAR",2,0,0,0]
+["EMPADA DEL REI",2,0,0,0]
+["EMPORIO DA TERRA",1,0,0,100]
+["EMPREITEIRA CAIRO ALVES",2,0,0,0]
+["EP-I 14 RIO BRANCO EMPREENDIME",1,0,0,100]
+["EP-I15 ARTHUR BERNARDES EMP.",1,0,0,100]
+["EP-I21 BARREIRO CENTER MALL EM",1,0,0,100]
+["EPD ENGENHARIA LTDA",1,0,0,100]
+["EPO CONSTRUÇÕES LTDA",1,0,0,100]
+["Escola Caminho das Águas",1,0,0,100]
+["ESTRELA DALVA",2,0,0,33]
+["ESTRUTURAL GLAZING COM.SER.VID",2,0,0,29]
+["ESTRUTURAR ENGENHARIA FORMA E",1,0,0,100]
+["ETHOS CONSULTORES LTDA",1,0,0,80]
+["FACIFESTAS LOCADORA",2,0,0,33]
+["FERREIRA E CHAGAS ADVOGADOS",1,0,0,100]
+["FERREIRA E CHAGAS RECUPERACAO",1,0,0,87]
+["FIORELLA GELATO 02",2,0,0,33]
+["FIORELLA GELATO 04",2,0,0,0]
+["FIZ SPORTS WEAR",2,0,0,0]
+["FOCO EMPREENDIMENTOS LTDA",1,0,0,100]
+["FORNAC LTDA",2,0,0,14]
+["FRISUL REFRIGERACAO E CLIMATIZACAO",1,0,0,100]
+["FROTA CONSTRUCOES EIRELI",1,0,0,71]
+["FUNILAR COMERCIO E INDUSTRIA L",1,0,0,100]
+["GARCIA PRESTADORA DE SERVIÇOS",1,0,0,60]
+["GEORGIA BRANT",2,0,0,8]
+["GERIATRICA ILPI LTDA - EPP",1,0,0,100]
+["GMuniz Informatica",2,0,0,0]
+["GRUPO AGV DO BRASIL",1,0,0,82]
+["GRUPO BENASSI",1,0,0,83]
+["Havaianas São Joao Del Rei",2,0,0,20]
+["HEMOTEC GNS ANEXO",1,0,0,100]
+["HEMOTEC GNS LOTE XV",1,0,0,100]
+["HERON DO BRASIL",1,0,0,100]
+["HOSPITAL DE NOSSA SENHORA DAS MERCES",1,0,0,60]
+["HOTT LASHES",1,0,0,78]
+["I LOC PHONE",2,0,0,50]
+["IBCMED SERVICOS",2,0,0,0]
+["IMPERIO DO AR CONDICIONADO",1,0,0,100]
+["Implant & Graft Academy",2,0,0,41]
+["INSTITUTO AUXILIADORA",1,0,0,75]
+["INSTITUTO ESPIRITA EURIPEDES",1,0,0,92]
+["INSTITUTO ESPIRITA EURIPEDES",1,0,0,92]
+["INSTITUTO ESPIRITA EURIPEDES",2,0,0,33]
+["IRMÃOS FARID LTDA",1,0,0,100]
+["J & M CONSULTORIA EMPRESARIAL",2,0,0,50]
+["JACINTA COMERCIO ALIMENTOS E B",1,0,0,100]
+["JAIR PNEUS LTDA",1,0,0,67]
+["JARDIM DAS OLIVEIRAS CHOPERIA",2,0,0,50]
+["JBN SERVICOS COMBIMNADOS",2,0,0,25]
+["JONNY GLAUBER SILVA MELO",1,0,0,100]
+["JSW ENGENHARIA LTDA",2,0,0,33]
+["KELTZ ACESSORIOS EIRELI",1,0,0,60]
+["KIM+ TECNOLOGIA EM MOBILIDADE",2,0,0,18]
+["L&S IMPORT PRODUTOS DE PIGMENT",2,0,0,15]
+["LA BOLARIA ARTESANAL",1,0,0,88]
+["LB4 COMERCIO DE LINGERIE EIREL",1,0,0,100]
+["Liderança Limpeza e Conservação LTDA",2,0,0,17]
+["LIGAS GERAIS ELETROMETALURGIA",1,0,0,80]
+["LIVRARIAS FAMILIA CRISTA DE MARILIA LTDA",1,0,0,100]
+["LOCAGORA LOCADORA DE VEICULOS II LTDA",2,0,0,27]
+["LOCCEL LOCACAO DE CELULARES BH LTDA",2,0,0,0]
+["LOCCEL LOCACAO DE CELULARES LTDA",1,0,0,56]
+["LOJA MENDONÇA 2000 LTDA",2,0,0,21]
+["LONGATTI IMOVEIS SAO JOAO DEL REI",1,0,0,67]
+["LORENA LIMA DESIGN",1,0,0,100]
+["LUCAS KERN BRANDAO 08351144657",1,0,0,67]
+["LUIZA SALES ATELIE",1,0,0,67]
+["LVN ENGENHARIA",1,0,0,75]
+["Magnus Metais",2,0,0,0]
+["MANECO BURGUER",1,0,0,100]
+["MANIA DE CONFORTO CALCADOS LTDA",2,0,0,20]
+["Mapri Aquecedores",2,0,0,50]
+["MATCH COMERCIO",2,0,0,0]
+["MATOS CONTABILIDADE",2,0,0,40]
+["MAURICIO MAIA CORREA LTDA",2,0,0,0]
+["MEGA FORMAS ESTRUTURA DE CONCR",2,0,0,50]
+["MEGA PARAFUSO",2,0,0,20]
+["METRUM EQUIP. DE MED. E TESTES",2,0,0,50]
+["MI GARBA DIAMNDMALL LTDA",2,0,0,50]
+["MINAS AUTOMOVEIS",1,0,0,100]
+["MLJC SERVICOS ADMINISTRATIVOS",2,0,0,17]
+["MM ESQUADRIAS",1,0,0,67]
+["MOCCA VILA DA SERRA EIRELI-ME",1,0,0,100]
+["MODULARIS INDUSTRIA, COMERCIO E MONTAGEM",1,0,0,75]
+["MOMO COMIDARIA LTDA",1,0,0,100]
+["MOVE SJ",1,0,0,100]
+["MOVIMENTO EMPRE PAT LTDA",1,0,0,89]
+["MR CONSTRUCOES E REFORMAS",1,0,0,60]
+["Mr Mix Milk Shakes",1,0,0,60]
+["MR SERVICE LTDA",2,0,0,25]
+["MS SERVICOS",1,0,0,89]
+["MTC LOG",2,0,0,46]
+["MULTI ENGENHARIA",2,0,0,44]
+["MUNDO GELLATO",2,0,0,33]
+["NEPUGA POS GRADUAÇÃO",2,0,0,0]
+["NORPET LTDA -ME",1,0,0,100]
+["NOSSO LAR",1,0,0,100]
+["O BOTICARIO",2,0,0,40]
+["O BOTICARIO",2,0,0,20]
+["O BOTICARIO",2,0,0,20]
+["ODONTOARTES",2,0,0,0]
+["OFICINA RODIK LTDA",2,0,0,33]
+["OR3 -43",2,0,0,43]
+["ORAL SIN IMPLANTES",1,0,0,100]
+["ORAL SIN IMPLANTES",2,0,0,31]
+["OXI INDUSTRIA",1,0,0,67]
+["Padaria e Confeitaria Trigo de Ouro",1,0,0,75]
+["PET CAFÉ",1,0,0,100]
+["PLAMEDH PLANO SAUDE",1,0,0,100]
+["PLATINUM CONSTRUCOES LTDA",1,0,0,83]
+["POSTO BIANCA",2,0,0,0]
+["POSTO CANAL",2,0,0,50]
+["POSTO PIRATININGA",2,0,0,23]
+["Pousada Villa Alferes",2,0,0,20]
+["POWER CENTER LAGOA SANTA",2,0,0,0]
+["PRAÇA DOS AMIGOS FESTAS E RECE",2,0,0,43]
+["PROLAR COMERCIO",1,0,0,67]
+["PROMOVER VIGILANCIA PATRIMONIAL LTDA",2,0,0,40]
+["PUC RS CAMPUS IPIRANGA",2,0,0,0]
+["PÁTIO MATOSINHOS",2,0,0,33]
+["RB - POLISHOP COMERCIO E EXPORTAÇÃO",2,0,0,50]
+["RB - ZZAB COMERCIO DE CALCADOS",2,0,0,24]
+["REALMOTOS DEL REI LTDA",1,0,0,75]
+["República do Pátio",2,0,0,50]
+["República Gourmet",1,0,0,67]
+["RESIDENCIAL SOLARES",2,0,0,0]
+["RESIDENCIAL VIENNA",2,0,0,0]
+["RESIDENCIAL VILA MUNICH",1,0,0,100]
+["RESTAURANTE TEMPLÁRIO",2,0,0,20]
+["RFJ CONSTRUTORA EIRELI-EPP",1,0,0,58]
+["RFJ CONSTRUÇÃO E ENGENHARIA",1,0,0,59]
+["Ribeiro\'s Fitness",1,0,0,92]
+["RM CONSTRUCOES E REFORMAS",1,0,0,100]
+["ROYAL SORRISOS",1,0,0,60]
+["RS Comercio",1,0,0,83]
+["Rádio São João",1,0,0,80]
+["SA GONDOLAS DE ACO LTDA",1,0,0,71]
+["SAMMETAL METALURGICA LTDA",1,0,0,60]
+["SANTA CASA DA MISERICORDIA",1,0,0,67]
+["SANTUARIO SAO PAULO DA CRUZ",2,0,0,6]
+["SFA PARTCIPACOES LTDA",2,0,0,29]
+["SH3 INFORMÁTICA LTDA",2,0,0,25]
+["SINTECT MG",1,0,0,56]
+["SION MAT. DE CONSTRUÇÃO",1,0,0,56]
+["SMEP BH EMPREEEND IMOLBILIARIO",1,0,0,78]
+["SOCIEDADE EDUCADORA TORRICELLI",2,0,0,0]
+["SOLIDES TECNOLOGIA S/A",1,0,0,75]
+["SOLK LOGAN",1,0,0,83]
+["SOLK SPOT",1,0,0,100]
+["SOLK Thor",1,0,0,80]
+["SOPHIA LOURDES CAFE E RESTAUR",1,0,0,83]
+["SPE BRISA 24 EMPREENDIMENTOS I",2,0,0,23]
+["STEREO SOUND",1,0,0,75]
+["SUCESSO ADMINISTRAÇÃO E PARTIC",2,0,0,11]
+["SUI GENERIS ARQUITETURA E MARK",2,0,0,22]
+["SUPERMERCADO DOURADAO",1,0,0,67]
+["TECHVIAS ENGENHARIA LTDA",1,0,0,83]
+["TERCOBEL MINAS",2,0,0,0]
+["TETUM BURITIS EMPREENDIMENTOS",1,0,0,57]
+["THE FLAME SAVASSI",2,0,0,38]
+["TIMEX SOLUCOES INFORMATICA LTD",2,0,0,45]
+["TPA SISTEMAS LTDA",2,0,0,0]
+["Trade Arena",1,0,0,100]
+["TRANSJAAU ME",1,0,0,100]
+["Tronconi Neurologia",2,0,0,25]
+["UNIFORME ALIANCA",1,0,0,67]
+["UNIMED DE SAO JOAO DEL REI COOP DE TRABA",1,0,0,71]
+["Unimed São João del Rei",2,0,0,33]
+["VAGAO CONVENIENCIA",1,0,0,100]
+["VAP E DIAS PARTICIPAÇÕES E NEG",1,0,0,62]
+["VAP SOLUÇOES FINANCEIRAS LTDA",2,0,0,50]
+["Veterinarios Associados",1,0,0,60]
+["VIABILIZA TELECOM",2,0,0,33]
+["VILETECH SOLUCOES HOSPITALARES",1,0,0,62]
+["VILLA GOURMET LANCHONETE E RES",1,0,0,100]
+["VISION CADASTRO INTELIGENTE LTDA",2,0,0,43]
+["VM6 EMPREENDIMENTOS E CONSTRUÇOES",1,0,0,75]
+["WMCOURO AUTOMOTIVO",1,0,0,100]
+["WT Arte",2,0,0,50]
+["ACOSTA SERVIÇOS LTDA-ME",1,1,17,59]
+["ACOSTA SOLUÇÕES EM SERVIÇOS ES",1,1,20,65]
+["ALELO - VIA VAREJO S/A",1,1,18,82]
+["ALUMALL ALUMINIO E VIDRO LTDA",2,1,1,40]
+["AMPLA URBANISMO PARTICIPACOES",2,1,11,27]
+["ATTIME LTDA",2,1,5,15]
+["AUTO POSTO MENDONÇA",2,1,5,47]
+["BBM CONSTRUCOES",2,1,1,47]
+["BEL LUBE 1",1,1,25,65]
+["BLECK SERVIÇOS ESPECIALIZADOS",1,1,25,59]
+["BOTEQUIM DA SAPUCAI LTDA",1,1,26,77]
+["BOTEQUIM DA SAPUCAI LTDA",2,1,15,0]
+["BRAS ENGENHARIA",1,1,25,62]
+["BRETANHA CONSTRUCOES LTDA",1,1,24,75]
+["BRISA DO MAR",2,1,1,7]
+["C & C EMPREENDIMENTOS COMERCI",1,1,18,82]
+["C2C VIAGENS E TURISMO LTDA-ME",1,1,26,54]
+["CAESAR VERTICAL LTDA",1,1,22,71]
+["CANDIOTO & MASCARENHAS INTEGRA ODONTO E",2,1,1,46]
+["CEDRA AUTOMOTIVA LTDA",1,1,30,100]
+["CENTRAL ATACADISTA DE HORTIFRU",1,1,29,53]
+["CENTRO ESPORTIVO BHS",1,1,22,73]
+["CINES VIA SHOPPING BARREIRO",2,1,10,40]
+["CLINICA DE DERMATOLOGIA FERNANDA REZENDE",2,1,9,6]
+["Clinica Dr Jean Eldin LTDA",1,1,25,100]
+["CLINICA OFTALM ARNALDO CASTR",1,1,25,79]
+["COFFEE & JOY CAFES ESPECIAIS L",2,1,1,21]
+["COISA DE VO LTDA",1,1,17,79]
+["COMIM CONSTRUTORA LTDA",2,1,3,47]
+["COMPLEXO ESPORTIVO VILA",2,1,3,33]
+["CONNECTA BANK LTDA",2,1,3,0]
+["CONSORCIO DER BACIAS CONTAGEM",2,1,10,35]
+["CONSORCIO SABARA SES - ETAPA 3",2,1,8,24]
+["CONSORCIO VILARINHO II",2,1,8,0]
+["CONSTRUTORA NOXX LTDA",1,1,25,88]
+["CORDOBA CONFECÇÃO",1,1,22,58]
+["CÂMARA DE DIRIG LOG DE BH",2,1,5,33]
+["DATACOP SERVICOS DE DIGITALIZA",1,1,25,65]
+["DISTRIBUIDORA MAIA",2,1,2,29]
+["DOG VIBES",2,1,2,18]
+["DR BURITIS",1,1,23,76]
+["EMANX COM. E SERVDE TELECOMUIC",1,1,29,100]
+["ENTER CALCADOS",2,1,9,0]
+["EXODUS GESTAO EMPRESARIAL LTDA",2,1,12,44]
+["FEITO AFETO SAUDE LTDA",1,1,22,94]
+["Gayah Aromatherapy",1,1,25,100]
+["GRUPO ACTA",1,1,29,53]
+["GRUPO BW",2,1,3,29]
+["GRUPO CMA CLUBE MAIS ASSOCIADO",2,1,8,29]
+["GRUPO LAPACLEAN SOLUCOES ESPECIALIZADAS",1,1,18,100]
+["HADAD NUTRICAO",2,1,1,50]
+["HIPER SACOLAO HORTISUL",2,1,8,50]
+["HORMIGON HECT ENGENHARIA LTDA",1,1,25,65]
+["INSTITUTO MINDS DE ENSINO LTDA",2,1,1,44]
+["INSTITUTO SAO PAULO DE ARTE E CULTURA",1,1,19,82]
+["IPEBRAL IRMAOS PEDROSA BRAGA L",1,1,25,82]
+["ITAU CALÇADOS E ACESSORIOS DE",2,1,12,12]
+["KL MINAS ESPORTES LTDA - ME",1,1,18,85]
+["LA BOLARIA - SAVASSI",2,1,2,12]
+["LABORATORIO OPTICO POPULAR LTD",1,1,26,65]
+["LB COMERCIO DE PRESENTES LTDA",1,1,22,73]
+["LITORAL FRUTOS DO MAR",2,1,1,47]
+["L´UNICA LTDA-ME",2,1,3,41]
+["MAIA ATACADO",2,1,1,29]
+["MARCONE ALVES SILVEIRA",1,1,17,88]
+["MENDES E LIMA CONTABILIDADE E",1,1,25,53]
+["Meu ABC",2,1,2,31]
+["MG CONSERVAÇÃO E LIMPEZA LTDA",1,1,16,59]
+["MI PIACE COMERCIO LTDA",1,1,26,75]
+["MI PIACE COMERCIO LTDA-ME",1,1,26,62]
+["MINAS MEET",1,1,29,71]
+["MINEIRA FACILITIES",1,1,19,71]
+["MYPLACE INDUSTRIA",1,1,22,62]
+["OBJETIVA SERVICOS E COBRANCAS",2,1,8,0]
+["OON DIGITAL TECNOLOGIA LTDA",2,1,3,29]
+["ORGANIZAÇÕES NEF LTDA",2,1,8,50]
+["ORLA PADEL",2,1,5,29]
+["OTICA MAIS POPULAR",1,1,26,53]
+["PARANAIBA GUANABARA ALIMENTOS",2,1,2,47]
+["PGS PRODUTOS METALICOS EIRELI",1,1,22,53]
+["PI ENGENHARIA DIAGNOSTICA LTDA",2,1,9,20]
+["PI ENGENHARIA E CONSULTORIA LT",2,1,1,12]
+["POSTO ALEX",1,1,22,75]
+["POSTO CACHOEIRINHA LTDA",2,1,9,7]
+["POSTO JOCA LTDA",2,1,12,18]
+["POSTO LOURA EMPREEDIMENTOS LTD",2,1,1,12]
+["POSTO MIRAMAR",1,1,29,71]
+["POSTO QUATRO RODAS LTDA",1,1,22,53]
+["POSTO RETIRO NOVA CONTAGEM LTDA",1,1,26,75]
+["POSTO SANTA INÊS MINAS LTDA",2,1,3,18]
+["POSTO SANTA MARIA LTDA",2,1,5,29]
+["POSTO SAO BERNARDO LTDA",2,1,3,0]
+["POSTO SERENA",1,1,22,53]
+["POSTO TRANCOSO LTDA",2,1,8,24]
+["POSTO TUNEL LTDA",2,1,3,35]
+["PRESTAR SERVICOS E COBRANCAS L",2,1,12,0]
+["PRODENTAL BRASIL ASSISTENCIA ODONTOLOGIC",2,1,1,47]
+["RAJA NOBRE LOJA DE CONVENIENCI",2,1,2,35]
+["REDE ANCORA MG IMP. E DISTRIB.",1,1,25,65]
+["RESTAURANTE PORAO DO SABOR LTD",2,1,2,9]
+["RIG COMERCIO OPTICO LTDA",2,1,10,21]
+["ROCHE TERCEIRIZAÇÃO DE MÃO DE",2,1,3,0]
+["ROCKET CONFEITARIA LTDA",2,1,8,44]
+["RPL ENGENHARIA E SERVIÇOS LTDA",2,1,11,0]
+["RV FARMACIA DE MANIP E DERMAT.",2,1,3,29]
+["SAMECH METALURGIA LTDA - EPP",2,1,15,41]
+["SAN FILI ARTESANAL",1,1,29,62]
+["Santuário Arquidiocesano Santo Antônio",1,1,23,85]
+["SAUDE & COLUNA SERVIÇOS QUIROP",2,1,9,18]
+["SAUDE EMOCIONAL INTEGRATIVA LT",1,1,26,62]
+["SELFWAY TREINAMENTO PERNSONALI",1,1,26,53]
+["SOCIEDADE EDUCACIONAL SANTO ANTONIO LTDA",2,1,8,40]
+["SOMATTOS ALVARENGA PEIXOTO EMPREENDIMENT",2,1,1,42]
+["SOPHIA ROYAL CAFE E RESTAURANTE LTDA",2,1,3,47]
+["SPE BRISA 22",2,1,4,41]
+["TOP GESTÃO",1,1,24,59]
+["TRAKASSIST MONITORAMENTO",2,1,3,41]
+["VDS ENGENHARIA",2,1,11,23]
+["VENTUS CONTROLE DE ATIVOS LTDA",2,1,12,35]
+["VIENNA CLEAN SERVICOS LTDA",1,1,24,83]
+["VISIONTECH MEDICAL",1,1,16,53]
+];
+
 const recTotal=recVT.map((v,i)=>v+(recPAT[i]||0)+(financiamento[i]||0));
 // NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
 const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,162099,133960,177956,195508,174001,0,0,0,0,0,0];
@@ -3433,7 +3869,159 @@ function gerarAutorizacao(){
     '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>',
     '</div>',
 
-    '</div></body></html>'
+    '</div>
+<!-- ===== QUINZENA ===== -->
+<div class="content" id="tab-quinzena">
+  <div class="kpi-grid" id="qz-kpi-grid">
+    <div class="kpi green"><div class="kpi-label">Padrão 1ª Quinzena</div><div class="kpi-value" id="qz-q1pad">—</div><div class="kpi-sub">Compram dias 1–15</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Padrão 2ª Quinzena</div><div class="kpi-value" id="qz-q2pad">—</div><div class="kpi-sub">Compram dias 16–31</div></div>
+    <div class="kpi" style="--accent:var(--accent4)"><div class="kpi-label">Compraram no Padrão</div><div class="kpi-value" id="qz-ok">—</div><div class="kpi-sub" id="qz-ok-sub">Jun/26</div><div class="kpi-delta up" id="qz-ok-pct"></div></div>
+    <div class="kpi amber"><div class="kpi-label">Fora da Quinzena</div><div class="kpi-value" id="qz-mudou">—</div><div class="kpi-sub" id="qz-mudou-sub">Mudaram de quinzena</div></div>
+    <div class="kpi red"><div class="kpi-label">Não Compraram</div><div class="kpi-value" id="qz-ausente">—</div><div class="kpi-sub" id="qz-ausente-sub">Ausentes no mês</div></div>
+  </div>
+
+  <div class="chart-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    <div class="chart-card" style="grid-column:1/3">
+      <h3>Distribuição por Quinzena — Histórico</h3>
+      <p class="chart-sub">Pedidos na 1ª vs 2ª quinzena por mês</p>
+      <div class="chart-wrap" style="height:260px"><canvas id="qzHistChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <h3 style="margin:0">Alertas de Quinzena — <span id="qz-mes-label">Jun/26</span></h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="qzFilter('todos')" id="qzBtnTodos" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--accent2);color:#fff;border:none;cursor:pointer">Todos</button>
+        <button onclick="qzFilter('ausente')" id="qzBtnAusente" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Não compraram</button>
+        <button onclick="qzFilter('mudou')" id="qzBtnMudou" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Mudou quinzena</button>
+        <button onclick="qzFilter('q1')" id="qzBtnQ1" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Padrão Q1</button>
+        <button onclick="qzFilter('q2')" id="qzBtnQ2" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Padrão Q2</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:8px 6px;color:var(--muted)">Empresa</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Padrão</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Jun/26</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Dia Pago</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">% Q1 Hist.</th>
+        </tr></thead>
+        <tbody id="qzAlertasTbody"></tbody>
+      </table>
+      <p id="qzEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum alerta com esse filtro.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(typeof QZ_SUMMARY === 'undefined') return;
+
+  // KPI cards
+  document.getElementById('qz-q1pad').textContent = QZ_SUMMARY.q1pad.toLocaleString('pt-BR');
+  document.getElementById('qz-q2pad').textContent = QZ_SUMMARY.q2pad.toLocaleString('pt-BR');
+  document.getElementById('qz-ok').textContent = QZ_SUMMARY.ok.toLocaleString('pt-BR');
+  const total = QZ_SUMMARY.ok + QZ_SUMMARY.ausente + QZ_SUMMARY.mudou;
+  document.getElementById('qz-ok-pct').textContent = total > 0 ? Math.round(QZ_SUMMARY.ok/total*100)+'% do total' : '';
+  document.getElementById('qz-mudou').textContent = QZ_SUMMARY.mudou.toLocaleString('pt-BR');
+  document.getElementById('qz-ausente').textContent = QZ_SUMMARY.ausente.toLocaleString('pt-BR');
+
+  // Historical chart
+  const C = {q1:'#22d3ee', q2:'#f59e0b'};
+  const grid = {color:'rgba(255,255,255,0.05)'};
+  function initQzChart(){
+    const ctx = document.getElementById('qzHistChart');
+    if(!ctx) return;
+    new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: QZ_MONTHS,
+        datasets:[
+          {label:'1ª Quinzena (dias 1–15)', data:QZ_Q1, backgroundColor:C.q1+'bb', borderColor:C.q1, borderWidth:1},
+          {label:'2ª Quinzena (dias 16–31)', data:QZ_Q2, backgroundColor:C.q2+'bb', borderColor:C.q2, borderWidth:1}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'var(--text)',font:{size:11}}},
+          tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y+' pedidos'}}},
+        scales:{x:{stacked:false,grid,ticks:{color:'var(--muted)',font:{size:10}}},
+                y:{stacked:false,grid,ticks:{color:'var(--muted)'}}}}
+    });
+  }
+
+  // Table
+  let _qzActiveFilter = 'todos';
+  function renderQzTable(filter){
+    _qzActiveFilter = filter;
+    ['Todos','Ausente','Mudou','Q1','Q2'].forEach(k=>{
+      const b = document.getElementById('qzBtn'+k);
+      if(b) b.style.background = (filter === k.toLowerCase()) ? 'var(--accent2)' : 'var(--card)';
+      if(b) b.style.color = (filter === k.toLowerCase()) ? '#fff' : 'var(--text)';
+    });
+    // fix "todos" btn
+    const bt = document.getElementById('qzBtnTodos');
+    if(bt){ bt.style.background = filter==='todos'?'var(--accent2)':'var(--card)'; bt.style.color=filter==='todos'?'#fff':'var(--text)'; }
+
+    const rows = QZ_ALERTAS.filter(r=>{
+      if(filter==='ausente') return r[2]===0;
+      if(filter==='mudou')   return r[2]===1;
+      if(filter==='q1')      return r[1]===1;
+      if(filter==='q2')      return r[1]===2;
+      return true;
+    });
+    const tbody = document.getElementById('qzAlertasTbody');
+    const empty = document.getElementById('qzEmptyMsg');
+    if(!tbody) return;
+    if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    tbody.innerHTML = rows.map(r=>{
+      const [nome, padrao, status, dia, pct] = r;
+      const padLabel = padrao===1
+        ? '<span style="color:#22d3ee;font-weight:600">Q1</span>'
+        : '<span style="color:#f59e0b;font-weight:600">Q2</span>';
+      const statusLabel = status===0
+        ? '<span style="color:var(--danger)">Não comprou</span>'
+        : '<span style="color:#f59e0b">Mudou p/ '+(padrao===1?'Q2':'Q1')+'</span>';
+      const diaStr = dia > 0 ? 'dia '+dia : '—';
+      const barW = pct;
+      return \`<tr style="border-bottom:1px solid var(--border)20">
+        <td style="padding:7px 6px">\${nome}</td>
+        <td style="text-align:center;padding:7px 6px">\${padLabel}</td>
+        <td style="text-align:center;padding:7px 6px">\${statusLabel}</td>
+        <td style="text-align:center;padding:7px 6px;color:var(--muted)">\${diaStr}</td>
+        <td style="text-align:center;padding:7px 6px">
+          <div style="display:inline-flex;align-items:center;gap:5px">
+            <div style="width:50px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="width:\${barW}%;height:100%;background:#22d3ee;border-radius:3px"></div>
+            </div>
+            <span style="color:var(--muted);font-size:11px">\${pct}%</span>
+          </div>
+        </td>
+      </tr>\`;
+    }).join('');
+  }
+  window.qzFilter = renderQzTable;
+
+  // Init on tab show
+  const _origShowTab = window.showTab;
+  window.showTab = function(tab){
+    _origShowTab(tab);
+    if(tab==='quinzena'){
+      renderQzTable('todos');
+      setTimeout(initQzChart, 50);
+    }
+  };
+  // Also init if already active
+  if(document.querySelector('#tab-quinzena.active')){
+    renderQzTable('todos');
+    setTimeout(initQzChart, 50);
+  }
+})();
+</script>
+
+</body></html>'
   ].join('\n');
 
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
@@ -13833,7 +14421,159 @@ function exportCCPDF(){
     renderScript,
     '})(0);',
     '<\/script>',
-    '</body></html>'
+    '
+<!-- ===== QUINZENA ===== -->
+<div class="content" id="tab-quinzena">
+  <div class="kpi-grid" id="qz-kpi-grid">
+    <div class="kpi green"><div class="kpi-label">Padrão 1ª Quinzena</div><div class="kpi-value" id="qz-q1pad">—</div><div class="kpi-sub">Compram dias 1–15</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Padrão 2ª Quinzena</div><div class="kpi-value" id="qz-q2pad">—</div><div class="kpi-sub">Compram dias 16–31</div></div>
+    <div class="kpi" style="--accent:var(--accent4)"><div class="kpi-label">Compraram no Padrão</div><div class="kpi-value" id="qz-ok">—</div><div class="kpi-sub" id="qz-ok-sub">Jun/26</div><div class="kpi-delta up" id="qz-ok-pct"></div></div>
+    <div class="kpi amber"><div class="kpi-label">Fora da Quinzena</div><div class="kpi-value" id="qz-mudou">—</div><div class="kpi-sub" id="qz-mudou-sub">Mudaram de quinzena</div></div>
+    <div class="kpi red"><div class="kpi-label">Não Compraram</div><div class="kpi-value" id="qz-ausente">—</div><div class="kpi-sub" id="qz-ausente-sub">Ausentes no mês</div></div>
+  </div>
+
+  <div class="chart-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    <div class="chart-card" style="grid-column:1/3">
+      <h3>Distribuição por Quinzena — Histórico</h3>
+      <p class="chart-sub">Pedidos na 1ª vs 2ª quinzena por mês</p>
+      <div class="chart-wrap" style="height:260px"><canvas id="qzHistChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <h3 style="margin:0">Alertas de Quinzena — <span id="qz-mes-label">Jun/26</span></h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="qzFilter('todos')" id="qzBtnTodos" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--accent2);color:#fff;border:none;cursor:pointer">Todos</button>
+        <button onclick="qzFilter('ausente')" id="qzBtnAusente" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Não compraram</button>
+        <button onclick="qzFilter('mudou')" id="qzBtnMudou" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Mudou quinzena</button>
+        <button onclick="qzFilter('q1')" id="qzBtnQ1" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Padrão Q1</button>
+        <button onclick="qzFilter('q2')" id="qzBtnQ2" style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);cursor:pointer">Padrão Q2</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:8px 6px;color:var(--muted)">Empresa</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Padrão</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Jun/26</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">Dia Pago</th>
+          <th style="text-align:center;padding:8px 6px;color:var(--muted)">% Q1 Hist.</th>
+        </tr></thead>
+        <tbody id="qzAlertasTbody"></tbody>
+      </table>
+      <p id="qzEmptyMsg" style="text-align:center;color:var(--muted);padding:20px;display:none">Nenhum alerta com esse filtro.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(typeof QZ_SUMMARY === 'undefined') return;
+
+  // KPI cards
+  document.getElementById('qz-q1pad').textContent = QZ_SUMMARY.q1pad.toLocaleString('pt-BR');
+  document.getElementById('qz-q2pad').textContent = QZ_SUMMARY.q2pad.toLocaleString('pt-BR');
+  document.getElementById('qz-ok').textContent = QZ_SUMMARY.ok.toLocaleString('pt-BR');
+  const total = QZ_SUMMARY.ok + QZ_SUMMARY.ausente + QZ_SUMMARY.mudou;
+  document.getElementById('qz-ok-pct').textContent = total > 0 ? Math.round(QZ_SUMMARY.ok/total*100)+'% do total' : '';
+  document.getElementById('qz-mudou').textContent = QZ_SUMMARY.mudou.toLocaleString('pt-BR');
+  document.getElementById('qz-ausente').textContent = QZ_SUMMARY.ausente.toLocaleString('pt-BR');
+
+  // Historical chart
+  const C = {q1:'#22d3ee', q2:'#f59e0b'};
+  const grid = {color:'rgba(255,255,255,0.05)'};
+  function initQzChart(){
+    const ctx = document.getElementById('qzHistChart');
+    if(!ctx) return;
+    new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: QZ_MONTHS,
+        datasets:[
+          {label:'1ª Quinzena (dias 1–15)', data:QZ_Q1, backgroundColor:C.q1+'bb', borderColor:C.q1, borderWidth:1},
+          {label:'2ª Quinzena (dias 16–31)', data:QZ_Q2, backgroundColor:C.q2+'bb', borderColor:C.q2, borderWidth:1}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'var(--text)',font:{size:11}}},
+          tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y+' pedidos'}}},
+        scales:{x:{stacked:false,grid,ticks:{color:'var(--muted)',font:{size:10}}},
+                y:{stacked:false,grid,ticks:{color:'var(--muted)'}}}}
+    });
+  }
+
+  // Table
+  let _qzActiveFilter = 'todos';
+  function renderQzTable(filter){
+    _qzActiveFilter = filter;
+    ['Todos','Ausente','Mudou','Q1','Q2'].forEach(k=>{
+      const b = document.getElementById('qzBtn'+k);
+      if(b) b.style.background = (filter === k.toLowerCase()) ? 'var(--accent2)' : 'var(--card)';
+      if(b) b.style.color = (filter === k.toLowerCase()) ? '#fff' : 'var(--text)';
+    });
+    // fix "todos" btn
+    const bt = document.getElementById('qzBtnTodos');
+    if(bt){ bt.style.background = filter==='todos'?'var(--accent2)':'var(--card)'; bt.style.color=filter==='todos'?'#fff':'var(--text)'; }
+
+    const rows = QZ_ALERTAS.filter(r=>{
+      if(filter==='ausente') return r[2]===0;
+      if(filter==='mudou')   return r[2]===1;
+      if(filter==='q1')      return r[1]===1;
+      if(filter==='q2')      return r[1]===2;
+      return true;
+    });
+    const tbody = document.getElementById('qzAlertasTbody');
+    const empty = document.getElementById('qzEmptyMsg');
+    if(!tbody) return;
+    if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    tbody.innerHTML = rows.map(r=>{
+      const [nome, padrao, status, dia, pct] = r;
+      const padLabel = padrao===1
+        ? '<span style="color:#22d3ee;font-weight:600">Q1</span>'
+        : '<span style="color:#f59e0b;font-weight:600">Q2</span>';
+      const statusLabel = status===0
+        ? '<span style="color:var(--danger)">Não comprou</span>'
+        : '<span style="color:#f59e0b">Mudou p/ '+(padrao===1?'Q2':'Q1')+'</span>';
+      const diaStr = dia > 0 ? 'dia '+dia : '—';
+      const barW = pct;
+      return \`<tr style="border-bottom:1px solid var(--border)20">
+        <td style="padding:7px 6px">\${nome}</td>
+        <td style="text-align:center;padding:7px 6px">\${padLabel}</td>
+        <td style="text-align:center;padding:7px 6px">\${statusLabel}</td>
+        <td style="text-align:center;padding:7px 6px;color:var(--muted)">\${diaStr}</td>
+        <td style="text-align:center;padding:7px 6px">
+          <div style="display:inline-flex;align-items:center;gap:5px">
+            <div style="width:50px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="width:\${barW}%;height:100%;background:#22d3ee;border-radius:3px"></div>
+            </div>
+            <span style="color:var(--muted);font-size:11px">\${pct}%</span>
+          </div>
+        </td>
+      </tr>\`;
+    }).join('');
+  }
+  window.qzFilter = renderQzTable;
+
+  // Init on tab show
+  const _origShowTab = window.showTab;
+  window.showTab = function(tab){
+    _origShowTab(tab);
+    if(tab==='quinzena'){
+      renderQzTable('todos');
+      setTimeout(initQzChart, 50);
+    }
+  };
+  // Also init if already active
+  if(document.querySelector('#tab-quinzena.active')){
+    renderQzTable('todos');
+    setTimeout(initQzChart, 50);
+  }
+})();
+</script>
+
+</body></html>'
   ].join('\n');
 
   // ── Abrir via Blob URL (mais confiável que document.write) ────────────────
