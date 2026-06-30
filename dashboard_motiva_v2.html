@@ -611,6 +611,15 @@ const financiamento = [9626,9421,8752,9784,11124,11748,19660,10094,9510,9591,831
 const cartoesMes=[17564,17611,16761,17377,18327,17593,19335,17131,17554,16863,17223,16508,16689,14686,14012,16662,18242,15737,0,0,0,0,0,0];
 const lastDataIdx = (()=>{for(let i=months.length-1;i>=0;i--){if(gmvVT[i]||gmvPAT[i]||financiamento[i])return i;}return months.length-1;})();
 
+// Índice do mês atual para truncar gráficos (não exibir meses futuros)
+const clientCutIdx = (()=>{
+  const now = new Date();
+  const ptMon = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const label = ptMon[now.getMonth()] + '/' + String(now.getFullYear()).slice(2);
+  const idx = months.indexOf(label);
+  return idx >= 0 ? idx + 1 : lastDataIdx + 1;
+})();
+
 const recTotal=recVT.map((v,i)=>v+(recPAT[i]||0)+(financiamento[i]||0));
 // NF Pedido de Carga = col T (Nota Fiscal) extraída automaticamente da aba "Pedido de carga Completo"
 const nfPedCarga  = [129778,114519,113920,121690,151017,158349,172233,158950,158929,153820,154232,163697,171281,162099,133960,177956,195508,174001,0,0,0,0,0,0];
@@ -1178,7 +1187,7 @@ function applyRec(){
 (function(){
   // Crescimento base
   new Chart(document.getElementById('clientsLineChart'),{
-    type:'line',data:{labels:months.slice(0,_CC_MESES.length),datasets:[{label:'Total de Clientes',data:qtdClients.slice(0,_CC_MESES.length),borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
+    type:'line',data:{labels:months.slice(0,clientCutIdx),datasets:[{label:'Total de Clientes',data:qtdClients.slice(0,clientCutIdx),borderColor:C.green,backgroundColor:C.green+'22',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} clientes`}}},scales:{x:{grid},y:{grid,min:750}}}
   });
 
@@ -14363,11 +14372,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
     </div>
   </div>
   <div id="authModalBtns" style="max-width:800px;margin:16px auto 0;display:flex;gap:12px;justify-content:flex-end;">
-    <button onclick="fecharAutorizacao()" style="background:#334155;border:none;color:#f1f5f9;padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">✕ Fechar</button>
-    <button onclick="imprimirAutorizacao()" style="background:#1e40af;border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;">🖨 Gerar PDF</button>
-  </div>
-</div>
-</body>
-<!-- deploy 20260608161718 -->
-</html><!-- updated Tue Jun  2 21:27:48 UTC 2026 -->
-                                 
+    <button onclick="fecharAutorizacao()" style="background:#334155;border:none;color:#f1f5f9;padding:10px 22px;border-radius:8px;font-size:13px;cursor:po
