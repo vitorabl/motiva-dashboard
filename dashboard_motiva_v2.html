@@ -4704,6 +4704,196 @@ function gerarAutorizacao(){
 
     '</div>
 
+
+
+</body></html>'
+  ].join('\n');
+
+  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+}
+
+function fecharAutorizacao(){
+  document.getElementById('authModal').style.display='none';
+  document.body.style.overflow='';
+}
+// Mantida para não quebrar o botão (não usada mais para PDF)
+function imprimirAutorizacao(){ gerarAutorizacao(); }
+
+function exportCommCSV(){
+  const rows   = window._lastCommRows   || [];
+  const vendor = window._lastCommVendor || 'Vendedor';
+  const period = window._lastCommPeriod || '';
+  if(!rows.length){ alert('Nenhum dado para exportar.'); return; }
+  const bom    = '\uFEFF';
+  const header = ['Empresa','CNPJ','GMV (R$)','Receita (R$)','Comissao (R$)'].join(';');
+  const lines  = rows.map(r => [
+    '"'+r.empresa.replace(/"/g,'""')+'"',
+    '"'+(r.cnpj||'')+'"',
+    r.gmv.toFixed(2),
+    r.rec.toFixed(2),
+    r.comm.toFixed(2)
+  ].join(';'));
+  const csv  = bom + header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'comissoes_'+vendor.replace(/\s/g,'_')+'_'+period.replace(/[\s\/]/g,'_')+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Exportar GMV por Cliente
+function exportClientCSV(){
+  const seg    = document.getElementById('clientSeg')?.value   || 'all';
+  const search = (document.getElementById('clientSearch')?.value || '').toLowerCase();
+  const _SEGS_LOCAL = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP',''];
+  let filtered = _CD.filter(r => {
+    if(seg !== 'all' && _SEGS_LOCAL[r[2]] !== seg) return false;
+    if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search)) return false;
+    return true;
+  });
+  const bom = '\uFEFF';
+  const gmvHdr = months.map(m => 'GMV '+m);
+  const varHdr = months.slice(1).map(m => 'Var% '+m);
+  const interleaved = [gmvHdr[0]];
+  for(let i=1;i<months.length;i++){ interleaved.push(gmvHdr[i]); interleaved.push(varHdr[i-1]); }
+  const header = ['Empresa','CNPJ','Segmento','Cadastro',...interleaved,'GMV Total','Meses em Queda','Ultimo Mes em Queda'].join(';');
+  const lines = filtered.map(r => {
+    const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
+    const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
+    const varArr = gmvArr.map((v,i) => {
+      if(i===0) return null;
+      const prev=gmvArr[i-1];
+      if(!prev||prev===0||!v||v===0) return null;
+      return ((v-prev)/prev*100);
+    });
+    let quedaCount=0, ultimaQueda='';
+    varArr.forEach((pct,i)=>{ if(pct!==null&&pct<0){ quedaCount++; ultimaQueda=months[i]; } });
+    const interleaved2=[gmvArr[0].toFixed(1)];
+    for(let i=1;i<months.length;i++){
+      interleaved2.push(gmvArr[i].toFixed(1));
+      const pct=varArr[i];
+      interleaved2.push(pct!==null?(pct.toFixed(1)+'%').replace('.',','):'');
+    }
+    return [
+      '"'+r[1].replace(/"/g,'""')+'"',
+      '"'+r[0]+'"',
+      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
+      '"'+(r[3]||'')+'"',
+      ...interleaved2,
+      gmvTot,quedaCount,'"'+(ultimaQueda||'')+'"'
+    ].join(';');
+  });
+  const csv  = bom + header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+// ===================== PEDIDOS POR CLIENTE TAB =====================
+(function(){
+  // Populate vendedor filter
+  const vends = [...new Set(_PC.map(r=>r[3]).filter(v=>v))].sort();
+  const vSel = document.getElementById('pedVend');
+  vends.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; vSel.appendChild(o); });
+})();
+
+let cPedLine = null;
+
+function resetPedidos(){
+  document.getElementById('pedSearch').value='';
+  document.getElementById('pedTipo').value='all';
+  document.getElementById('pedVend').value='all';
+  renderPedidos();
+}
+
+function renderPedidos(){
+  const search = document.getElementById('pedSearch').value.trim().toLowerCase();
+  const tipo   = document.getElementById('pedTipo').value;
+  const vend   = document.getElementById('pedVend').value;
+
+  let data = _PC.filter(r => {
+    const matchSearch = !search || r[2].toLowerCase().includes(search) || r[1].includes(search);
+    const matchTipo   = tipo==='all' || String(r[0])===tipo;
+    const matchVend   = vend==='all' || r[3]===vend;
+    return matchSearch && matchTipo && matchVend;
+  });
+
+  // KPIs
+  const totalN   = data.reduce((s,r)=>s+r[4],0);
+  const totalGmv = data.reduce((s,r)=>s+r[5],0);
+  const totalNf  = data.reduce((s,r)=>s+r[6],0);
+  document.getElementById('pk-count').textContent = data.length.toLocaleString('pt-BR');
+  document.getElementById('pk-n').textContent     = totalN.toLocaleString('pt-BR');
+  document.getElementById('pk-gmv').textContent   = fmt(totalGmv,true);
+  document.getElementById('pk-nf').textContent    = fmt(totalNf,true);
+
+  // Show line chart only for single client
+  const chartWrap = document.getElementById('ped-chart-wrap');
+  if(data.length===1){
+    chartWrap.style.display='';
+    const c = data[0];
+    document.getElementById('ped-chart-title').textContent = c[2]+' — GMV Mensal';
+    if(cPedLine) cPedLine.destroy();
+    cPedLine = new Chart(document.getElementById('pedLineChart'),{
+      type:'line',
+      data:{labels:months,datasets:[
+        {label:'GMV',data:c[7],borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:3},
+        {label:'Receita (NF)',data:c[8],borderColor:C.amber,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderDash:[4,3]}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:0})}`}}},
+        scales:{x:{grid:{color:'rgba(255,255,255,0.06)'}},y:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{callback:v=>'R$'+(v>=1000?(v/1e3).toFixed(0)+'K':v)}}}}
+    });
+  } else {
+    chartWrap.style.display='none';
+    if(cPedLine){cPedLine.destroy();cPedLine=null;}
+  }
+
+  // Table
+  const tbody = document.getElementById('pedTableBody');
+  tbody.innerHTML='';
+  if(data.length===0){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>';
+    return;
+  }
+  const sorted = [...data].sort((a,b)=>b[5]-a[5]);
+  sorted.forEach(r=>{
+    const tr=document.createElement('tr');
+    const tipoLabel=r[0]===0?'<span class="pill ativo">VT</span>':'<span class="pill risco">PAT</span>';
+    const tr_pct = r[5]>0 ? ((r[6]/r[5])*100).toFixed(2)+'%' : '—';
+    tr.innerHTML=
+      '<td class="col-fix"><strong>'+r[2]+'</strong></td>'+
+      '<td class="col-fix" style="color:#94a3b8;">'+r[1]+'</td>'+
+      '<td>'+tipoLabel+'</td>'+
+      '<td style="color:#94a3b8;">'+r[3]+'</td>'+
+      '<td style="text-align:right;">'+r[4].toLocaleString('pt-BR')+'</td>'+
+      '<td style="text-align:right;font-weight:600;">'+fmtDec(r[5])+'</td>'+
+      '<td style="text-align:right;color:#f59e0b;">'+fmtDec(r[6])+'</td>'+
+      '<td style="text-align:right;color:#10b981;">'+tr_pct+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// Wire up tab activation
+const _pedOrigShowTab = window.showTab;
+window.showTab = function(name,e){
+  _pedOrigShowTab(name,e);
+  if(name==='pedidos') renderPedidos();
+};
+
+</script>
+
 <!-- ===== RESUMO COMPARATIVO ===== -->
 <div class="content" id="tab-resumo">
   <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
@@ -4726,6 +4916,7 @@ function gerarAutorizacao(){
     </table>
   </div>
 </div>
+
 
 <script>
 (function(){
@@ -4929,193 +5120,6 @@ window.showTab=function(name,ev){
 })();
 </script>
 
-</body></html>'
-  ].join('\n');
-
-  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  var url  = URL.createObjectURL(blob);
-  window.open(url,'_blank');
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
-}
-
-function fecharAutorizacao(){
-  document.getElementById('authModal').style.display='none';
-  document.body.style.overflow='';
-}
-// Mantida para não quebrar o botão (não usada mais para PDF)
-function imprimirAutorizacao(){ gerarAutorizacao(); }
-
-function exportCommCSV(){
-  const rows   = window._lastCommRows   || [];
-  const vendor = window._lastCommVendor || 'Vendedor';
-  const period = window._lastCommPeriod || '';
-  if(!rows.length){ alert('Nenhum dado para exportar.'); return; }
-  const bom    = '\uFEFF';
-  const header = ['Empresa','CNPJ','GMV (R$)','Receita (R$)','Comissao (R$)'].join(';');
-  const lines  = rows.map(r => [
-    '"'+r.empresa.replace(/"/g,'""')+'"',
-    '"'+(r.cnpj||'')+'"',
-    r.gmv.toFixed(2),
-    r.rec.toFixed(2),
-    r.comm.toFixed(2)
-  ].join(';'));
-  const csv  = bom + header + '\n' + lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'comissoes_'+vendor.replace(/\s/g,'_')+'_'+period.replace(/[\s\/]/g,'_')+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// Exportar GMV por Cliente
-function exportClientCSV(){
-  const seg    = document.getElementById('clientSeg')?.value   || 'all';
-  const search = (document.getElementById('clientSearch')?.value || '').toLowerCase();
-  const _SEGS_LOCAL = ['Diamante','Ouro','Prata','Bronze-P','Bronze-PP',''];
-  let filtered = _CD.filter(r => {
-    if(seg !== 'all' && _SEGS_LOCAL[r[2]] !== seg) return false;
-    if(search && !r[1].toLowerCase().includes(search) && !(r[0]||'').includes(search)) return false;
-    return true;
-  });
-  const bom = '\uFEFF';
-  const gmvHdr = months.map(m => 'GMV '+m);
-  const varHdr = months.slice(1).map(m => 'Var% '+m);
-  const interleaved = [gmvHdr[0]];
-  for(let i=1;i<months.length;i++){ interleaved.push(gmvHdr[i]); interleaved.push(varHdr[i-1]); }
-  const header = ['Empresa','CNPJ','Segmento','Cadastro',...interleaved,'GMV Total','Meses em Queda','Ultimo Mes em Queda'].join(';');
-  const lines = filtered.map(r => {
-    const gmvArr = months.map((_,i) => parseFloat((r[5+i]||0).toFixed(1)));
-    const gmvTot = gmvArr.reduce((s,v) => s+v, 0).toFixed(0);
-    const varArr = gmvArr.map((v,i) => {
-      if(i===0) return null;
-      const prev=gmvArr[i-1];
-      if(!prev||prev===0||!v||v===0) return null;
-      return ((v-prev)/prev*100);
-    });
-    let quedaCount=0, ultimaQueda='';
-    varArr.forEach((pct,i)=>{ if(pct!==null&&pct<0){ quedaCount++; ultimaQueda=months[i]; } });
-    const interleaved2=[gmvArr[0].toFixed(1)];
-    for(let i=1;i<months.length;i++){
-      interleaved2.push(gmvArr[i].toFixed(1));
-      const pct=varArr[i];
-      interleaved2.push(pct!==null?(pct.toFixed(1)+'%').replace('.',','):'');
-    }
-    return [
-      '"'+r[1].replace(/"/g,'""')+'"',
-      '"'+r[0]+'"',
-      '"'+(_SEGS_LOCAL[r[2]]||'Outros')+'"',
-      '"'+(r[3]||'')+'"',
-      ...interleaved2,
-      gmvTot,quedaCount,'"'+(ultimaQueda||'')+'"'
-    ].join(';');
-  });
-  const csv  = bom + header + '\n' + lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'gmv_por_cliente_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-
-// ===================== PEDIDOS POR CLIENTE TAB =====================
-(function(){
-  // Populate vendedor filter
-  const vends = [...new Set(_PC.map(r=>r[3]).filter(v=>v))].sort();
-  const vSel = document.getElementById('pedVend');
-  vends.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; vSel.appendChild(o); });
-})();
-
-let cPedLine = null;
-
-function resetPedidos(){
-  document.getElementById('pedSearch').value='';
-  document.getElementById('pedTipo').value='all';
-  document.getElementById('pedVend').value='all';
-  renderPedidos();
-}
-
-function renderPedidos(){
-  const search = document.getElementById('pedSearch').value.trim().toLowerCase();
-  const tipo   = document.getElementById('pedTipo').value;
-  const vend   = document.getElementById('pedVend').value;
-
-  let data = _PC.filter(r => {
-    const matchSearch = !search || r[2].toLowerCase().includes(search) || r[1].includes(search);
-    const matchTipo   = tipo==='all' || String(r[0])===tipo;
-    const matchVend   = vend==='all' || r[3]===vend;
-    return matchSearch && matchTipo && matchVend;
-  });
-
-  // KPIs
-  const totalN   = data.reduce((s,r)=>s+r[4],0);
-  const totalGmv = data.reduce((s,r)=>s+r[5],0);
-  const totalNf  = data.reduce((s,r)=>s+r[6],0);
-  document.getElementById('pk-count').textContent = data.length.toLocaleString('pt-BR');
-  document.getElementById('pk-n').textContent     = totalN.toLocaleString('pt-BR');
-  document.getElementById('pk-gmv').textContent   = fmt(totalGmv,true);
-  document.getElementById('pk-nf').textContent    = fmt(totalNf,true);
-
-  // Show line chart only for single client
-  const chartWrap = document.getElementById('ped-chart-wrap');
-  if(data.length===1){
-    chartWrap.style.display='';
-    const c = data[0];
-    document.getElementById('ped-chart-title').textContent = c[2]+' — GMV Mensal';
-    if(cPedLine) cPedLine.destroy();
-    cPedLine = new Chart(document.getElementById('pedLineChart'),{
-      type:'line',
-      data:{labels:months,datasets:[
-        {label:'GMV',data:c[7],borderColor:C.blue,backgroundColor:C.blue+'22',fill:true,tension:.4,pointRadius:3},
-        {label:'Receita (NF)',data:c[8],borderColor:C.amber,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,borderDash:[4,3]}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},
-          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:0})}`}}},
-        scales:{x:{grid:{color:'rgba(255,255,255,0.06)'}},y:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{callback:v=>'R$'+(v>=1000?(v/1e3).toFixed(0)+'K':v)}}}}
-    });
-  } else {
-    chartWrap.style.display='none';
-    if(cPedLine){cPedLine.destroy();cPedLine=null;}
-  }
-
-  // Table
-  const tbody = document.getElementById('pedTableBody');
-  tbody.innerHTML='';
-  if(data.length===0){
-    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum cliente encontrado</td></tr>';
-    return;
-  }
-  const sorted = [...data].sort((a,b)=>b[5]-a[5]);
-  sorted.forEach(r=>{
-    const tr=document.createElement('tr');
-    const tipoLabel=r[0]===0?'<span class="pill ativo">VT</span>':'<span class="pill risco">PAT</span>';
-    const tr_pct = r[5]>0 ? ((r[6]/r[5])*100).toFixed(2)+'%' : '—';
-    tr.innerHTML=
-      '<td class="col-fix"><strong>'+r[2]+'</strong></td>'+
-      '<td class="col-fix" style="color:#94a3b8;">'+r[1]+'</td>'+
-      '<td>'+tipoLabel+'</td>'+
-      '<td style="color:#94a3b8;">'+r[3]+'</td>'+
-      '<td style="text-align:right;">'+r[4].toLocaleString('pt-BR')+'</td>'+
-      '<td style="text-align:right;font-weight:600;">'+fmtDec(r[5])+'</td>'+
-      '<td style="text-align:right;color:#f59e0b;">'+fmtDec(r[6])+'</td>'+
-      '<td style="text-align:right;color:#10b981;">'+tr_pct+'</td>';
-    tbody.appendChild(tr);
-  });
-}
-
-// Wire up tab activation
-const _pedOrigShowTab = window.showTab;
-window.showTab = function(name,e){
-  _pedOrigShowTab(name,e);
-  if(name==='pedidos') renderPedidos();
-};
-
-</script>
 
 <!-- ===== PEDIDOS POR CLIENTE ===== -->
 <div class="content" id="tab-pedidos">
