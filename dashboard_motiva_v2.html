@@ -4712,22 +4712,15 @@ function gerarAutorizacao(){
     <span style="color:var(--muted);font-size:12px;">vs</span>
     <select id="sumMesB" onchange="buildSummary()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
     <button class="filter-btn" onclick="buildSummary()">Atualizar</button>
-    <button class="filter-btn" onclick="exportSumPDF()" style="margin-left:auto;">⬇ PDF</button>
   </div>
-
-  <!-- KPIs macro -->
   <div id="sum-kpi-area"></div>
-
-  <!-- Análise de divergência -->
-  <div id="sum-analysis" style="margin-top:18px;"></div>
-
-  <!-- Tabela top 20 -->
-  <div style="margin:20px 0 6px;font-size:12px;font-weight:700;color:var(--text);">
-    🏢 Top 20 maiores variações de GMV — por empresa
+  <div id="sum-analysis" style="margin-top:14px;"></div>
+  <div style="margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--text);">🏢 Top 20 maiores variações de GMV — por empresa</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
+    Ordenado por |ΔGMV|. Clique no cabeçalho para reordenar. 🔴 GMV cresceu mas NF caiu.
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Linhas em vermelho = GMV cresceu mas receita (NF) caiu</div>
   <div style="overflow-x:auto;">
-    <table id="sum-table" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:780px;">
+    <table id="sum-table" style="width:100%;border-collapse:collapse;font-size:11px;min-width:960px;">
       <thead id="sum-thead" style="position:sticky;top:0;z-index:2;"></thead>
       <tbody id="sum-tbody"></tbody>
     </table>
@@ -4735,38 +4728,80 @@ function gerarAutorizacao(){
 </div>
 
 <script>
-// ===== RESUMO COMPARATIVO =====
 (function(){
+// ===== RESUMO COMPARATIVO (com projeção de saldo) =====
+var _sumInit=false;
+var _sumRows=[];
+var _sumSortCol=3;
+var _sumSortAsc=false;
+var _ccMonthMap={};   // months-idx -> CC-idx
+var _ccProjByKey={};  // "cnpj|ccIdx" -> projecao
+
+function buildCCIndex(){
+  if(typeof _CC==='undefined'||typeof _CC_MESES==='undefined'||typeof months==='undefined') return;
+  months.forEach(function(m,mi){
+    var ci=_CC_MESES.indexOf(m);
+    if(ci>=0) _ccMonthMap[mi]=ci;
+  });
+  _CC.forEach(function(r){
+    var k=String(r[0]).replace(/\D/g,'').replace(/\.0$/,'').padStart(14,'0')+'|'+r[2];
+    _ccProjByKey[k]=(_ccProjByKey[k]||0)+(r[4]||0);
+  });
+}
+
+function getCCProj(cnpj,monthsIdx){
+  var ci=_ccMonthMap[monthsIdx];
+  if(ci===undefined) return 0;
+  var k=String(cnpj).replace(/\D/g,'').replace(/\.0$/,'').padStart(14,'0')+'|'+ci;
+  return _ccProjByKey[k]||0;
+}
+
+function getTotProj(monthsIdx){
+  var ci=_ccMonthMap[monthsIdx];
+  if(ci===undefined) return 0;
+  var tot=0;
+  _CC.forEach(function(r){ if(r[2]===ci) tot+=(r[4]||0); });
+  return tot;
+}
+
 function initSumTab(){
+  if(_sumInit) return;
+  buildCCIndex();
   var selA=document.getElementById('sumMesA');
   var selB=document.getElementById('sumMesB');
   if(!selA||!selB||typeof months==='undefined') return;
-  months.forEach(function(m,i){
-    selA.add(new Option(m,i));
-    selB.add(new Option(m,i));
-  });
-  // default: ultimos dois meses com dados de GMV
+  months.forEach(function(m,i){ selA.add(new Option(m,i)); selB.add(new Option(m,i)); });
   var lastIdx=0;
-  for(var k=months.length-1;k>=0;k--){ if((gmvVT[k]||0)>0||(gmvPAT[k]||0)>0){lastIdx=k;break;} }
+  for(var k=months.length-1;k>=0;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){lastIdx=k;break;} }
   var prevIdx=0;
-  for(var k=lastIdx-1;k>=0;k--){ if((gmvVT[k]||0)>0||(gmvPAT[k]||0)>0){prevIdx=k;break;} }
-  selA.value=prevIdx;
-  selB.value=lastIdx;
+  for(var k=lastIdx-1;k>=0;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){prevIdx=k;break;} }
+  selA.value=prevIdx; selB.value=lastIdx;
+  _sumInit=true;
   buildSummary();
 }
 
 function fmtM(v){
-  if(Math.abs(v)>=1e6) return 'R$ '+(v/1e6).toFixed(2)+'M';
-  if(Math.abs(v)>=1e3) return 'R$ '+(v/1e3).toFixed(1)+'k';
+  var a=Math.abs(v);
+  if(a>=1e6) return 'R$ '+(v/1e6).toFixed(2).replace('.',',')+'M';
+  if(a>=1e3) return 'R$ '+(v/1e3).toFixed(1).replace('.',',')+'k';
   return 'R$ '+v.toFixed(0);
 }
-function fmtSign(v){return (v>=0?'+':'')+fmtM(v);}
-function fmtPct(v,dec){dec=dec||1;return (v>=0?'+':'')+v.toFixed(dec)+'%';}
-function fmtPP(v){return (v>=0?'+':'')+v.toFixed(3)+'pp';}
-function colorCls(v,inv){
-  var pos=v>=0;
-  if(inv) pos=!pos;
-  return pos?'color:#10b981;font-weight:700':'color:#ef4444;font-weight:700';
+function fmtSign(v){ return (v>=0?'+':'')+fmtM(v); }
+function fmtPP(v){ return (v>=0?'+':'')+v.toFixed(3)+'pp'; }
+function fmtPct(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+function colPos(v){ return v>=0?'color:#10b981;font-weight:700':'color:#ef4444;font-weight:700'; }
+function colNeg(v){ return v<=0?'color:#10b981;font-weight:700':'color:#ef4444;font-weight:700'; }
+
+function kpiCard(lbl,vA,vB,mA,mB,fmtFn,invDelta,unitSuffix){
+  var d=vB-vA, pct=vA?d/vA*100:0;
+  var col=invDelta?colNeg(d):colPos(d);
+  return '<div class="kpi" style="min-width:160px;">'+
+    '<div class="kpi-label">'+lbl+'</div>'+
+    '<div style="font-size:14px;font-weight:700;color:var(--text);margin:4px 0 1px;">'+fmtFn(vA)+'<span style="color:var(--muted);font-size:10px;"> '+mA+'</span></div>'+
+    '<div style="font-size:14px;font-weight:700;color:var(--text);margin:1px 0;">'+fmtFn(vB)+'<span style="color:var(--muted);font-size:10px;"> '+mB+'</span></div>'+
+    '<div style="font-size:11px;margin-top:5px;'+col+'">'+fmtSign(d)+(unitSuffix||'')+
+      (unitSuffix?'':' ('+fmtPct(pct)+')')+'</div>'+
+  '</div>';
 }
 
 window.buildSummary=function(){
@@ -4774,147 +4809,122 @@ window.buildSummary=function(){
   var idxB=parseInt(document.getElementById('sumMesB').value);
   var mA=months[idxA]||'', mB=months[idxB]||'';
 
-  var gVT_A=(gmvVT[idxA]||0), gVT_B=(gmvVT[idxB]||0);
-  var gPAT_A=(gmvPAT[idxA]||0), gPAT_B=(gmvPAT[idxB]||0);
-  var gTot_A=(gmvTotal[idxA]||0), gTot_B=(gmvTotal[idxB]||0);
-  var rVT_A=(recVT[idxA]||0), rVT_B=(recVT[idxB]||0);
-  var rPAT_A=(recPAT[idxA]||0), rPAT_B=(recPAT[idxB]||0);
+  var gVT_A=gmvVT[idxA]||0, gVT_B=gmvVT[idxB]||0;
+  var gPAT_A=gmvPAT[idxA]||0, gPAT_B=gmvPAT[idxB]||0;
+  var gTot_A=gmvTotal[idxA]||0, gTot_B=gmvTotal[idxB]||0;
+  var rVT_A=recVT[idxA]||0, rVT_B=recVT[idxB]||0;
+  var rPAT_A=recPAT[idxA]||0, rPAT_B=recPAT[idxB]||0;
   var rTot_A=rVT_A+rPAT_A, rTot_B=rVT_B+rPAT_B;
-
   var trVT_A=gVT_A?rVT_A/gVT_A*100:0, trVT_B=gVT_B?rVT_B/gVT_B*100:0;
-  var trPAT_A=gPAT_A?rPAT_A/gPAT_A*100:0, trPAT_B=gPAT_B?rPAT_B/gPAT_B*100:0;
   var trTot_A=gTot_A?rTot_A/gTot_A*100:0, trTot_B=gTot_B?rTot_B/gTot_B*100:0;
-
-  // KPI cards
-  function kpiCard(label,vA,vB,fmt,inv,unit){
-    var d=vB-vA;
-    var pct=vA?d/vA*100:0;
-    var col=colorCls(d,inv);
-    var unitStr=unit||'';
-    return '<div class="kpi" style="min-width:150px;">'+
-      '<div class="kpi-label">'+label+'</div>'+
-      '<div class="kpi-value" style="font-size:15px;">'+fmt(vA)+'<span style="color:var(--muted);font-size:11px;"> '+mA+'</span></div>'+
-      '<div class="kpi-value" style="font-size:15px;">'+fmt(vB)+'<span style="color:var(--muted);font-size:11px;"> '+mB+'</span></div>'+
-      '<div style="font-size:12px;margin-top:4px;'+col+'">'+fmtSign(d)+unitStr+
-        (unit?'':' ('+fmtPct(pct)+')')+'</div>'+
-    '</div>';
-  }
+  var projTot_A=getTotProj(idxA), projTot_B=getTotProj(idxB);
 
   var area=document.getElementById('sum-kpi-area');
   area.innerHTML=
     '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">📦 GMV</div>'+
     '<div class="kpi-grid">'+
-      kpiCard('GMV VT',gVT_A,gVT_B,fmtM,false)+
-      kpiCard('GMV PAT',gPAT_A,gPAT_B,fmtM,false)+
-      kpiCard('GMV Total',gTot_A,gTot_B,fmtM,false)+
+      kpiCard('GMV VT',gVT_A,gVT_B,mA,mB,fmtM,false)+
+      kpiCard('GMV PAT',gPAT_A,gPAT_B,mA,mB,fmtM,false)+
+      kpiCard('GMV Total',gTot_A,gTot_B,mA,mB,fmtM,false)+
     '</div>'+
-    '<div style="margin:14px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💰 Receita</div>'+
+    '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💰 Receita (NF) & Take Rate</div>'+
     '<div class="kpi-grid">'+
-      kpiCard('Receita VT',rVT_A,rVT_B,fmtM,false)+
-      kpiCard('Receita PAT',rPAT_A,rPAT_B,fmtM,false)+
-      kpiCard('Receita Total',rTot_A,rTot_B,fmtM,false)+
+      kpiCard('Receita VT',rVT_A,rVT_B,mA,mB,fmtM,false)+
+      kpiCard('Receita Total',rTot_A,rTot_B,mA,mB,fmtM,false)+
+      kpiCard('Take Rate VT',trVT_A,trVT_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
+      kpiCard('Take Rate Total',trTot_A,trTot_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
     '</div>'+
-    '<div style="margin:14px 0 6px;font-size:12px;font-weight:700;color:var(--text);">📈 Take Rate</div>'+
+    '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💼 Projeção de Saldo</div>'+
     '<div class="kpi-grid">'+
-      kpiCard('Take Rate VT',trVT_A,trVT_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
-      kpiCard('Take Rate PAT',trPAT_A,trPAT_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
-      kpiCard('Take Rate Total',trTot_A,trTot_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
-    '</div>';
+      kpiCard('Proj. Saldo Total',projTot_A,projTot_B,mA,mB,fmtM,false)+
+      (gTot_A>0&&gTot_B>0?kpiCard('Proj/GMV',projTot_A/gTot_A*100,projTot_B/gTot_B*100,mA,mB,function(v){return v.toFixed(2)+'%';},false,'pp'):'')+'</div>';
 
-  // Análise de divergência
+  // Alerta de divergência
   var dGmv=gTot_B-gTot_A, dRec=rTot_B-rTot_A, dTR=trTot_B-trTot_A;
-  var alertColor=dTR<-0.2?'rgba(239,68,68,.12)':dTR<0?'rgba(245,158,11,.12)':'rgba(16,185,129,.12)';
-  var alertBorder=dTR<-0.2?'rgba(239,68,68,.4)':dTR<0?'rgba(245,158,11,.4)':'rgba(16,185,129,.4)';
+  var dProj=projTot_B-projTot_A;
   var an=document.getElementById('sum-analysis');
+  var alerts=[];
   if(dGmv>0&&dRec<dGmv*0.05){
-    an.innerHTML='<div style="padding:12px 16px;border-radius:10px;background:'+alertColor+';border:1px solid '+alertBorder+';font-size:12px;line-height:1.7;color:var(--text);">'+
-      '<b>⚠ Atenção — Divergência GMV × Receita</b><br>'+
-      'O GMV cresceu <b>'+fmtSign(dGmv)+'</b> mas a receita cresceu apenas <b>'+fmtSign(dRec)+'</b>. '+
-      'O take rate caiu <b>'+fmtPP(dTR)+'</b> (de '+trTot_A.toFixed(3)+'% para '+trTot_B.toFixed(3)+'%). '+
-      'Verifique as empresas com ΔGMV positivo mas ΔNF negativo na tabela abaixo.</div>';
-  } else {
-    an.innerHTML='';
+    alerts.push('⚠ <b>GMV cresceu '+fmtSign(dGmv)+' mas receita só +'+fmtSign(dRec)+'.</b> Take rate: '+fmtPP(dTR)+' ('+trTot_A.toFixed(3)+'% → '+trTot_B.toFixed(3)+'%).');
   }
+  if(dGmv>0&&dProj<0){
+    alerts.push('⚠ <b>Projeção de saldo caiu '+fmtSign(dProj)+'</b> mesmo com GMV em alta — verificar mix de clientes e recargas.');
+  } else if(dGmv>0&&dProj<dGmv*0.5){
+    alerts.push('ℹ Projeção de saldo cresceu menos que o GMV ('+fmtSign(dProj)+' vs GMV +'+fmtSign(dGmv)+').');
+  }
+  an.innerHTML=alerts.length?'<div style="padding:10px 14px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);font-size:12px;line-height:1.8;color:var(--text);">'+alerts.join('<br>')+'</div>':'';
 
   // Tabela por empresa
-  var thead=document.getElementById('sum-thead');
-  var tbody=document.getElementById('sum-tbody');
-  thead.innerHTML='<tr>'+
-    ['Empresa','GMV '+mA,'GMV '+mB,'ΔGMV','NF '+mA,'NF '+mB,'ΔNF','TR% '+mA,'TR% '+mB,'ΔTR']
-    .map(function(h,i){
-      return '<th style="padding:6px 8px;text-align:'+(i===0?'left':'right')+
-        ';background:var(--card2);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;" '+
-        'onclick="sortSumTable('+i+')">'+h+'</th>';
-    }).join('')+'</tr>';
-
-  if(typeof _RD==='undefined'){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted);">Dados não disponíveis</td></tr>';return;}
-
+  if(typeof _RD==='undefined'){document.getElementById('sum-tbody').innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Dados não disponíveis</td></tr>';return;}
   var rows=[];
   _RD.forEach(function(e){
-    if(!e[2]||!e[3]) return;
-    var gA=e[2][idxA]||0, gB=e[2][idxB]||0;
-    var nA=e[3][idxA]||0, nB=e[3][idxB]||0;
+    var gA=(e[2]&&e[2][idxA])||0, gB=(e[2]&&e[2][idxB])||0;
+    var nA=(e[3]&&e[3][idxA])||0, nB=(e[3]&&e[3][idxB])||0;
     if(gA===0&&gB===0) return;
-    rows.push({nome:e[0],cnpj:e[1],gA:gA,gB:gB,dG:gB-gA,nA:nA,nB:nB,dN:nB-nA,
-      trA:gA?nA/gA*100:0,trB:gB?nB/gB*100:0});
+    var cnpj=e[1];
+    var pA=getCCProj(cnpj,idxA), pB=getCCProj(cnpj,idxB);
+    rows.push({nome:e[0],cnpj:cnpj,gA:gA,gB:gB,dG:gB-gA,nA:nA,nB:nB,dN:nB-nA,
+      trA:gA?nA/gA*100:0,trB:gB?nB/gB*100:0,pA:pA,pB:pB,dP:pB-pA});
   });
   rows.sort(function(a,b){return Math.abs(b.dG)-Math.abs(a.dG);});
-  window._sumRows=rows;
-  window._sumSortCol=3; window._sumSortAsc=false;
+  _sumRows=rows;_sumSortCol=3;_sumSortAsc=false;
   renderSumRows(rows.slice(0,20));
+  renderSumHead(mA,mB);
 };
 
-window._sumRows=[];window._sumSortCol=3;window._sumSortAsc=false;
+function renderSumHead(mA,mB){
+  var cols=['Empresa','GMV '+mA,'GMV '+mB,'ΔGMV','NF '+mA,'NF '+mB,'ΔNF','TR% '+mA,'TR% '+mB,'ΔTR','Proj '+mA,'Proj '+mB,'ΔProj'];
+  document.getElementById('sum-thead').innerHTML='<tr>'+cols.map(function(h,i){
+    return '<th style="padding:5px 7px;text-align:'+(i===0?'left':'right')+
+      ';background:var(--card2);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;font-size:11px;" '+
+      'onclick="sortSumTable('+i+')">'+h+'</th>';
+  }).join('')+'</tr>';
+}
+
 window.sortSumTable=function(col){
-  if(window._sumSortCol===col) window._sumSortAsc=!window._sumSortAsc;
-  else{window._sumSortCol=col;window._sumSortAsc=false;}
-  var keys=['nome','gA','gB','dG','nA','nB','dN','trA','trB'];
-  var dKey=keys[col]||'dG';
-  var sorted=window._sumRows.slice().sort(function(a,b){
-    var va=a[dKey],vb=b[dKey];
+  if(_sumSortCol===col) _sumSortAsc=!_sumSortAsc;
+  else{_sumSortCol=col;_sumSortAsc=false;}
+  var keys=['nome','gA','gB','dG','nA','nB','dN','trA','trB','_dTR','pA','pB','dP'];
+  var sorted=_sumRows.slice().sort(function(a,b){
+    var va=a[keys[col]]!==undefined?a[keys[col]]:(col===9?a.trB-a.trA:0);
+    var vb=b[keys[col]]!==undefined?b[keys[col]]:(col===9?b.trB-b.trA:0);
     if(col===0){va=va.toLowerCase();vb=vb.toLowerCase();}
-    if(window._sumSortAsc) return va>vb?1:-1; else return va<vb?1:-1;
+    return _sumSortAsc?(va>vb?1:-1):(va<vb?1:-1);
   });
   renderSumRows(sorted.slice(0,20));
 };
 
 function renderSumRows(rows){
-  var tbody=document.getElementById('sum-tbody');
-  function fc(v){return 'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
-  function fd(v){return (v>=0?'+':'−')+'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+  function fc(v){return 'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+  function fd(v){return (v>=0?'+':'−')+'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
   function fp(v){return v.toFixed(2)+'%';}
   function fpp(v){return (v>=0?'+':'')+v.toFixed(2)+'pp';}
-  tbody.innerHTML=rows.map(function(r,i){
+  document.getElementById('sum-tbody').innerHTML=rows.map(function(r,i){
     var diverge=r.dG>0&&r.dN<0;
-    var bg=diverge?'background:rgba(239,68,68,.08);':'background:'+(i%2===0?'var(--card)':'var(--card2)')+';';
-    var dNc=r.dN>=0?'color:#10b981':'color:#ef4444;font-weight:700';
+    var bg=diverge?'background:rgba(239,68,68,.07);':'background:'+(i%2===0?'var(--card)':'var(--card2)')+';';
     var dTR=r.trB-r.trA;
-    var dTRc=dTR>=0?'color:#10b981':'color:#ef4444';
-    var dGc=r.dG>=0?'color:#10b981':'color:#ef4444';
     return '<tr style="'+bg+'border-bottom:1px solid var(--border);">'+
-      '<td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.nome+'">'+r.nome+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fc(r.gA)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fc(r.gB)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;'+dGc+'">'+fd(r.dG)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fc(r.nA)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fc(r.nB)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;'+dNc+'">'+fd(r.dN)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fp(r.trA)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;">'+fp(r.trB)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;'+dTRc+'">'+fpp(dTR)+'</td>'+
+      '<td style="padding:4px 7px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;" title="'+r.nome+'">'+r.nome+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fc(r.gA)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fc(r.gB)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;'+(r.dG>=0?'color:#10b981':'color:#ef4444')+';font-weight:700;">'+fd(r.dG)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fc(r.nA)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fc(r.nB)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;'+(r.dN>=0?'color:#10b981':'color:#ef4444;font-weight:700')+'>'+fd(r.dN)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fp(r.trA)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;">'+fp(r.trB)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;'+(dTR>=0?'color:#10b981':'color:#ef4444')+';font-weight:700;">'+fpp(dTR)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;color:var(--muted);">'+fc(r.pA)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;color:var(--muted);">'+fc(r.pB)+'</td>'+
+      '<td style="padding:4px 7px;text-align:right;'+(r.dP>=0?'color:#10b981':'color:#ef4444')+';font-weight:700;">'+fd(r.dP)+'</td>'+
     '</tr>';
   }).join('');
 }
 
-// Inicializar quando aba for aberta
-var _origShowTab=window.showTab;
+var _origShowTab2=window.showTab;
 window.showTab=function(name,ev){
-  _origShowTab&&_origShowTab(name,ev);
-  if(name==='resumo'){
-    var sumA=document.getElementById('sumMesA');
-    if(sumA&&sumA.options.length===0) initSumTab();
-    else if(sumA&&sumA.options.length>0) buildSummary();
-  }
+  _origShowTab2&&_origShowTab2(name,ev);
+  if(name==='resumo') initSumTab();
 };
 })();
 </script>
