@@ -279,6 +279,7 @@ function togglePwd(){
   <div class="tab" onclick="showTab('gmvcliente',event)">🏢 GMV por Cliente</div>
   <div class="tab" onclick="showTab('controle',event)">📋 Controle Cliente</div>
   <div class="tab" onclick="showTab('quinzena',event)">🔢 Quinzena</div>
+  <div class="tab" onclick="showTab('resumo',event)">📊 Resumo</div>
 </div>
 
 <!-- ===== GMV ===== -->
@@ -4701,7 +4702,224 @@ function gerarAutorizacao(){
     '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>',
     '</div>',
 
-    '</div></body></html>'
+    '</div>
+
+<!-- ===== RESUMO COMPARATIVO ===== -->
+<div class="content" id="tab-resumo">
+  <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+    <label>📅 Comparar:</label>
+    <select id="sumMesA" onchange="buildSummary()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
+    <span style="color:var(--muted);font-size:12px;">vs</span>
+    <select id="sumMesB" onchange="buildSummary()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
+    <button class="filter-btn" onclick="buildSummary()">Atualizar</button>
+    <button class="filter-btn" onclick="exportSumPDF()" style="margin-left:auto;">⬇ PDF</button>
+  </div>
+
+  <!-- KPIs macro -->
+  <div id="sum-kpi-area"></div>
+
+  <!-- Análise de divergência -->
+  <div id="sum-analysis" style="margin-top:18px;"></div>
+
+  <!-- Tabela top 20 -->
+  <div style="margin:20px 0 6px;font-size:12px;font-weight:700;color:var(--text);">
+    🏢 Top 20 maiores variações de GMV — por empresa
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Linhas em vermelho = GMV cresceu mas receita (NF) caiu</div>
+  <div style="overflow-x:auto;">
+    <table id="sum-table" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:780px;">
+      <thead id="sum-thead" style="position:sticky;top:0;z-index:2;"></thead>
+      <tbody id="sum-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ===== RESUMO COMPARATIVO =====
+(function(){
+function initSumTab(){
+  var selA=document.getElementById('sumMesA');
+  var selB=document.getElementById('sumMesB');
+  if(!selA||!selB||typeof months==='undefined') return;
+  months.forEach(function(m,i){
+    selA.add(new Option(m,i));
+    selB.add(new Option(m,i));
+  });
+  // default: ultimos dois meses com dados de GMV
+  var lastIdx=0;
+  for(var k=months.length-1;k>=0;k--){ if((gmvVT[k]||0)>0||(gmvPAT[k]||0)>0){lastIdx=k;break;} }
+  var prevIdx=0;
+  for(var k=lastIdx-1;k>=0;k--){ if((gmvVT[k]||0)>0||(gmvPAT[k]||0)>0){prevIdx=k;break;} }
+  selA.value=prevIdx;
+  selB.value=lastIdx;
+  buildSummary();
+}
+
+function fmtM(v){
+  if(Math.abs(v)>=1e6) return 'R$ '+(v/1e6).toFixed(2)+'M';
+  if(Math.abs(v)>=1e3) return 'R$ '+(v/1e3).toFixed(1)+'k';
+  return 'R$ '+v.toFixed(0);
+}
+function fmtSign(v){return (v>=0?'+':'')+fmtM(v);}
+function fmtPct(v,dec){dec=dec||1;return (v>=0?'+':'')+v.toFixed(dec)+'%';}
+function fmtPP(v){return (v>=0?'+':'')+v.toFixed(3)+'pp';}
+function colorCls(v,inv){
+  var pos=v>=0;
+  if(inv) pos=!pos;
+  return pos?'color:#10b981;font-weight:700':'color:#ef4444;font-weight:700';
+}
+
+window.buildSummary=function(){
+  var idxA=parseInt(document.getElementById('sumMesA').value);
+  var idxB=parseInt(document.getElementById('sumMesB').value);
+  var mA=months[idxA]||'', mB=months[idxB]||'';
+
+  var gVT_A=(gmvVT[idxA]||0), gVT_B=(gmvVT[idxB]||0);
+  var gPAT_A=(gmvPAT[idxA]||0), gPAT_B=(gmvPAT[idxB]||0);
+  var gTot_A=(gmvTotal[idxA]||0), gTot_B=(gmvTotal[idxB]||0);
+  var rVT_A=(recVT[idxA]||0), rVT_B=(recVT[idxB]||0);
+  var rPAT_A=(recPAT[idxA]||0), rPAT_B=(recPAT[idxB]||0);
+  var rTot_A=rVT_A+rPAT_A, rTot_B=rVT_B+rPAT_B;
+
+  var trVT_A=gVT_A?rVT_A/gVT_A*100:0, trVT_B=gVT_B?rVT_B/gVT_B*100:0;
+  var trPAT_A=gPAT_A?rPAT_A/gPAT_A*100:0, trPAT_B=gPAT_B?rPAT_B/gPAT_B*100:0;
+  var trTot_A=gTot_A?rTot_A/gTot_A*100:0, trTot_B=gTot_B?rTot_B/gTot_B*100:0;
+
+  // KPI cards
+  function kpiCard(label,vA,vB,fmt,inv,unit){
+    var d=vB-vA;
+    var pct=vA?d/vA*100:0;
+    var col=colorCls(d,inv);
+    var unitStr=unit||'';
+    return '<div class="kpi" style="min-width:150px;">'+
+      '<div class="kpi-label">'+label+'</div>'+
+      '<div class="kpi-value" style="font-size:15px;">'+fmt(vA)+'<span style="color:var(--muted);font-size:11px;"> '+mA+'</span></div>'+
+      '<div class="kpi-value" style="font-size:15px;">'+fmt(vB)+'<span style="color:var(--muted);font-size:11px;"> '+mB+'</span></div>'+
+      '<div style="font-size:12px;margin-top:4px;'+col+'">'+fmtSign(d)+unitStr+
+        (unit?'':' ('+fmtPct(pct)+')')+'</div>'+
+    '</div>';
+  }
+
+  var area=document.getElementById('sum-kpi-area');
+  area.innerHTML=
+    '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">📦 GMV</div>'+
+    '<div class="kpi-grid">'+
+      kpiCard('GMV VT',gVT_A,gVT_B,fmtM,false)+
+      kpiCard('GMV PAT',gPAT_A,gPAT_B,fmtM,false)+
+      kpiCard('GMV Total',gTot_A,gTot_B,fmtM,false)+
+    '</div>'+
+    '<div style="margin:14px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💰 Receita</div>'+
+    '<div class="kpi-grid">'+
+      kpiCard('Receita VT',rVT_A,rVT_B,fmtM,false)+
+      kpiCard('Receita PAT',rPAT_A,rPAT_B,fmtM,false)+
+      kpiCard('Receita Total',rTot_A,rTot_B,fmtM,false)+
+    '</div>'+
+    '<div style="margin:14px 0 6px;font-size:12px;font-weight:700;color:var(--text);">📈 Take Rate</div>'+
+    '<div class="kpi-grid">'+
+      kpiCard('Take Rate VT',trVT_A,trVT_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
+      kpiCard('Take Rate PAT',trPAT_A,trPAT_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
+      kpiCard('Take Rate Total',trTot_A,trTot_B,function(v){return v.toFixed(3)+'%';},false,'pp')+
+    '</div>';
+
+  // Análise de divergência
+  var dGmv=gTot_B-gTot_A, dRec=rTot_B-rTot_A, dTR=trTot_B-trTot_A;
+  var alertColor=dTR<-0.2?'rgba(239,68,68,.12)':dTR<0?'rgba(245,158,11,.12)':'rgba(16,185,129,.12)';
+  var alertBorder=dTR<-0.2?'rgba(239,68,68,.4)':dTR<0?'rgba(245,158,11,.4)':'rgba(16,185,129,.4)';
+  var an=document.getElementById('sum-analysis');
+  if(dGmv>0&&dRec<dGmv*0.05){
+    an.innerHTML='<div style="padding:12px 16px;border-radius:10px;background:'+alertColor+';border:1px solid '+alertBorder+';font-size:12px;line-height:1.7;color:var(--text);">'+
+      '<b>⚠ Atenção — Divergência GMV × Receita</b><br>'+
+      'O GMV cresceu <b>'+fmtSign(dGmv)+'</b> mas a receita cresceu apenas <b>'+fmtSign(dRec)+'</b>. '+
+      'O take rate caiu <b>'+fmtPP(dTR)+'</b> (de '+trTot_A.toFixed(3)+'% para '+trTot_B.toFixed(3)+'%). '+
+      'Verifique as empresas com ΔGMV positivo mas ΔNF negativo na tabela abaixo.</div>';
+  } else {
+    an.innerHTML='';
+  }
+
+  // Tabela por empresa
+  var thead=document.getElementById('sum-thead');
+  var tbody=document.getElementById('sum-tbody');
+  thead.innerHTML='<tr>'+
+    ['Empresa','GMV '+mA,'GMV '+mB,'ΔGMV','NF '+mA,'NF '+mB,'ΔNF','TR% '+mA,'TR% '+mB,'ΔTR']
+    .map(function(h,i){
+      return '<th style="padding:6px 8px;text-align:'+(i===0?'left':'right')+
+        ';background:var(--card2);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;" '+
+        'onclick="sortSumTable('+i+')">'+h+'</th>';
+    }).join('')+'</tr>';
+
+  if(typeof _RD==='undefined'){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted);">Dados não disponíveis</td></tr>';return;}
+
+  var rows=[];
+  _RD.forEach(function(e){
+    if(!e[2]||!e[3]) return;
+    var gA=e[2][idxA]||0, gB=e[2][idxB]||0;
+    var nA=e[3][idxA]||0, nB=e[3][idxB]||0;
+    if(gA===0&&gB===0) return;
+    rows.push({nome:e[0],cnpj:e[1],gA:gA,gB:gB,dG:gB-gA,nA:nA,nB:nB,dN:nB-nA,
+      trA:gA?nA/gA*100:0,trB:gB?nB/gB*100:0});
+  });
+  rows.sort(function(a,b){return Math.abs(b.dG)-Math.abs(a.dG);});
+  window._sumRows=rows;
+  window._sumSortCol=3; window._sumSortAsc=false;
+  renderSumRows(rows.slice(0,20));
+};
+
+window._sumRows=[];window._sumSortCol=3;window._sumSortAsc=false;
+window.sortSumTable=function(col){
+  if(window._sumSortCol===col) window._sumSortAsc=!window._sumSortAsc;
+  else{window._sumSortCol=col;window._sumSortAsc=false;}
+  var keys=['nome','gA','gB','dG','nA','nB','dN','trA','trB'];
+  var dKey=keys[col]||'dG';
+  var sorted=window._sumRows.slice().sort(function(a,b){
+    var va=a[dKey],vb=b[dKey];
+    if(col===0){va=va.toLowerCase();vb=vb.toLowerCase();}
+    if(window._sumSortAsc) return va>vb?1:-1; else return va<vb?1:-1;
+  });
+  renderSumRows(sorted.slice(0,20));
+};
+
+function renderSumRows(rows){
+  var tbody=document.getElementById('sum-tbody');
+  function fc(v){return 'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+  function fd(v){return (v>=0?'+':'−')+'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+  function fp(v){return v.toFixed(2)+'%';}
+  function fpp(v){return (v>=0?'+':'')+v.toFixed(2)+'pp';}
+  tbody.innerHTML=rows.map(function(r,i){
+    var diverge=r.dG>0&&r.dN<0;
+    var bg=diverge?'background:rgba(239,68,68,.08);':'background:'+(i%2===0?'var(--card)':'var(--card2)')+';';
+    var dNc=r.dN>=0?'color:#10b981':'color:#ef4444;font-weight:700';
+    var dTR=r.trB-r.trA;
+    var dTRc=dTR>=0?'color:#10b981':'color:#ef4444';
+    var dGc=r.dG>=0?'color:#10b981':'color:#ef4444';
+    return '<tr style="'+bg+'border-bottom:1px solid var(--border);">'+
+      '<td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.nome+'">'+r.nome+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fc(r.gA)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fc(r.gB)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;'+dGc+'">'+fd(r.dG)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fc(r.nA)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fc(r.nB)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;'+dNc+'">'+fd(r.dN)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fp(r.trA)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;">'+fp(r.trB)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;'+dTRc+'">'+fpp(dTR)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// Inicializar quando aba for aberta
+var _origShowTab=window.showTab;
+window.showTab=function(name,ev){
+  _origShowTab&&_origShowTab(name,ev);
+  if(name==='resumo'){
+    var sumA=document.getElementById('sumMesA');
+    if(sumA&&sumA.options.length===0) initSumTab();
+    else if(sumA&&sumA.options.length>0) buildSummary();
+  }
+};
+})();
+</script>
+
+</body></html>'
   ].join('\n');
 
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
