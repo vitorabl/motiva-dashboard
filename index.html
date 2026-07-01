@@ -1136,7 +1136,7 @@ Chart.defaults.color='#94a3b8'; Chart.defaults.font.family='Segoe UI,sans-serif'
 const grid={color:'rgba(255,255,255,0.06)'};const noLegend={display:false};
 
 function fmt(n,short=false){
-  if(short){if(n>=1e6)return'R$ '+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'R$ '+(n/1e3).toFixed(0)+'K';return'R$ '+n.toFixed(0);}
+  if(short){if(n>=1e6)return'R$ '+(n/1e6).toFixed(2)+'M';if(n>=1e3)return'R$ '+(n/1e3).toFixed(1)+'K';return'R$ '+n.toFixed(2);}
   return'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:0});
 }
 function pctVal(n,d){return d?((n/d)*100):0;}
@@ -3563,7 +3563,7 @@ const _toClient=r=>({cnpj:r[0],empresa:r[1],origem:'VT',cadastro:r[3],segmento:_
 let clientGmvData = _CD.map(_toClient);
 // ⚠️ Os dados acima são de exemplo. Importe o Excel para carregar os dados reais.
 
-function fmtGmv(v){if(!v||v===0)return'—';if(v>=1e6)return'R$'+(v/1e6).toFixed(1)+'M';if(v>=1e3)return'R$'+(v/1e3).toFixed(0)+'K';return'R$'+v;}
+function fmtGmv(v){if(!v||v===0)return'—';if(v>=1e6)return'R$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'R$'+(v/1e3).toFixed(1)+'K';return'R$'+v;}
 
 function gmvArrow(cur,prev){
   if(!prev||prev===0||!cur||cur===0)return'';
@@ -3746,7 +3746,7 @@ function renderCommCompanyTable(vendor, fromIdx, toIdx){
     return{empresa:c[0],cnpj:c[1],gmv,rec,comm};
   }).filter(r=>r.gmv>0||r.comm>0).sort((a,b)=>b.comm-a.comm||b.gmv-a.gmv);
   window._lastCommRows=rows; window._lastCommVendor=vendor; window._lastCommPeriod=months[fromIdx]+' a '+months[toIdx];
-  const fmtV=v=>v>=1e6?'R$ '+(v/1e6).toFixed(1)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(0)+'K':v>0?'R$ '+v.toFixed(0):'—';
+  const fmtV=v=>v>=1e6?'R$ '+(v/1e6).toFixed(2)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(1)+'K':v>0?'R$ '+v.toFixed(2):'—';
   const totGmv=rows.reduce((s,r)=>s+r.gmv,0),totRec=rows.reduce((s,r)=>s+r.rec,0),totComm=rows.reduce((s,r)=>s+r.comm,0);
   body.innerHTML=rows.map(r=>'<tr><td><strong>'+r.empresa+'</strong></td><td style="color:#64748b;font-size:11px;">'+(r.cnpj||'—')+'</td><td style="text-align:right;">'+fmtV(r.gmv)+'</td><td style="text-align:right;">'+fmtV(r.rec)+'</td><td style="text-align:right;color:#fbbf24;font-weight:600;">'+(r.comm>0?'R$ '+r.comm.toFixed(2):'—')+'</td></tr>').join('')+
     '<tr style="border-top:2px solid #334155;background:#1e2433;"><td colspan="2"><strong>TOTAL ('+rows.length+' empresas)</strong></td><td style="text-align:right;font-weight:700;">'+fmtV(totGmv)+'</td><td style="text-align:right;font-weight:700;">'+fmtV(totRec)+'</td><td style="text-align:right;color:#fbbf24;font-weight:700;">R$ '+totComm.toFixed(2)+'</td></tr>';
@@ -14545,7 +14545,7 @@ function renderCCDashboard(allData, yrFilter){
         ctx.textAlign='center';
         ctx.shadowColor='rgba(0,0,0,0.6)';
         ctx.shadowBlur=3;
-        var noR=!!ds._noPrefix; var lbl=v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(noR?(v/1e3).toFixed(0)+'k':'R$'+(v/1e3).toFixed(0)+'k'):String(Math.round(v));
+        var noR=!!ds._noPrefix; var lbl=v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(noR?(v/1e3).toFixed(1)+'k':'R$'+(v/1e3).toFixed(1)+'k'):String(Math.round(v));
         ctx.fillText(lbl, el.x, el.y-5);
         ctx.shadowBlur=0;
         ctx.restore();
