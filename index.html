@@ -1382,16 +1382,15 @@ function getVDFiltered(){
   var gF=(document.getElementById('rGrupo')||{value:''}).value||'';
   var eF=_rSel;
   if(!gF&&!eF.length) return null;
-  if(typeof VD==='undefined') return null;
   function ck(v){return String(v).replace(/\.0$/,'').replace(/\D/g,'');}
+  var src=typeof _RD!=='undefined'?_RD:[];
+  if(!src.length&&typeof VD!=='undefined'){var tmp=[];Object.values(VD).forEach(function(a){a.forEach(function(e){tmp.push(e);});});src=tmp;}
   var gmv=new Array(months.length).fill(0);
   var taxa=new Array(months.length).fill(0);
-  Object.values(VD).forEach(function(arr){
-    arr.forEach(function(e){
-      var mE=(!eF.length||eF.includes(e[0]));
-      var mG=(!gF||(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck(e[1])]===gF));
-      if(mE&&mG){e[2].forEach(function(v,i){gmv[i]+=v;});e[3].forEach(function(v,i){taxa[i]+=v;});}
-    });
+  src.forEach(function(e){
+    var mE=(!eF.length||eF.includes(e[0]));
+    var mG=(!gF||(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[ck(e[1])]===gF));
+    if(mE&&mG){e[2].forEach(function(v,i){gmv[i]+=v;});e[3].forEach(function(v,i){taxa[i]+=v;});}
   });
   return {gmv:gmv,taxa:taxa};
 }
@@ -1400,21 +1399,20 @@ function getVDFilteredEmps(){
   var gF=(document.getElementById('rGrupo')||{value:''}).value||'';
   var eF=_rSel;
   if(!gF&&!eF.length) return [];
-  if(typeof VD==='undefined') return [];
   function ck(v){return String(v).replace(/\.0$/,'').replace(/\D/g,'');}
+  var src=typeof _RD!=='undefined'?_RD:[];
+  if(!src.length&&typeof VD!=='undefined'){var tmp=[];Object.values(VD).forEach(function(a){a.forEach(function(e){tmp.push(e);});});src=tmp;}
   var res={};
-  Object.values(VD).forEach(function(arr){
-    arr.forEach(function(e){
-      var mE=(!eF.length||eF.includes(e[0]));
-      var cKey=ck(e[1]);
-      var grupo=(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[cKey])||'—';
-      var mG=(!gF||grupo===gF);
-      if(mE&&mG){
-        if(!res[e[0]]) res[e[0]]={empresa:e[0],grupo:grupo,gmv:new Array(months.length).fill(0),taxa:new Array(months.length).fill(0)};
-        e[2].forEach(function(v,i){res[e[0]].gmv[i]+=v;});
-        e[3].forEach(function(v,i){res[e[0]].taxa[i]+=v;});
-      }
-    });
+  src.forEach(function(e){
+    var mE=(!eF.length||eF.includes(e[0]));
+    var cKey=ck(e[1]);
+    var grupo=(typeof VINCULO_MAP!=='undefined'&&VINCULO_MAP[cKey])||'—';
+    var mG=(!gF||grupo===gF);
+    if(mE&&mG){
+      if(!res[e[0]]) res[e[0]]={empresa:e[0],grupo:grupo,gmv:new Array(months.length).fill(0),taxa:new Array(months.length).fill(0)};
+      e[2].forEach(function(v,i){res[e[0]].gmv[i]+=v;});
+      e[3].forEach(function(v,i){res[e[0]].taxa[i]+=v;});
+    }
   });
   return Object.values(res).sort(function(a,b){return b.gmv[rTo]-a.gmv[rTo];});
 }
