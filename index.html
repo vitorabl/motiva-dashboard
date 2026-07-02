@@ -4898,6 +4898,7 @@ window.showTab = function(name,e){
     <span style="color:var(--muted);font-size:12px;">vs</span>
     <select id="sumMesB" onchange="buildSummary()" style="font-size:12px;padding:4px 8px;border-radius:6px;background:var(--card);color:var(--text);border:1px solid var(--border);"></select>
     <button class="filter-btn" onclick="buildSummary()">Atualizar</button>
+    <button onclick="exportResumoPDF()" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);color:#818cf8;padding:5px 13px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;">📄 Exportar PDF</button>
   </div>
   <div id="sum-kpi-area"></div>
   <div id="sum-analysis" style="margin-top:14px;"></div>
@@ -5106,6 +5107,51 @@ function renderSumRows(rows){
       '<td style="padding:4px 7px;text-align:right;'+(r.dP>=0?'color:#10b981':'color:#ef4444')+';font-weight:700;">'+fd(r.dP)+'</td>'+
     '</tr>';
   }).join('');
+}
+
+
+function exportResumoPDF(){
+  var mA=document.getElementById('sumMesA');
+  var mB=document.getElementById('sumMesB');
+  var labelA=mA?mA.options[mA.selectedIndex].text:'?';
+  var labelB=mB?mB.options[mB.selectedIndex].text:'?';
+  var kpiHtml=document.getElementById('sum-kpi-area').innerHTML;
+  var anlHtml=document.getElementById('sum-analysis').innerHTML;
+  var theadHtml=document.getElementById('sum-thead').innerHTML;
+  var tbodyHtml=document.getElementById('sum-tbody').innerHTML;
+  var agora=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var html=[
+    '<!DOCTYPE html><html><head><meta charset="utf-8">',
+    '<title>Resumo Motiva — '+labelA+' vs '+labelB+'</title>',
+    '<style>',
+    'body{font-family:sans-serif;background:#fff;color:#1e293b;margin:0;padding:24px;}',
+    'h1{font-size:17px;font-weight:700;margin-bottom:4px;}',
+    '.sub{font-size:12px;color:#64748b;margin-bottom:18px;}',
+    'table{width:100%;border-collapse:collapse;font-size:10px;margin-top:12px;}',
+    'th{padding:5px 7px;background:#f1f5f9;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;font-size:10px;}',
+    'th:first-child{text-align:left;}',
+    'td{padding:4px 7px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:10px;}',
+    'td:first-child{text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+    '.footer{margin-top:20px;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;}',
+    '.pbtn{padding:6px 14px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;}',
+    '@media print{.pbtn{display:none;} body{padding:12px;}}',
+    '</style></head><body>',
+    '<h1>📊 Resumo Comparativo — '+labelA+' vs '+labelB+'</h1>',
+    '<div class="sub">Motiva Bene��fcios \xb7 Gerado em '+agora+'</div>',
+    kpiHtml,
+    anlHtml,
+    '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;">🏢 Top 20 maiores varia���es de GMV — por empresa</div>',
+    '<div style="overflow-x:auto;"><table><thead>'+theadHtml+'</thead><tbody>'+tbodyHtml+'</tbody></table></div>',
+    '<div class="footer">',
+    '<span>Documento gerado automaticamente \xb7 Uso interno</span>',
+    '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>',
+    '</div>',
+    '</body></html>'
+  ].join('\n');
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(function(){URL.revokeObjectURL(url);},120000);
 }
 
 var _origShowTab2=window.showTab;
