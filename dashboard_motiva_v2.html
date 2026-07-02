@@ -5002,7 +5002,9 @@ window.buildSummary=function(){
   var gTot_A=gmvTotal[idxA]||0, gTot_B=gmvTotal[idxB]||0;
   var rVT_A=recVT[idxA]||0, rVT_B=recVT[idxB]||0;
   var rPAT_A=recPAT[idxA]||0, rPAT_B=recPAT[idxB]||0;
-  var rTot_A=rVT_A+rPAT_A, rTot_B=rVT_B+rPAT_B;
+  var fin_A=(typeof financiamento!=='undefined'?financiamento[idxA]:0)||0;
+  var fin_B=(typeof financiamento!=='undefined'?financiamento[idxB]:0)||0;
+  var rTot_A=rVT_A+rPAT_A+fin_A, rTot_B=rVT_B+rPAT_B+fin_B;
   var trVT_A=gVT_A?rVT_A/gVT_A*100:0, trVT_B=gVT_B?rVT_B/gVT_B*100:0;
   var trTot_A=gTot_A?rTot_A/gTot_A*100:0, trTot_B=gTot_B?rTot_B/gTot_B*100:0;
   var projTot_A=getTotProj(idxA), projTot_B=getTotProj(idxB);
@@ -5018,6 +5020,7 @@ window.buildSummary=function(){
     '<div style="margin:12px 0 6px;font-size:12px;font-weight:700;color:var(--text);">💰 Receita (NF) & Take Rate</div>'+
     '<div class="kpi-grid">'+
       kpiCard('Receita VT',rVT_A,rVT_B,mA,mB,fmtM,false)+
+      kpiCard('Financiamento',fin_A,fin_B,mA,mB,fmtM,false)+
       kpiCard('Receita Total',rTot_A,rTot_B,mA,mB,fmtM,false)+
       kpiCard('Take Rate VT',trVT_A,trVT_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
       kpiCard('Take Rate Total',trTot_A,trTot_B,mA,mB,function(v){return v.toFixed(3)+'%';},false,'pp')+
