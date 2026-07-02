@@ -5115,16 +5115,152 @@ function renderSumRows(rows){
 
 window.exportResumoPDF=function(){
   try{
-    // Garantir que a aba está populada
     if(typeof buildSummary==='function') buildSummary();
 
-    var mA=document.getElementById('sumMesA');
-    var mB=document.getElementById('sumMesB');
-    var labelA=mA?mA.options[mA.selectedIndex].text:'Mes A';
-    var labelB=mB?mB.options[mB.selectedIndex].text:'Mes B';
+    var idxA=parseInt(document.getElementById('sumMesA').value);
+    var idxB=parseInt(document.getElementById('sumMesB').value);
+    var mA=months[idxA]||'?', mB=months[idxB]||'?';
+
+    var gVT_A=gmvVT[idxA]||0, gVT_B=gmvVT[idxB]||0;
+    var gPAT_A=gmvPAT[idxA]||0, gPAT_B=gmvPAT[idxB]||0;
+    var gTot_A=(gmvTotal[idxA]||0), gTot_B=(gmvTotal[idxB]||0);
+    var rVT_A=recVT[idxA]||0, rVT_B=recVT[idxB]||0;
+    var rPAT_A=recPAT[idxA]||0, rPAT_B=recPAT[idxB]||0;
+    var fin_A=(typeof financiamento!=='undefined'?financiamento[idxA]:0)||0;
+    var fin_B=(typeof financiamento!=='undefined'?financiamento[idxB]:0)||0;
+    var rTot_A=rVT_A+rPAT_A+fin_A, rTot_B=rVT_B+rPAT_B+fin_B;
+    var trVT_A=gVT_A?rVT_A/gVT_A*100:0, trVT_B=gVT_B?rVT_B/gVT_B*100:0;
+    var projTot_A=getTotProj(idxA), projTot_B=getTotProj(idxB);
+
+    // --- Metricas derivadas ---
+    var dGmv=gTot_B-gTot_A, pGmv=gTot_A?dGmv/gTot_A*100:0;
+    var dRec=rTot_B-rTot_A, pRec=rTot_A?dRec/rTot_A*100:0;
+    var dTR=trVT_B-trVT_A;
+    var dProj=projTot_B-projTot_A, pProj=projTot_A?dProj/projTot_A*100:0;
+    var projRatioA=gTot_A?projTot_A/gTot_A*100:0, projRatioB=gTot_B?projTot_B/gTot_B*100:0;
+
+    function fm(v){
+      var a=Math.abs(v);
+      if(a>=1e6) return 'R$ '+(v/1e6).toFixed(2).replace('.',',')+'M';
+      if(a>=1e3) return 'R$ '+(v/1e3).toFixed(1).replace('.',',')+'k';
+      return 'R$ '+v.toFixed(0);
+    }
+    function fms(v){return (v>=0?'+':'')+fm(v);}
+    function fp2(v){return v.toFixed(2)+'%';}
+    function fps(v){return (v>=0?'+':'')+v.toFixed(2)+'pp';}
+    function fpct(v){return (v>=0?'+':'')+v.toFixed(1)+'%';}
+
+    // --- Analise Executiva ---
+    var paragrafos=[];
+    var dataAgora=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+    // 1. Desempenho Geral
+    var tendGmv=dGmv>=0?'crescimento':'reducao';
+    var forteOuMod=Math.abs(pGmv)>10?'expressivo':'moderado';
+    var gmvTxt='O GMV total registrou '+tendGmv+' '+forteOuMod+' de '+fms(dGmv)+
+      ' ('+fpct(pGmv)+') entre '+mA+' e '+mB+', passando de '+fm(gTot_A)+' para '+fm(gTot_B)+'. ';
+    if(dGmv>0){
+      if(pGmv>15) gmvTxt+='O desempenho acima de 15% e.m. indica forte momentum comercial e expansao da base ativa.';
+      else if(pGmv>5) gmvTxt+='Crescimento saudavel, consistente com operacao em expansao.';
+      else gmvTxt+='Crescimento timido — recomenda-se investigar se ha represamento de pedidos ou sazonalidade.';
+    } else {
+      if(pGmv<-10) gmvTxt+='Reducao relevante exige atencao imediata: verificar churn, inadimplencia ou concentracao em poucos clientes.';
+      else gmvTxt+='Contracao pontual — avaliar se e sazonalidade ou sinal de desaceleracao estrutural.';
+    }
+    paragrafos.push({titulo:'Desempenho de Volume (GMV)',corpo:gmvTxt});
+
+    // 2. Monetizacao e Take Rate
+    var recTxt='A receita total passou de '+fm(rTot_A)+' para '+fm(rTot_B)+' ('+fms(dRec)+', '+fpct(pRec)+'). ';
+    if(dGmv>0 && dRec>0){
+      var leverage=pRec/pGmv;
+      if(leverage>=0.8) recTxt+='A receita acompanhou o GMV com alavancagem saudavel ('+leverage.toFixed(2)+'x), sinalizando estabilidade na precificacao.';
+      else recTxt+='A receita cresceu menos que o GMV (alavancagem de '+leverage.toFixed(2)+'x), indicando possivel compressao de margem ou mix desfavoravel de clientes.';
+    } else if(dGmv>0 && dRec<=0){
+      recTxt+='Situacao critica: GMV em alta mas receita em queda. Investigar renegociacoes de taxa, clientes com SK (externos) com maior peso relativo ou falhas de repasse de NF.';
+    } else if(dGmv<=0 && dRec>0){
+      recTxt+='Receita cresceu apesar da queda de volume — possivelmente reflexo de melhora no mix ou reajuste de taxas. Avaliar sustentabilidade.';
+    }
+    if(Math.abs(dTR)>0.1){
+      recTxt+=' O take rate VT variou '+fps(dTR)+' ('+fp2(trVT_A)+' -> '+fp2(trVT_B)+') — ';
+      if(dTR<0) recTxt+='compressao de taxa requer monitoramento para nao corroer margem operacional.';
+      else recTxt+='expansao de taxa e positiva, mas verificar se reflete mix ou repricing deliberado.';
+    }
+    if(fin_B>0||fin_A>0){
+      recTxt+=' O financiamento representou '+fm(fin_B)+' em '+mB+(fin_B>fin_A?' (alta de '+fms(fin_B-fin_A)+')':(fin_B<fin_A?' (reducao de '+fms(fin_B-fin_A)+')':''))+'.';
+    }
+    paragrafos.push({titulo:'Monetizacao e Take Rate',corpo:recTxt});
+
+    // 3. Projecao de Saldo
+    if(projTot_A>0||projTot_B>0){
+      var projTxt='A projecao de saldo disponivel dos clientes passou de '+fm(projTot_A)+' para '+fm(projTot_B)+
+        ' ('+fms(dProj)+', '+fpct(pProj)+'). ';
+      projTxt+='Em relacao ao GMV, o indice projecao/GMV foi de '+projRatioA.toFixed(1)+'% em '+mA+' para '+projRatioB.toFixed(1)+'% em '+mB+'. ';
+      if(projRatioB>40) projTxt+='Indice elevado indica saldo robusto na carteira — menor risco de inadimplencia e potencial para recarga futura.';
+      else if(projRatioB>20) projTxt+='Nivel saudavel de saldo remanescente.';
+      else projTxt+='Indice baixo pode indicar clientes consumindo o saldo sem recarregar — acompanhar retencao.';
+      if(dGmv>0&&dProj<0) projTxt+=' Atencao: GMV cresceu mas projecao caiu ('+fms(dProj)+') — possivel mudanca de perfil de uso ou entrada de clientes com ciclo curto.';
+      paragrafos.push({titulo:'Saude da Carteira (Projecao de Saldo)',corpo:projTxt});
+    }
+
+    // 4. Concentracao e Destaques
+    var topRows=_sumRows.slice(0,5);
+    if(topRows.length>0){
+      var somaDeltaTop3=0; topRows.slice(0,3).forEach(function(r){somaDeltaTop3+=Math.abs(r.dG);});
+      var pctConc=dGmv?somaDeltaTop3/Math.abs(dGmv)*100:0;
+      var concTxt='Os 3 maiores movimentadores representam '+pctConc.toFixed(0)+'% da variacao total de GMV. ';
+      var altas=topRows.filter(function(r){return r.dG>0;}).slice(0,3);
+      var quedas=topRows.filter(function(r){return r.dG<0;}).slice(0,3);
+      if(altas.length>0){
+        concTxt+='Maiores crescimentos: '+altas.map(function(r){return r.nome+' ('+fms(r.dG)+')';}).join(', ')+'. ';
+      }
+      if(quedas.length>0){
+        concTxt+='Maiores quedas: '+quedas.map(function(r){return r.nome+' ('+fms(r.dG)+')';}).join(', ')+'. ';
+      }
+      if(pctConc>60) concTxt+='Alta concentracao em poucos clientes aumenta risco operacional — diversificacao da carteira e estrategica.';
+      else concTxt+='Base diversificada, reducao de risco de concentracao.';
+      paragrafos.push({titulo:'Movimentacao por Cliente',corpo:concTxt});
+    }
+
+    // 5. Divergencias e Pontos de Atencao
+    var divRows=_sumRows.filter(function(r){return r.dG>0&&r.dN<0;}).slice(0,3);
+    if(divRows.length>0){
+      var divTxt='Clientes com GMV crescente mas NF em queda: '+
+        divRows.map(function(r){return r.nome+' (GMV '+fms(r.dG)+', NF '+fms(r.dN)+')';}).join('; ')+
+        '. Possivel atraso na emissao de nota, desconto contratual ou erro de conciliacao. Recomenda-se validacao com time financeiro.';
+      paragrafos.push({titulo:'Pontos de Atencao',corpo:divTxt});
+    }
+
+    // 6. Recomendacoes Executivas
+    var recs=[];
+    if(dGmv<0) recs.push('Acionar plano de recuperacao de volume: revisar pipeline comercial e identificar clientes inativos com potencial de reativacao.');
+    if(dTR<-0.15) recs.push('Revisao de politica de precificacao: compressao de take rate impacta diretamente a margem. Avaliar renegociacoes recentes.');
+    if(dProj<0&&dGmv>0) recs.push('Investigar queda de projecao de saldo em contexto de GMV crescente — pode indicar mudanca de comportamento de uso ou churn iminente.');
+    if(divRows.length>0) recs.push('Reconciliar NF x GMV nos clientes com divergencia — risco de sub-faturamento e impacto fiscal.');
+    if(recs.length===0) recs.push('Manter ritmo de crescimento. Considerar expansao ativa para novos segmentos e aumento do ticket medio por cliente.');
+    recs.push('Acompanhar evolucao do take rate mensalmente como indicador-lider de rentabilidade.');
+    paragrafos.push({titulo:'Recomendacoes Executivas',corpo:'<ul style="margin:6px 0 0 16px;padding:0;line-height:1.9;">'+recs.map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul>'});
+
+    // --- Montar HTML da analise ---
+    var analiseHtml='<div style="margin:20px 0;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">'+
+      '<div style="font-size:13px;font-weight:800;color:#1e293b;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">'+
+        'ANALISE EXECUTIVA &mdash; '+mA+' vs '+mB+
+      '</div>'+
+      paragrafos.map(function(p){
+        return '<div style="margin-bottom:14px;">'+
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#5b6af0;margin-bottom:5px;">'+p.titulo+'</div>'+
+          '<div style="font-size:12px;color:#334155;line-height:1.75;">'+p.corpo+'</div>'+
+        '</div>';
+      }).join('')+
+      '<div style="font-size:10px;color:#94a3b8;margin-top:12px;border-top:1px solid #e2e8f0;padding-top:8px;">Analise gerada automaticamente com base nos dados de '+mB+'. Uso interno — Motiva Beneficios.</div>'+
+    '</div>';
+
+    // --- Ler HTML dos elementos ---
+    var mAsel=document.getElementById('sumMesA');
+    var mBsel=document.getElementById('sumMesB');
+    var labelA=mAsel?mAsel.options[mAsel.selectedIndex].text:mA;
+    var labelB=mBsel?mBsel.options[mBsel.selectedIndex].text:mB;
 
     var kpiHtml=document.getElementById('sum-kpi-area').innerHTML||'';
-    var anlHtml=document.getElementById('sum-analysis').innerHTML||'';
     var theadHtml=document.getElementById('sum-thead').innerHTML||'';
     var tbodyHtml=document.getElementById('sum-tbody').innerHTML||'';
 
@@ -5139,7 +5275,6 @@ window.exportResumoPDF=function(){
         .replace(/var\(--bg\)/g,'#ffffff');
     }
     kpiHtml=fixVars(kpiHtml);
-    anlHtml=fixVars(anlHtml);
     theadHtml=fixVars(theadHtml);
     tbodyHtml=fixVars(tbodyHtml);
 
@@ -5147,10 +5282,9 @@ window.exportResumoPDF=function(){
     var doc='<!DOCTYPE html><html><head><meta charset="utf-8">'+
       '<title>Resumo Motiva - '+labelA+' vs '+labelB+'</title>'+
       '<style>'+
-      ':root{--text:#1e293b;--muted:#64748b;--card:#f8fafc;--card2:#f1f5f9;--border:#e2e8f0;--accent:#5b6af0;}'+
       'body{font-family:sans-serif;background:#fff;color:#1e293b;margin:0;padding:24px;}'+
       'h1{font-size:17px;font-weight:700;margin-bottom:4px;}'+
-      '.sub{font-size:12px;color:#64748b;margin-bottom:18px;}'+
+      '.sub{font-size:12px;color:#64748b;margin-bottom:14px;}'+
       '.kpi-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}'+
       '.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;min-width:140px;}'+
       '.kpi-label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}'+
@@ -5164,18 +5298,17 @@ window.exportResumoPDF=function(){
       '@media print{.pbtn{display:none;}body{padding:12px;}}'+
       '</style></head><body>'+
       '<h1>Resumo Comparativo - '+labelA+' vs '+labelB+'</h1>'+
-      '<div class="sub">Motiva Beneficios - Gerado em '+agora+'</div>'+
+      '<div class="sub">Motiva Beneficios &nbsp;|&nbsp; Gerado em '+agora+'</div>'+
       kpiHtml+
-      anlHtml+
-      '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;">Top 20 maiores variacoes de GMV - por empresa</div>'+
+      analiseHtml+
+      '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:#1e293b;">Top 20 maiores variacoes de GMV por empresa</div>'+
       '<div style="overflow-x:auto;"><table><thead>'+theadHtml+'</thead><tbody>'+tbodyHtml+'</tbody></table></div>'+
       '<div class="footer">'+
-      '<span>Documento gerado automaticamente - Uso interno</span>'+
+      '<span>Documento gerado automaticamente &middot; Uso interno</span>'+
       '<button class="pbtn" onclick="window.print()">Imprimir / Salvar PDF</button>'+
       '</div>'+
       '</body></html>';
 
-    // Download como arquivo HTML (sem popup blocker)
     var blob=new Blob([doc],{type:'text/html;charset=utf-8'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');
