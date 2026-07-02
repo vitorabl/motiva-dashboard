@@ -5118,42 +5118,64 @@ function exportResumoPDF(){
   var mB=document.getElementById('sumMesB');
   var labelA=mA?mA.options[mA.selectedIndex].text:'?';
   var labelB=mB?mB.options[mB.selectedIndex].text:'?';
+
   var kpiHtml=document.getElementById('sum-kpi-area').innerHTML;
   var anlHtml=document.getElementById('sum-analysis').innerHTML;
   var theadHtml=document.getElementById('sum-thead').innerHTML;
   var tbodyHtml=document.getElementById('sum-tbody').innerHTML;
+
+  // Resolver CSS variables para valores concretos (modo claro / impressão)
+  function fixVars(s){
+    return s
+      .replace(/var\(--text\)/g,'#1e293b')
+      .replace(/var\(--muted\)/g,'#64748b')
+      .replace(/var\(--card2\)/g,'#f1f5f9')
+      .replace(/var\(--card\)/g,'#f8fafc')
+      .replace(/var\(--border\)/g,'#e2e8f0')
+      .replace(/var\(--accent\)/g,'#5b6af0')
+      .replace(/var\(--bg\)/g,'#ffffff');
+  }
+  kpiHtml=fixVars(kpiHtml);
+  anlHtml=fixVars(anlHtml);
+  theadHtml=fixVars(theadHtml);
+  tbodyHtml=fixVars(tbodyHtml);
+
   var agora=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  var html=[
-    '<!DOCTYPE html><html><head><meta charset="utf-8">',
-    '<title>Resumo Motiva — '+labelA+' vs '+labelB+'</title>',
-    '<style>',
-    'body{font-family:sans-serif;background:#fff;color:#1e293b;margin:0;padding:24px;}',
-    'h1{font-size:17px;font-weight:700;margin-bottom:4px;}',
-    '.sub{font-size:12px;color:#64748b;margin-bottom:18px;}',
-    'table{width:100%;border-collapse:collapse;font-size:10px;margin-top:12px;}',
-    'th{padding:5px 7px;background:#f1f5f9;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;font-size:10px;}',
-    'th:first-child{text-align:left;}',
-    'td{padding:4px 7px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:10px;}',
-    'td:first-child{text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-    '.footer{margin-top:20px;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;}',
-    '.pbtn{padding:6px 14px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;}',
-    '@media print{.pbtn{display:none;} body{padding:12px;}}',
-    '</style></head><body>',
-    '<h1>📊 Resumo Comparativo — '+labelA+' vs '+labelB+'</h1>',
-    '<div class="sub">Motiva Bene��fcios \xb7 Gerado em '+agora+'</div>',
-    kpiHtml,
-    anlHtml,
-    '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;">🏢 Top 20 maiores varia���es de GMV — por empresa</div>',
-    '<div style="overflow-x:auto;"><table><thead>'+theadHtml+'</thead><tbody>'+tbodyHtml+'</tbody></table></div>',
-    '<div class="footer">',
-    '<span>Documento gerado automaticamente \xb7 Uso interno</span>',
-    '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>',
-    '</div>',
-    '</body></html>'
-  ].join('\n');
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var doc='<!DOCTYPE html><html><head><meta charset="utf-8">'+
+    '<title>Resumo Motiva — '+labelA+' vs '+labelB+'</title>'+
+    '<style>'+
+    ':root{--text:#1e293b;--muted:#64748b;--card:#f8fafc;--card2:#f1f5f9;--border:#e2e8f0;--accent:#5b6af0;}'+
+    'body{font-family:sans-serif;background:#fff;color:#1e293b;margin:0;padding:24px;}'+
+    'h1{font-size:17px;font-weight:700;margin-bottom:4px;}'+
+    '.sub{font-size:12px;color:#64748b;margin-bottom:18px;}'+
+    '.kpi-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}'+
+    '.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;min-width:140px;}'+
+    '.kpi-label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}'+
+    'table{width:100%;border-collapse:collapse;font-size:10px;margin-top:12px;}'+
+    'th{padding:5px 7px;background:#f1f5f9;border-bottom:2px solid #e2e8f0;text-align:right;white-space:nowrap;font-size:10px;}'+
+    'th:first-child{text-align:left;}'+
+    'td{padding:4px 7px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:10px;}'+
+    'td:first-child{text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'+
+    '.footer{margin-top:24px;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;}'+
+    '.pbtn{padding:6px 14px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;}'+
+    '@media print{.pbtn{display:none;}body{padding:12px;}}'+
+    '</style></head><body>'+
+    '<h1>📊 Resumo Comparativo — '+labelA+' vs '+labelB+'</h1>'+
+    '<div class="sub">Motiva Benefícios · Gerado em '+agora+'</div>'+
+    kpiHtml+
+    anlHtml+
+    '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;">🏢 Top 20 maiores variações de GMV — por empresa</div>'+
+    '<div style="overflow-x:auto;"><table><thead>'+theadHtml+'</thead><tbody>'+tbodyHtml+'</tbody></table></div>'+
+    '<div class="footer">'+
+    '<span>Documento gerado automaticamente · Uso interno</span>'+
+    '<button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>'+
+    '</div>'+
+    '</body></html>';
+
+  var blob=new Blob([doc],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
-  window.open(url,'_blank');
+  var w=window.open(url,'_blank');
+  if(!w){alert('Pop-up bloqueado pelo navegador. Permita pop-ups para este site e tente novamente.');}
   setTimeout(function(){URL.revokeObjectURL(url);},120000);
 }
 
