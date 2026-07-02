@@ -5113,7 +5113,7 @@ function renderSumRows(rows){
 }
 
 
-function exportResumoPDF(){
+window.exportResumoPDF=function(){
   var mA=document.getElementById('sumMesA');
   var mB=document.getElementById('sumMesB');
   var labelA=mA?mA.options[mA.selectedIndex].text:'?';
