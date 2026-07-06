@@ -361,6 +361,12 @@ function togglePwd(){
 
 <!-- ===== CLIENTES ===== -->
 <div class="content" id="tab-clientes">
+  <div class="filter-bar">
+    <label>📅 Mês de referência:</label>
+    <select id="clienteMesSel" onchange="onClienteMesChange()"></select>
+    <button class="filter-btn" onclick="resetClienteMes()">Mês atual</button>
+    <span style="color:var(--muted);font-size:11px;margin-left:8px;">Histórico de clientes ativos/risco/inativos e segmentação por mês</span>
+  </div>
   <div class="kpi-grid">
     <div class="kpi green" id="kpi-ativos"><div class="kpi-label" id="kpi-ativos-lbl">Clientes Ativos</div><div class="kpi-value" id="kpi-ativos-val">—</div><div class="kpi-sub">Últimos 30 dias</div><div class="kpi-delta" id="kpi-ativos-delta"></div></div>
     <div class="kpi amber" id="kpi-risco"><div class="kpi-label" id="kpi-risco-lbl">Em Risco 30–90d</div><div class="kpi-value" id="kpi-risco-val">—</div><div class="kpi-sub">Sem compra 30–90 dias</div><div class="kpi-delta" id="kpi-risco-delta"></div></div>
@@ -375,8 +381,8 @@ function togglePwd(){
   </div>
   <div class="chart-grid full"><div class="chart-card"><h3>Base Total — Ativos vs Inativos por Mês</h3><p class="chart-sub">Clientes ativos (≤30d) e inativos (+90d) — Jan/25 a Abr/26</p><div class="chart-wrap"><canvas id="ativoInativoChart"></canvas></div></div></div>
   <div class="chart-grid">
-    <div class="chart-card"><h3>Status de Atividade (Abr/26)</h3><p class="chart-sub">Distribuição atual dos 1.011 clientes</p><div class="chart-wrap"><canvas id="statusChart"></canvas></div></div>
-    <div class="chart-card"><h3>Segmentação por GMV — Detalhes</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="segTable"></div></div></div>
+    <div class="chart-card"><h3 id="statusChartTitle">Status de Atividade (Abr/26)</h3><p class="chart-sub" id="statusChartSub">Distribuição atual dos 1.011 clientes</p><div class="chart-wrap"><canvas id="statusChart"></canvas></div></div>
+    <div class="chart-card"><h3 id="segTableTitle">Segmentação por GMV — Detalhes</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="segTable"></div></div></div>
   </div>
   <div class="chart-grid">
     <div class="chart-card"><h3>Detalhes de Inatividade</h3><div style="margin-top:14px;"><div style="display:flex;flex-direction:column;gap:12px;" id="inactiveTable"></div></div></div>
@@ -623,8 +629,8 @@ const clientCutIdx = (()=>{
 })();
 
 // Preenche KPI cards de clientes dinamicamente
-function renderClienteKPIs() {
-  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+function renderClienteKPIs(mi) {
+  const curI = (typeof mi === 'number') ? mi : Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
   const compI = Math.max(0, curI - 1); // comparação: mês anterior
   const mesNm = months[curI] || '';
   const mesComp = months[compI] || '';
@@ -1657,6 +1663,7 @@ function applyRec(){
 })();
 
 // ===================== CLIENTES TAB =====================
+var statusChartInst, segPieChartInst;
 (function(){
   // Crescimento base
   new Chart(document.getElementById('clientsLineChart'),{
@@ -1684,7 +1691,7 @@ function applyRec(){
   });
 
   // Status donut
-  new Chart(document.getElementById('statusChart'),{
+  statusChartInst = new Chart(document.getElementById('statusChart'),{
     type:'doughnut',data:{labels:['Ativos (≤30d)','Em Risco (30–90d)','Inativos (+90d)'],datasets:[{data:[480,65,491],backgroundColor:[C.green,C.amber,C.red],borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/1036*100).toFixed(1)}%)`}}}}
   });
@@ -1692,7 +1699,7 @@ function applyRec(){
   // Segmentação composição donut
   const segLabels=Object.keys(segData),segVals=Object.values(segData);
   const segColors=[C.purple,C.amber,C.slate,C.orange,'#475569'];
-  new Chart(document.getElementById('segPieChart'),{
+  segPieChartInst = new Chart(document.getElementById('segPieChart'),{
     type:'doughnut',data:{labels:segLabels,datasets:[{data:segVals,backgroundColor:segColors,borderColor:'#1a1d27',borderWidth:3,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e2e8f0',usePointStyle:true}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotal*100).toFixed(1)}%)`}}}}
   });
@@ -1717,6 +1724,105 @@ function applyRec(){
     const pv=(s.qtd/1036*100).toFixed(1);
     inactDiv.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
   });
+})();
+
+// ===================== FILTRO DE MÊS — CLIENTES (histórico ativos/segmentação) =====================
+// Segmentação por mês = clientes com GMV>0 naquele mês (_CD col 5+mi), agrupados pelo
+// segmento cadastrado de cada cliente (_CD[2]). Fórmula validada contra o snapshot do
+// último mês completo gerado pelo update_vars.py (bate 100% com segData).
+const SEG_NAMES_CLI = {0:'Diamante',1:'Ouro',2:'Prata',3:'Bronze-P',4:'Bronze-PP'};
+function computeSegForMonth(mi){
+  const counts = {Diamante:0,Ouro:0,Prata:0,'Bronze-P':0,'Bronze-PP':0};
+  _CD.forEach(row=>{
+    const gmv = row[5+mi];
+    if(!gmv || gmv<=0) return;
+    const name = SEG_NAMES_CLI[row[2]];
+    if(name!==undefined) counts[name]++;
+  });
+  return counts;
+}
+
+let clienteSelMonthIdx = null;
+function applyClienteFiltro(mi){
+  clienteSelMonthIdx = mi;
+  const mesNm = months[mi] || '';
+
+  // KPIs Ativos / Em Risco / Inativos / Base
+  renderClienteKPIs(mi);
+
+  // Status donut + detalhe de inatividade (mesmos números dos KPIs acima)
+  const ativos = qtdAtivos[mi]||0, risco = qtdRisco[mi]||0, inativos = qtdInativos[mi]||0;
+  const totalStatus = (ativos+risco+inativos) || 1;
+  if(statusChartInst){
+    statusChartInst.data.datasets[0].data=[ativos,risco,inativos];
+    statusChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/totalStatus*100).toFixed(1)}%)`;
+    statusChartInst.update();
+  }
+  const statusTitleEl=document.getElementById('statusChartTitle');
+  if(statusTitleEl) statusTitleEl.textContent = `Status de Atividade (${mesNm})`;
+  const statusSubEl=document.getElementById('statusChartSub');
+  if(statusSubEl) statusSubEl.textContent = `Distribuição dos ${totalStatus.toLocaleString('pt-BR')} clientes`;
+
+  const inactDiv2=document.getElementById('inactiveTable');
+  if(inactDiv2){
+    const inact2=[
+      {label:'Ativos (≤30d)',cls:'ativo',qtd:ativos},
+      {label:'Em Risco (30–90d)',cls:'risco',qtd:risco},
+      {label:'Inativos (+90d)',cls:'inativo',qtd:inativos},
+    ];
+    inactDiv2.innerHTML='';
+    inact2.forEach(s=>{
+      const pv=(s.qtd/totalStatus*100).toFixed(1);
+      inactDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
+    });
+  }
+
+  // Segmentação — ativos no mês, por segmento
+  const segCounts = computeSegForMonth(mi);
+  const segLabelsL = Object.keys(segCounts);
+  const segValsL = segLabelsL.map(k=>segCounts[k]);
+  const segTotalL = segValsL.reduce((a,b)=>a+b,0) || 1;
+  const segColorsL=[C.purple,C.amber,C.slate,C.orange,'#475569'];
+  if(segPieChartInst){
+    segPieChartInst.data.labels=segLabelsL;
+    segPieChartInst.data.datasets[0].data=segValsL;
+    segPieChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotalL*100).toFixed(1)}%)`;
+    segPieChartInst.update();
+  }
+  const segDiv2=document.getElementById('segTable');
+  if(segDiv2){
+    const segFaixasL={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
+    const segClsL={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+    segDiv2.innerHTML='';
+    segLabelsL.forEach((k,i)=>{
+      const v=segValsL[i],pv=(v/segTotalL*100).toFixed(1);
+      segDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segClsL[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixasL[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColorsL[i]}"></div></div></div>`;
+    });
+  }
+  const segTitleEl=document.getElementById('segTableTitle');
+  if(segTitleEl) segTitleEl.textContent = `Segmentação por GMV — Detalhes (${mesNm})`;
+}
+
+function onClienteMesChange(){
+  const sel=document.getElementById('clienteMesSel');
+  if(sel) applyClienteFiltro(parseInt(sel.value));
+}
+function resetClienteMes(){
+  const sel=document.getElementById('clienteMesSel');
+  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+  if(sel) sel.value = curI;
+  applyClienteFiltro(curI);
+}
+
+(function initClienteMesSelect(){
+  const sel=document.getElementById('clienteMesSel');
+  if(!sel) return;
+  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+  let opts='';
+  for(let i=0;i<=curI;i++){ opts+=`<option value="${i}">${months[i]}</option>`; }
+  sel.innerHTML=opts;
+  sel.value = curI;
+  applyClienteFiltro(curI);
 })();
 
 // ===================== COMISSÕES =====================
@@ -16196,94 +16302,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
     if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
     empty.style.display='none';
     tbody.innerHTML = rows.map(function(r){
-      var padLabel    = r[1]===1 ? '<span style="color:#22d3ee;font-weight:600">Q1</span>' : '<span style="color:#f59e0b;font-weight:600">Q2</span>';
-      var statusLabel = r[2]===0 ? '<span style="color:var(--danger)">N\u00e3o comprou</span>' : '<span style="color:#f59e0b">Mudou p/'+(r[1]===1?'Q2':'Q1')+'</span>';
-      var diaStr      = r[3]>0 ? 'dia '+r[3] : '—';
-      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">'+
-        '<td style="padding:7px 6px">'+r[0]+'</td>'+
-        '<td style="text-align:center;padding:7px 6px">'+padLabel+'</td>'+
-        '<td style="text-align:center;padding:7px 6px">'+statusLabel+'</td>'+
-        '<td style="text-align:center;padding:7px 6px;color:var(--muted)">'+diaStr+'</td>'+
-        '<td style="text-align:center;padding:7px 6px">'+
-          '<div style="display:inline-flex;align-items:center;gap:5px">'+
-          '<div style="width:50px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">'+
-          '<div style="width:'+r[4]+'%;height:100%;background:#22d3ee;border-radius:3px"></div></div>'+
-          '<span style="color:var(--muted);font-size:11px">'+r[4]+'%</span></div></td>'+
-        '</tr>';
-    }).join('');
-  };
-
-  // Chart — lazy init via direct listener on quinzena tab button (no showTab override)
-  var _qzChartDone = false;
-  function _initQzChart(){
-    if(_qzChartDone || !window.Chart || !window.QZ_MONTHS) return;
-    _qzChartDone = true;
-    setTimeout(function(){
-      var ctx = document.getElementById('qzHistChart');
-      if(!ctx) return;
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: QZ_MONTHS,
-          datasets: [
-            {label:'1ª Quinzena (dias 1–15)', data:QZ_Q1, backgroundColor:'rgba(91,106,240,0.75)', borderColor:'#5b6af0', borderWidth:1},
-            {label:'2ª Quinzena (dias 16–31)', data:QZ_Q2, backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#f59e0b', borderWidth:1}
-          ]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{legend:{labels:{color:'var(--text)',font:{size:11}}}},
-          scales:{
-            x:{grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'var(--muted)',font:{size:10}}},
-            y:{grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'var(--muted)'}}
-          }
-        }
-      });
-    }, 80);
-  }
-  // Attach directly to the Quinzena tab button — no showTab override needed
-  document.addEventListener('DOMContentLoaded', function(){
-    // Pre-populate table so it's ready when tab opens
-    if(window.qzFilter) window.qzFilter('todos');
-    // Also wire up tab button click for chart init
-    var qzTabBtn = document.querySelector(".tab[onclick*=\"quinzena\"]");
-    if(qzTabBtn){
-      qzTabBtn.addEventListener('click', function(){
-        if(window.qzFilter) window.qzFilter('todos');
-        _initQzChart();
-      });
-    }
-  });
-})();
-</script>
-
-
-
-<!-- ===== MODAL AUTORIZAÇÃO DE COMISSÃO ===== -->
-<div id="authModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);overflow-y:auto;padding:32px 16px;">
-  <div id="authDoc" style="max-width:800px;margin:0 auto;background:#fff;border-radius:12px;padding:40px 48px;color:#111;font-family:Georgia,serif;">
-    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e40af;padding-bottom:18px;margin-bottom:28px;">
-      <div style="width:52px;height:52px;background:linear-gradient(135deg,#1e40af,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;flex-shrink:0;">M</div>
-      <div>
-        <div style="font-size:20px;font-weight:700;color:#1e293b;font-family:Arial,sans-serif;">Motiva Benefícios</div>
-        <div style="font-size:12px;color:#64748b;font-family:Arial,sans-serif;">Gestão de Benefícios Corporativos</div>
-      </div>
-      <div style="margin-left:auto;text-align:right;font-family:Arial,sans-serif;">
-        <div style="font-size:11px;color:#64748b;">Emitido em</div>
-        <div style="font-size:13px;font-weight:600;" id="authDocDate"></div>
-      </div>
-    </div>
-    <h2 style="text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1e293b;margin:0 0 28px;font-family:Arial,sans-serif;">
-      Relatório de Autorização de Comissão
-    </h2>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px;font-family:Arial,sans-serif;font-size:13px;">
-      <tr>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:30%;color:#334155;">Funcionário</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocVendor"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;width:25%;color:#334155;">Mês de Referência</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:700;color:#1e40af;" id="authDocPeriod"></td>
-      </tr>
-      <tr>
-        <td style="padding:8px 12px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:600;color:#334155;">Total Empresas</td>
-        <td style="padding:8px 12px;border:1px solid #cbd5e1;" id="authDocQtd"></td>
-        <td style="padding:8px 12px;background:#f1f5f9;bo
+      var padLabel    = r[1]=
