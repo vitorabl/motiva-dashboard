@@ -1726,105 +1726,6 @@ var statusChartInst, segPieChartInst;
   });
 })();
 
-// ===================== FILTRO DE MÊS — CLIENTES (histórico ativos/segmentação) =====================
-// Segmentação por mês = clientes com GMV>0 naquele mês (_CD col 5+mi), agrupados pelo
-// segmento cadastrado de cada cliente (_CD[2]). Fórmula validada contra o snapshot do
-// último mês completo gerado pelo update_vars.py (bate 100% com segData).
-const SEG_NAMES_CLI = {0:'Diamante',1:'Ouro',2:'Prata',3:'Bronze-P',4:'Bronze-PP'};
-function computeSegForMonth(mi){
-  const counts = {Diamante:0,Ouro:0,Prata:0,'Bronze-P':0,'Bronze-PP':0};
-  _CD.forEach(row=>{
-    const gmv = row[5+mi];
-    if(!gmv || gmv<=0) return;
-    const name = SEG_NAMES_CLI[row[2]];
-    if(name!==undefined) counts[name]++;
-  });
-  return counts;
-}
-
-let clienteSelMonthIdx = null;
-function applyClienteFiltro(mi){
-  clienteSelMonthIdx = mi;
-  const mesNm = months[mi] || '';
-
-  // KPIs Ativos / Em Risco / Inativos / Base
-  renderClienteKPIs(mi);
-
-  // Status donut + detalhe de inatividade (mesmos números dos KPIs acima)
-  const ativos = qtdAtivos[mi]||0, risco = qtdRisco[mi]||0, inativos = qtdInativos[mi]||0;
-  const totalStatus = (ativos+risco+inativos) || 1;
-  if(statusChartInst){
-    statusChartInst.data.datasets[0].data=[ativos,risco,inativos];
-    statusChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/totalStatus*100).toFixed(1)}%)`;
-    statusChartInst.update();
-  }
-  const statusTitleEl=document.getElementById('statusChartTitle');
-  if(statusTitleEl) statusTitleEl.textContent = `Status de Atividade (${mesNm})`;
-  const statusSubEl=document.getElementById('statusChartSub');
-  if(statusSubEl) statusSubEl.textContent = `Distribuição dos ${totalStatus.toLocaleString('pt-BR')} clientes`;
-
-  const inactDiv2=document.getElementById('inactiveTable');
-  if(inactDiv2){
-    const inact2=[
-      {label:'Ativos (≤30d)',cls:'ativo',qtd:ativos},
-      {label:'Em Risco (30–90d)',cls:'risco',qtd:risco},
-      {label:'Inativos (+90d)',cls:'inativo',qtd:inativos},
-    ];
-    inactDiv2.innerHTML='';
-    inact2.forEach(s=>{
-      const pv=(s.qtd/totalStatus*100).toFixed(1);
-      inactDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
-    });
-  }
-
-  // Segmentação — ativos no mês, por segmento
-  const segCounts = computeSegForMonth(mi);
-  const segLabelsL = Object.keys(segCounts);
-  const segValsL = segLabelsL.map(k=>segCounts[k]);
-  const segTotalL = segValsL.reduce((a,b)=>a+b,0) || 1;
-  const segColorsL=[C.purple,C.amber,C.slate,C.orange,'#475569'];
-  if(segPieChartInst){
-    segPieChartInst.data.labels=segLabelsL;
-    segPieChartInst.data.datasets[0].data=segValsL;
-    segPieChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotalL*100).toFixed(1)}%)`;
-    segPieChartInst.update();
-  }
-  const segDiv2=document.getElementById('segTable');
-  if(segDiv2){
-    const segFaixasL={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
-    const segClsL={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
-    segDiv2.innerHTML='';
-    segLabelsL.forEach((k,i)=>{
-      const v=segValsL[i],pv=(v/segTotalL*100).toFixed(1);
-      segDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segClsL[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixasL[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColorsL[i]}"></div></div></div>`;
-    });
-  }
-  const segTitleEl=document.getElementById('segTableTitle');
-  if(segTitleEl) segTitleEl.textContent = `Segmentação por GMV — Detalhes (${mesNm})`;
-}
-
-function onClienteMesChange(){
-  const sel=document.getElementById('clienteMesSel');
-  if(sel) applyClienteFiltro(parseInt(sel.value));
-}
-function resetClienteMes(){
-  const sel=document.getElementById('clienteMesSel');
-  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
-  if(sel) sel.value = curI;
-  applyClienteFiltro(curI);
-}
-
-(function initClienteMesSelect(){
-  const sel=document.getElementById('clienteMesSel');
-  if(!sel) return;
-  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
-  let opts='';
-  for(let i=0;i<=curI;i++){ opts+=`<option value="${i}">${months[i]}</option>`; }
-  sel.innerHTML=opts;
-  sel.value = curI;
-  applyClienteFiltro(curI);
-})();
-
 // ===================== COMISSÕES =====================
 const commSellers={
   'Karine':  {data:commKarine,  color:C.cyan,   status:'Ativo'},
@@ -3666,6 +3567,106 @@ const _CD=[
 ];
 const _toClient=r=>({cnpj:r[0],empresa:r[1],origem:'VT',cadastro:r[3],segmento:_SEGS[r[2]],maiorGmv:Math.max(...r.slice(5)),gmv:r.slice(5),top:r[4]===1});
 let clientGmvData = _CD.map(_toClient);
+
+// ===================== FILTRO DE MÊS — CLIENTES (histórico ativos/segmentação) =====================
+// Segmentação por mês = clientes com GMV>0 naquele mês (_CD col 5+mi), agrupados pelo
+// segmento cadastrado de cada cliente (_CD[2]). Fórmula validada contra o snapshot do
+// último mês completo gerado pelo update_vars.py (bate 100% com segData).
+const SEG_NAMES_CLI = {0:'Diamante',1:'Ouro',2:'Prata',3:'Bronze-P',4:'Bronze-PP'};
+function computeSegForMonth(mi){
+  const counts = {Diamante:0,Ouro:0,Prata:0,'Bronze-P':0,'Bronze-PP':0};
+  _CD.forEach(row=>{
+    const gmv = row[5+mi];
+    if(!gmv || gmv<=0) return;
+    const name = SEG_NAMES_CLI[row[2]];
+    if(name!==undefined) counts[name]++;
+  });
+  return counts;
+}
+
+let clienteSelMonthIdx = null;
+function applyClienteFiltro(mi){
+  clienteSelMonthIdx = mi;
+  const mesNm = months[mi] || '';
+
+  // KPIs Ativos / Em Risco / Inativos / Base
+  renderClienteKPIs(mi);
+
+  // Status donut + detalhe de inatividade (mesmos números dos KPIs acima)
+  const ativos = qtdAtivos[mi]||0, risco = qtdRisco[mi]||0, inativos = qtdInativos[mi]||0;
+  const totalStatus = (ativos+risco+inativos) || 1;
+  if(statusChartInst){
+    statusChartInst.data.datasets[0].data=[ativos,risco,inativos];
+    statusChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/totalStatus*100).toFixed(1)}%)`;
+    statusChartInst.update();
+  }
+  const statusTitleEl=document.getElementById('statusChartTitle');
+  if(statusTitleEl) statusTitleEl.textContent = `Status de Atividade (${mesNm})`;
+  const statusSubEl=document.getElementById('statusChartSub');
+  if(statusSubEl) statusSubEl.textContent = `Distribuição dos ${totalStatus.toLocaleString('pt-BR')} clientes`;
+
+  const inactDiv2=document.getElementById('inactiveTable');
+  if(inactDiv2){
+    const inact2=[
+      {label:'Ativos (≤30d)',cls:'ativo',qtd:ativos},
+      {label:'Em Risco (30–90d)',cls:'risco',qtd:risco},
+      {label:'Inativos (+90d)',cls:'inativo',qtd:inativos},
+    ];
+    inactDiv2.innerHTML='';
+    inact2.forEach(s=>{
+      const pv=(s.qtd/totalStatus*100).toFixed(1);
+      inactDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="pill ${s.cls}">${s.label}</span><strong>${s.qtd} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%"></div></div></div>`;
+    });
+  }
+
+  // Segmentação — ativos no mês, por segmento
+  const segCounts = computeSegForMonth(mi);
+  const segLabelsL = Object.keys(segCounts);
+  const segValsL = segLabelsL.map(k=>segCounts[k]);
+  const segTotalL = segValsL.reduce((a,b)=>a+b,0) || 1;
+  const segColorsL=[C.purple,C.amber,C.slate,C.orange,'#475569'];
+  if(segPieChartInst){
+    segPieChartInst.data.labels=segLabelsL;
+    segPieChartInst.data.datasets[0].data=segValsL;
+    segPieChartInst.options.plugins.tooltip.callbacks.label = ctx=>` ${ctx.label}: ${ctx.parsed} (${(ctx.parsed/segTotalL*100).toFixed(1)}%)`;
+    segPieChartInst.update();
+  }
+  const segDiv2=document.getElementById('segTable');
+  if(segDiv2){
+    const segFaixasL={Diamante:'> R$50K/mês',Ouro:'R$10K–R$49K/mês',Prata:'R$5K–R$9.999/mês','Bronze-P':'R$1K–R$4.999/mês','Bronze-PP':'até R$1K/mês'};
+    const segClsL={Diamante:'diamante',Ouro:'ouro',Prata:'prata','Bronze-P':'bronze-p','Bronze-PP':'bronze-pp'};
+    segDiv2.innerHTML='';
+    segLabelsL.forEach((k,i)=>{
+      const v=segValsL[i],pv=(v/segTotalL*100).toFixed(1);
+      segDiv2.innerHTML+=`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span><span class="pill ${segClsL[k]}">${k}</span><span style="font-size:11px;color:#94a3b8;margin-left:8px;">${segFaixasL[k]}</span></span><strong>${v} (${pv}%)</strong></div><div class="progress"><div class="progress-fill" style="width:${pv}%;background:${segColorsL[i]}"></div></div></div>`;
+    });
+  }
+  const segTitleEl=document.getElementById('segTableTitle');
+  if(segTitleEl) segTitleEl.textContent = `Segmentação por GMV — Detalhes (${mesNm})`;
+}
+
+function onClienteMesChange(){
+  const sel=document.getElementById('clienteMesSel');
+  if(sel) applyClienteFiltro(parseInt(sel.value));
+}
+function resetClienteMes(){
+  const sel=document.getElementById('clienteMesSel');
+  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+  if(sel) sel.value = curI;
+  applyClienteFiltro(curI);
+}
+
+(function initClienteMesSelect(){
+  const sel=document.getElementById('clienteMesSel');
+  if(!sel) return;
+  const curI = Math.min(clientCutIdx - 1, qtdAtivos.length - 1);
+  let opts='';
+  for(let i=0;i<=curI;i++){ opts+=`<option value="${i}">${months[i]}</option>`; }
+  sel.innerHTML=opts;
+  sel.value = curI;
+  applyClienteFiltro(curI);
+})();
+
 // ⚠️ Os dados acima são de exemplo. Importe o Excel para carregar os dados reais.
 
 function fmtGmv(v){if(!v||v===0)return'—';if(v>=1e6)return'R$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'R$'+(v/1e3).toFixed(1)+'K';return'R$'+v;}
