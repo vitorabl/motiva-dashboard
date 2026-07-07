@@ -15498,7 +15498,7 @@ function exportCCPDF(){
   var selEmps=typeof _ccSelectedEmps!=='undefined'?_ccSelectedEmps:[];
   var entityLabel='Todos os clientes';
   if(grupoEl&&grupoEl.value) entityLabel=grupoEl.value;
-  else if(selEmps.length===1) entityLabel=selEmps[0];
+  else if(selEmps.length===1) entityLabel=selEmps[0].name;
   else if(selEmps.length>1) entityLabel=selEmps.length+' empresas';
   var yrVal=(document.getElementById('ccYearFilter')||{value:''}).value||'';
   var selMonths=typeof getCCSelectedMonths==='function'?getCCSelectedMonths():[];
@@ -15526,7 +15526,7 @@ function exportCCPDF(){
   var grupoFilter2=(grupoEl&&grupoEl.value)||'';
   var allPDFData=_CC.filter(function(r){
     if(origFilter2!=='all'&&parseInt(origFilter2)!==r[8]) return false;
-    if(selEmps.length>0&&!selEmps.includes(r[1])) return false;
+    if(selEmps.length>0&&!selEmps.some(function(s){return s.cnpj===r[0].replace(/\.0$/,'').replace(/\D/g,'');})) return false;
     if(grupoFilter2&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[r[0].replace(/\.0$/,'').replace(/\D/g,'')]||'')!==grupoFilter2)) return false;
     if(yrVal){var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');if(myr!==yrVal)return false;}
     if(selMonths.length>0&&!selMonths.includes(r[2])) return false;
@@ -15709,17 +15709,17 @@ function renderCCTags(){
   var inp=document.getElementById('ccTagInput');
   _ccSelectedEmps.forEach(function(e){
     var tag=document.createElement('span'); tag.className='client-tag';
-    var nm=e.length>22?e.slice(0,21)+'…':e;
+    var nm=e.name.length>22?e.name.slice(0,21)+'…':e.name;
     tag.appendChild(document.createTextNode(nm+' '));
     var btn=document.createElement('span'); btn.className='tag-remove'; btn.textContent='×';
-    (function(emp){btn.addEventListener('mousedown',function(ev){ev.preventDefault();_ccSelectedEmps=_ccSelectedEmps.filter(function(x){return x!==emp;});renderCCTags();});})(e);
+    (function(cnpj){btn.addEventListener('mousedown',function(ev){ev.preventDefault();_ccSelectedEmps=_ccSelectedEmps.filter(function(x){return x.cnpj!==cnpj;});renderCCTags();});})(e.cnpj);
     tag.appendChild(btn);
     wrap.insertBefore(tag,inp);
   });
   renderCC();
 }
-function addCCTag(emp){
-  if(!_ccSelectedEmps.includes(emp)) _ccSelectedEmps.push(emp);
+function addCCTag(cnpj,name){
+  if(!_ccSelectedEmps.some(function(s){return s.cnpj===cnpj;})) _ccSelectedEmps.push({cnpj:cnpj,name:name});
   document.getElementById('ccTagInput').value='';
   var dd=document.getElementById('ccDropdown'); if(dd) dd.style.display='none';
   renderCCTags();
@@ -15734,18 +15734,24 @@ function showCCDropdown(){
   var dd=document.getElementById('ccDropdown'); if(!dd) return;
   // Busca considera TODOS os meses/origens do historico (nao so o mes selecionado),
   // pois o objetivo aqui e localizar a empresa; o filtro de periodo e aplicado depois na tabela/KPIs.
-  var byName={};
+  // Agrupado por CNPJ (nao por nome) — o mesmo CNPJ pode aparecer com nome_fantasia/razao social
+  // diferentes em meses diferentes na planilha; agrupar por CNPJ evita perder historico.
+  var byCnpj={};
   (_CC||[]).forEach(function(r){
-    var nm=r[1], cnpj=String(r[0]).replace(/\D/g,'');
-    if(!byName[nm]) byName[nm]={name:nm,cnpjs:[]};
-    if(cnpj&&byName[nm].cnpjs.indexOf(cnpj)===-1) byName[nm].cnpjs.push(cnpj);
+    var cnpj=String(r[0]).replace(/\D/g,''), nm=r[1];
+    if(!cnpj) return;
+    if(!byCnpj[cnpj]) byCnpj[cnpj]={cnpj:cnpj,names:{}};
+    byCnpj[cnpj].names[nm]=(byCnpj[cnpj].names[nm]||0)+1;
   });
-  var emps=Object.keys(byName).map(function(k){return byName[k];})
-    .filter(function(o){
-      if(_ccSelectedEmps.includes(o.name)) return false;
+  var emps=Object.keys(byCnpj).map(function(k){
+    var o=byCnpj[k];
+    var variants=Object.keys(o.names).sort(function(a,b){return o.names[b]-o.names[a];});
+    return {cnpj:o.cnpj,name:variants[0],variants:variants};
+  }).filter(function(o){
+      if(_ccSelectedEmps.some(function(s){return s.cnpj===o.cnpj;})) return false;
       if(!q) return true;
-      if(o.name.toLowerCase().includes(q)) return true;
-      if(qDigits&&o.cnpjs.some(function(c){return c.includes(qDigits);})) return true;
+      if(o.variants.some(function(v){return v.toLowerCase().includes(q);})) return true;
+      if(qDigits&&o.cnpj.includes(qDigits)) return true;
       return false;
     }).sort(function(a,b){return a.name.localeCompare(b.name);}).slice(0,30);
   if(!emps.length){dd.style.display='none';return;}
@@ -15754,12 +15760,10 @@ function showCCDropdown(){
     var item=document.createElement('div'); item.className='client-dropdown-item';
     var nm=document.createElement('span'); nm.className='dd-name'; nm.textContent=o.name;
     item.appendChild(nm);
-    if(o.cnpjs.length){
-      var cn=document.createElement('span'); cn.className='dd-cnpj';
-      cn.textContent=o.cnpjs.join(', ');
-      item.appendChild(cn);
-    }
-    (function(emp){item.addEventListener('mousedown',function(ev){ev.preventDefault();addCCTag(emp);});})(o.name);
+    var cn=document.createElement('span'); cn.className='dd-cnpj';
+    cn.textContent=o.variants.length>1?(o.cnpj+' · tambem: '+o.variants.slice(1).join(', ')):o.cnpj;
+    item.appendChild(cn);
+    (function(cnpj,name){item.addEventListener('mousedown',function(ev){ev.preventDefault();addCCTag(cnpj,name);});})(o.cnpj,o.name);
     dd.appendChild(item);
   });
   dd.style.display='block';
@@ -16068,7 +16072,7 @@ function renderCC(){
     var base=_CC.filter(function(r){
       if(r[2]!==mesIdx) return false;
       if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
-      if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
+      if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.some(function(s){return s.cnpj===_cnpjKey(r[0]);})) return false;
       if(grupoFilter){
         var vm=typeof VINCULO_MAP!=='undefined'?VINCULO_MAP:{};
         var g=vm[_cnpjKey(r[0])]||'';
@@ -16195,7 +16199,7 @@ function renderCC(){
   var selMonths=getCCSelectedMonths();
   var allPeriodData = _CC.filter(function(r){
     if(origFilter!=='all'&&parseInt(origFilter)!==r[8]) return false;
-    if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.includes(r[1])) return false;
+    if(_ccSelectedEmps.length>0&&!_ccSelectedEmps.some(function(s){return s.cnpj===_cnpjKey(r[0]);})) return false;
     if(grupoFilter&&(typeof VINCULO_MAP==='undefined'||(VINCULO_MAP[_cnpjKey(r[0])]||'')!==grupoFilter)) return false;
     if(yrFilter){
       var myr='20'+((_CC_MESES[r[2]]||'').split('/')[1]||'');
