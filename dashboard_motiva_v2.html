@@ -309,7 +309,7 @@ function togglePwd(){
   <div class="table-card"><h3>📋 Detalhe Mensal GMV</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th>GMV VT</th><th>% VT</th><th>GMV PAT</th><th>% PAT</th><th>GMV Total</th><th>TR VT</th><th>TR PAT</th></tr></thead><tbody id="gmvTbody"></tbody></table></div></div>
   <div class="table-card" style="margin-top:12px;">
     <h3>📊 GMV VT por Segmento de Cliente</h3>
-    <p class="chart-sub">Diamante · Ouro · Prata · Bronze-P · Bronze-PP — soma do período selecionado acima (📅 Período GMV) · apenas VT, classificação da aba GMV por Cliente</p>
+    <p class="chart-sub">Diamante · Ouro · Prata · Bronze-P · Bronze-PP — soma do período selecionado acima (📅 Período GMV) · apenas VT, calculado direto de Pedido de Carga + Pedido Externo (mesma regra de GMV do restante do dashboard)</p>
     <div class="table-scroll"><table>
       <thead><tr>
         <th style="text-align:left;padding:8px 12px;">Segmento</th>
@@ -17227,5 +17227,4 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
     if(!tbody) return;
     if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
     empty.style.display='none';
-    tbody.innerHTML = rows.map(function(r){
-      var padLabel    = r[1]=
+    tbody.inn
