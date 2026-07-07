@@ -15371,7 +15371,7 @@ function initCC(){
     sel.appendChild(o);
     if(selComp){ var o2=document.createElement('option'); o2.value=String(i); o2.textContent=_CC_MESES[i]; selComp.appendChild(o2); }
   }
-  var defaultIdx=Math.max(0,_CC_MESES.length-2);
+  var defaultIdx=Math.max(0,_CC_MESES.length-1);
   sel.value=String(defaultIdx);
   if(selComp) selComp.value=String(Math.max(0,defaultIdx-1));
 }
@@ -16040,7 +16040,7 @@ function renderCC(){
   var selMes=sel?parseInt(sel.value):-1;
   var selMesComp=selComp?parseInt(selComp.value):-1;
   var origFilter=selOrig?selOrig.value:'all';
-  if(isNaN(selMes)) selMes=Math.max(0,_CC_MESES.length-2);
+  if(isNaN(selMes)) selMes=Math.max(0,_CC_MESES.length-1);
   var hasComp=selMesComp>=0&&selMesComp!==selMes&&!isNaN(selMesComp);
   var mesNm=_CC_MESES[selMes]||''; var compMesNm=hasComp?(_CC_MESES[selMesComp]||''):'';
 
