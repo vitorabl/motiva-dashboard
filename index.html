@@ -5055,9 +5055,9 @@ window.showTab = function(name,e){
   </div>
   <div id="sum-kpi-area"></div>
   <div id="sum-analysis" style="margin-top:14px;"></div>
-  <div style="margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--text);">🏢 Top 20 maiores variações de GMV — por empresa</div>
+  <div style="margin:18px 0 4px;font-size:12px;font-weight:700;color:var(--text);">🏢 Top 10 maiores variações de GMV — por grupo</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
-    Ordenado por |ΔGMV|. Clique no cabeçalho para reordenar. 🔴 GMV cresceu mas NF caiu.
+    Período restrito a Jan–Jun/26. Ordenado por |ΔGMV|. Clique no cabeçalho para reordenar. 🔴 GMV cresceu mas NF caiu.
   </div>
   <div style="overflow-x:auto;">
     <table id="sum-table" style="width:100%;border-collapse:collapse;font-size:11px;min-width:960px;">
@@ -5111,11 +5111,15 @@ function initSumTab(){
   var selA=document.getElementById('sumMesA');
   var selB=document.getElementById('sumMesB');
   if(!selA||!selB||typeof months==='undefined') return;
-  months.forEach(function(m,i){ selA.add(new Option(m,i)); selB.add(new Option(m,i)); });
-  var lastIdx=0;
-  for(var k=months.length-1;k>=0;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){lastIdx=k;break;} }
-  var prevIdx=0;
-  for(var k=lastIdx-1;k>=0;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){prevIdx=k;break;} }
+  // Escopo fixo: apenas Jan/26 a Jun/26 (ultimos 6 meses do 1o semestre, a pedido)
+  var _rangeStart=months.indexOf('Jan/26'), _rangeEnd=months.indexOf('Jun/26');
+  if(_rangeStart<0) _rangeStart=0;
+  if(_rangeEnd<0) _rangeEnd=months.length-1;
+  for(var mi=_rangeStart; mi<=_rangeEnd; mi++){ selA.add(new Option(months[mi],mi)); selB.add(new Option(months[mi],mi)); }
+  var lastIdx=_rangeStart;
+  for(var k=_rangeEnd;k>=_rangeStart;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){lastIdx=k;break;} }
+  var prevIdx=_rangeStart;
+  for(var k=lastIdx-1;k>=_rangeStart;k--){ if((gmvVT[k]||0)+(gmvPAT[k]||0)>0){prevIdx=k;break;} }
   selA.value=prevIdx; selB.value=lastIdx;
   _sumInit=true;
   buildSummary();
@@ -5198,26 +5202,35 @@ window.buildSummary=function(){
   }
   an.innerHTML=alerts.length?'<div style="padding:10px 14px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);font-size:12px;line-height:1.8;color:var(--text);">'+alerts.join('<br>')+'</div>':'';
 
-  // Tabela por empresa
+  // Tabela por GRUPO ECONOMICO (empresas sem grupo definido contam como grupo proprio)
   if(typeof _RD==='undefined'){document.getElementById('sum-tbody').innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Dados não disponíveis</td></tr>';return;}
-  var rows=[];
+  function _cnpjKeySum(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,'').padStart(14,'0'); }
+  var _vmap=(typeof VINCULO_MAP!=='undefined')?VINCULO_MAP:{};
+  var byGroup={};
   _RD.forEach(function(e){
     var gA=(e[2]&&e[2][idxA])||0, gB=(e[2]&&e[2][idxB])||0;
     var nA=(e[3]&&e[3][idxA])||0, nB=(e[3]&&e[3][idxB])||0;
     if(gA===0&&gB===0) return;
     var cnpj=e[1];
+    var grupo=_vmap[_cnpjKeySum(cnpj)]||e[0]; // sem grupo -> usa o proprio nome da empresa
     var pA=getCCProj(cnpj,idxA), pB=getCCProj(cnpj,idxB);
-    rows.push({nome:e[0],cnpj:cnpj,gA:gA,gB:gB,dG:gB-gA,nA:nA,nB:nB,dN:nB-nA,
-      trA:gA?nA/gA*100:0,trB:gB?nB/gB*100:0,pA:pA,pB:pB,dP:pB-pA});
+    if(!byGroup[grupo]) byGroup[grupo]={nome:grupo,gA:0,gB:0,nA:0,nB:0,pA:0,pB:0,n:0};
+    var g=byGroup[grupo];
+    g.gA+=gA; g.gB+=gB; g.nA+=nA; g.nB+=nB; g.pA+=pA; g.pB+=pB; g.n+=1;
+  });
+  var rows=Object.keys(byGroup).map(function(k){
+    var g=byGroup[k];
+    return {nome:g.nome+(g.n>1?' ('+g.n+' empresas)':''),cnpj:'',gA:g.gA,gB:g.gB,dG:g.gB-g.gA,nA:g.nA,nB:g.nB,dN:g.nB-g.nA,
+      trA:g.gA?g.nA/g.gA*100:0,trB:g.gB?g.nB/g.gB*100:0,pA:g.pA,pB:g.pB,dP:g.pB-g.pA};
   });
   rows.sort(function(a,b){return Math.abs(b.dG)-Math.abs(a.dG);});
   _sumRows=rows;_sumSortCol=3;_sumSortAsc=false;
-  renderSumRows(rows.slice(0,20));
+  renderSumRows(rows.slice(0,10));
   renderSumHead(mA,mB);
 };
 
 function renderSumHead(mA,mB){
-  var cols=['Empresa','GMV '+mA,'GMV '+mB,'ΔGMV','NF '+mA,'NF '+mB,'ΔNF','TR% '+mA,'TR% '+mB,'ΔTR','Proj '+mA,'Proj '+mB,'ΔProj'];
+  var cols=['Grupo','GMV '+mA,'GMV '+mB,'ΔGMV','NF '+mA,'NF '+mB,'ΔNF','TR% '+mA,'TR% '+mB,'ΔTR','Proj '+mA,'Proj '+mB,'ΔProj'];
   document.getElementById('sum-thead').innerHTML='<tr>'+cols.map(function(h,i){
     return '<th style="padding:5px 7px;text-align:'+(i===0?'left':'right')+
       ';background:var(--card2);border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;font-size:11px;" '+
@@ -5454,7 +5467,7 @@ window.exportResumoPDF=function(){
       '<div class="sub">Motiva Beneficios &nbsp;|&nbsp; Gerado em '+agora+'</div>'+
       kpiHtml+
       analiseHtml+
-      '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:#1e293b;">Top 20 maiores variacoes de GMV por empresa</div>'+
+      '<div style="margin:16px 0 6px;font-size:12px;font-weight:700;color:#1e293b;">Top 10 maiores variacoes de GMV por grupo (Jan-Jun/26)</div>'+
       '<div style="overflow-x:auto;"><table><thead>'+theadHtml+'</thead><tbody>'+tbodyHtml+'</tbody></table></div>'+
       '<div class="footer">'+
       '<span>Documento gerado automaticamente &middot; Uso interno</span>'+
