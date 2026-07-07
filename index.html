@@ -342,6 +342,18 @@ function togglePwd(){
     <div class="chart-card"><h3>Composição de Receita por Categoria</h3><p class="chart-sub" id="r-pie-sub">Último mês selecionado</p><div class="chart-wrap"><canvas id="recPieChart"></canvas></div></div>
   </div>
   <div class="table-card"><h3>📋 Detalhe Mensal Receita</h3><div class="table-scroll"><table><thead><tr><th>Mês</th><th style="color:#818cf8;">Tx Adm VT</th><th style="color:#22d3ee;">Tx Sucesso VT</th><th style="color:#f59e0b;">Tx Entrega (2° Via)</th><th style="color:#f97316;">Financiamento</th><th>Rec. VT Total</th><th>Rec. PAT</th><th>Rec. Total</th><th>Margem s/ GMV</th></tr></thead><tbody id="recTbody"></tbody></table></div></div>
+  <div class="table-card" style="margin-top:12px;">
+    <h3>📊 GMV VT por Segmento de Cliente</h3>
+    <p class="chart-sub">Diamante · Ouro · Prata · Bronze-P · Bronze-PP — soma do período selecionado acima · classificação da aba GMV por Cliente (carteira VT)</p>
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th style="text-align:left;padding:8px 12px;">Segmento</th>
+        <th style="text-align:right;padding:8px 12px;">GMV (R$)</th>
+        <th style="text-align:right;padding:8px 12px;color:#60a5fa;">% do Total</th>
+      </tr></thead>
+      <tbody id="recSegBody"></tbody>
+    </table></div>
+  </div>
   <div id="rEmpSec" style="display:none;margin-top:12px;" class="table-card">
     <h3 id="rEmpTitle">Detalhe por Empresa</h3>
     <div class="table-scroll"><table>
@@ -1613,6 +1625,40 @@ function applyRec(){
       _es.style.display='';
     } else { _es.style.display='none'; }
   }
+  renderRecSeg();
+}
+
+function renderRecSeg(){
+  var body=document.getElementById('recSegBody');
+  if(!body) return;
+  if(typeof clientGmvData==='undefined'||typeof rFrom==='undefined'||typeof rTo==='undefined') return;
+  var segs=['Diamante','Ouro','Prata','Bronze-P','Bronze-PP'];
+  var totals={}; segs.forEach(function(s){totals[s]=0;});
+  var grand=0;
+  clientGmvData.forEach(function(c){
+    if(segs.indexOf(c.segmento)===-1) return;
+    var soma=0;
+    for(var i=rFrom;i<=rTo;i++){ soma+=(c.gmv[i]||0); }
+    totals[c.segmento]+=soma;
+    grand+=soma;
+  });
+  body.innerHTML='';
+  var segColors={'Diamante':'#a78bfa','Ouro':'#fbbf24','Prata':'#94a3b8','Bronze-P':'#f97316','Bronze-PP':'#c2825a'};
+  segs.forEach(function(s){
+    var v=totals[s];
+    var pct=grand>0?(v/grand*100):0;
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td style="padding:6px 12px;font-weight:600;color:'+(segColors[s]||'#e2e8f0')+';">'+s+'</td>'+
+      '<td style="text-align:right;padding:6px 12px;">'+fmt(v)+'</td>'+
+      '<td style="text-align:right;padding:6px 12px;color:#60a5fa;font-weight:600;">'+pct.toFixed(1)+'%</td>';
+    body.appendChild(tr);
+  });
+  var totRow=document.createElement('tr');
+  totRow.style.borderTop='1px solid var(--border)';
+  totRow.innerHTML='<td style="padding:6px 12px;font-weight:700;">Total</td>'+
+    '<td style="text-align:right;padding:6px 12px;font-weight:700;">'+fmt(grand)+'</td>'+
+    '<td style="text-align:right;padding:6px 12px;font-weight:700;">100,0%</td>';
+  body.appendChild(totRow);
 }
 
 (function initRecCharts(){
@@ -16234,6 +16280,11 @@ window.showTab=function(name,e){
     var sel=document.getElementById('ccMes');
     if(sel&&sel.options.length===0){ initCC(); initCCGrupo(); buildCCMonthList(); }
     renderCC();
+  }
+  if(name==='receitas' && typeof renderRecSeg==='function'){
+    // Garante que a tabela de GMV por segmento seja preenchida mesmo se a
+    // primeira chamada de applyRec() tiver ocorrido antes do _CD carregar.
+    renderRecSeg();
   }
 };
 // Inicializar ao carregar a página (para o seletor ficar pronto)
