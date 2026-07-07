@@ -1,5 +1,5 @@
 # Regras do Dashboard Motiva — Referência Completa
-> Atualizado em 03/06/2026 — compilado após sessão completa de refinamento
+> Atualizado em 02/07/2026 — correções críticas de GMV, cartões e filtro PE
 
 ---
 
@@ -162,7 +162,61 @@ GIT_DIR = "/tmp/motiva-update-TIMESTAMP"  # nunca reusar /tmp/motiva-dashboard (
 
 ---
 
-## 9. Valores de Referência — Abr/26 (último mês completo)
+## 9. Correções Aplicadas em 02/Jul/2026
+
+### 9.1 GMV PCC — coluna correta
+- ❌ **Errado (antigo):** `total_pedido` (col L) — inclui taxas administrativas
+- ✅ **Correto:** `valor_recarga` (col M) — valor líquido de recarga
+- Diferença: R$ 5,6 milhões de GMV inflado corrigido
+
+### 9.2 PE filtro BaseSK para GMV
+- ✅ `BaseSK = "Sem SK"` → conta como GMV e projeção de saldo
+- ❌ `BaseSK = [número]` → **excluído do GMV**, mas receita/taxas mantidas
+- Impacto: 572 linhas PE excluídas do GMV (R$ 1,748,277 removidos)
+
+### 9.3 Cartões — soma real
+- ❌ **Antigo:** `count(Codigo_bilhetagem)` = contagem de pedidos (linhas)
+- ✅ **Correto:** `sum(Qtd Cartões)` = coluna PCC índice 29, soma de beneficiários por pedido
+
+### 9.4 last_complete — critério de mês completo
+- ❌ **Antigo:** `gmv_pat > 0` → nunca avançava (PAT encerrado)
+- ✅ **Correto:** `gmv_total > 0` (VT + PAT) — funciona com PAT = 0
+
+### 9.5 Motiva não opera mais PAT
+- `gmvPAT` sempre = 0 a partir de 2026
+- Dashboard mantém histórico PAT mas não recebe novos dados
+- `recPAT` também = 0
+
+### 9.6 Regras _RD (GMV por empresa / Resumo)
+- `gmv_arr`: PCC `valor_recarga` (todos) + PE `Valor Recarga (I)` (só Sem SK)
+- `nf_arr`: PCC `nota_fiscal` (todos) + PE `NF` (todos — receita inclui Com SK)
+
+### 9.7 Regras _CC (Controle por Cliente)
+- PCC: todos os pedidos, `valor_recarga` como GMV, `Qtd Cartões` como cartões
+- PE: apenas `BaseSK = "Sem SK"`, `Valor Recarga (I)` como GMV
+- Comissões/taxas: todo PE independente de SK
+
+### 9.8 Novas funcionalidades
+- Botão `📄 Exportar PDF` adicionado à aba Resumo
+- Clientes mesclados por CNPJ em `_CC` e `_RD`
+
+---
+
+## 10. Valores de Referência — Jun/26 (último mês completo desde 02/Jul/2026)
+
+| Métrica | Valor |
+|---------|-------|
+| GMV VT | R$ 5.021.844 |
+| GMV PAT | R$ 0 (PAT encerrado) |
+| Receita VT | R$ 216.245 |
+| Take Rate VT | 4,31% |
+| Cartões | 18.027 |
+| Empresas únicas | 831 CNPJs |
+| Entradas _CC | 9.496 |
+
+---
+
+## 11. Valores de Referência — Abr/26 (histórico)
 
 | Métrica | Valor |
 |---------|-------|
@@ -180,7 +234,40 @@ GIT_DIR = "/tmp/motiva-update-TIMESTAMP"  # nunca reusar /tmp/motiva-dashboard (
 
 ---
 
-## 10. GitHub Pages
+## 12. Regra de Segmentação de Clientes (GMV Rule Based)
+
+Segmentação de cada cliente (CNPJ) pelo **maior GMV mensal** observado no período analisado
+(`max(gmv[i] for i in periodo)`), usando a mesma base de dados do GMV VT oficial:
+
+| Segmento | Faixa (maior GMV mensal) |
+|----------|---------------------------|
+| Diamante | >= R$ 50.000 |
+| Ouro | R$ 10.000 – R$ 50.000 |
+| Prata | R$ 5.000 – R$ 10.000 |
+| Bronze-P | R$ 1.000 – R$ 5.000 |
+| Bronze-PP | < R$ 1.000 |
+
+### Fonte dos dados (`_GMVSEG`)
+Calculado diretamente de PCC + PE — mesma Regra de GMV usada em `_RD` e `_CC` (§9.6/9.7):
+- PCC: `valor_recarga` (col M), **todos** os pedidos
+- PE: `Valor Recarga (I)` (col I), **apenas** linhas com `BaseSK = "Sem SK"`
+- Agrupado por CNPJ (`pad_cnpj`) + mês (`mes_pagamento`)
+
+Substitui a antiga fonte ("GMV por Cliente", aba separada da planilha), que apresentava pequenas
+divergências de reconciliação frente ao `gmv_vt` oficial. Ao usar a mesma base de PCC+PE do
+restante do pipeline, os números do card de segmentação ficam consistentes com os demais
+cálculos de GMV do dashboard (`_RD`, `_CC`, cards da aba GMV).
+
+### Nota de reconciliação
+Mesmo somando PCC+PE diretamente, o total por segmento não bate 100% com `gmv_vt` do
+Acompanhamento em todos os meses (diferença residual de até ~0,5%, ex.: Jun/26 R$ 5.021.844
+oficial vs. ~R$ 5.044.344 via PCC+PE direto) — o `gmv_vt` oficial aparenta incluir algum
+ajuste manual não totalmente redutível a PCC+PE isolado. Isso é uma limitação conhecida e não
+invalida a segmentação, que usa a mesma metodologia do restante do dashboard.
+
+---
+
+## 13. GitHub Pages
 URL: https://vitorabl.github.io/motiva-dashboard/
 Repo: config em `Automacao/github_config.txt` (REMOTE_URL)
 Deploy: ~2 min após push. Hard refresh: Ctrl+Shift+R ou aba anônima.
