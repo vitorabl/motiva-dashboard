@@ -15732,12 +15732,10 @@ function showCCDropdown(){
   var q=qRaw.toLowerCase();
   var qDigits=qRaw.replace(/\D/g,'');
   var dd=document.getElementById('ccDropdown'); if(!dd) return;
-  var selMes=parseInt(document.getElementById('ccMes')?.value||0);
-  var selOrig=document.getElementById('ccOrigem')?.value||'all';
+  // Busca considera TODOS os meses/origens do historico (nao so o mes selecionado),
+  // pois o objetivo aqui e localizar a empresa; o filtro de periodo e aplicado depois na tabela/KPIs.
   var byName={};
   (_CC||[]).forEach(function(r){
-    if(r[2]!==selMes) return;
-    if(selOrig!=='all'&&parseInt(selOrig)!==r[8]) return;
     var nm=r[1], cnpj=String(r[0]).replace(/\D/g,'');
     if(!byName[nm]) byName[nm]={name:nm,cnpjs:[]};
     if(cnpj&&byName[nm].cnpjs.indexOf(cnpj)===-1) byName[nm].cnpjs.push(cnpj);
