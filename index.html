@@ -1631,11 +1631,13 @@ function applyRec(){
 function renderRecSeg(){
   var body=document.getElementById('recSegBody');
   if(!body) return;
-  if(typeof clientGmvData==='undefined'||typeof rFrom==='undefined'||typeof rTo==='undefined') return;
+  var _cgd;
+  try{ _cgd=clientGmvData; }catch(e){ return; } // ainda em TDZ (script inicial) - tenta de novo depois via showTab
+  if(!_cgd||typeof rFrom==='undefined'||typeof rTo==='undefined') return;
   var segs=['Diamante','Ouro','Prata','Bronze-P','Bronze-PP'];
   var totals={}; segs.forEach(function(s){totals[s]=0;});
   var grand=0;
-  clientGmvData.forEach(function(c){
+  _cgd.forEach(function(c){
     if(segs.indexOf(c.segmento)===-1) return;
     var soma=0;
     for(var i=rFrom;i<=rTo;i++){ soma+=(c.gmv[i]||0); }
@@ -5205,7 +5207,8 @@ window.buildSummary=function(){
   // Tabela por GRUPO ECONOMICO (empresas sem grupo definido contam como grupo proprio)
   if(typeof _RD==='undefined'){document.getElementById('sum-tbody').innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Dados não disponíveis</td></tr>';return;}
   function _cnpjKeySum(v){ return String(v).replace(/\.0$/,'').replace(/\D/g,'').padStart(14,'0'); }
-  var _vmap=(typeof VINCULO_MAP!=='undefined')?VINCULO_MAP:{};
+  var _vmap={};
+  try{ _vmap=VINCULO_MAP||{}; }catch(e){ _vmap={}; }
   var byGroup={};
   _RD.forEach(function(e){
     var gA=(e[2]&&e[2][idxA])||0, gB=(e[2]&&e[2][idxB])||0;
