@@ -258,12 +258,27 @@ divergências de reconciliação frente ao `gmv_vt` oficial. Ao usar a mesma bas
 restante do pipeline, os números do card de segmentação ficam consistentes com os demais
 cálculos de GMV do dashboard (`_RD`, `_CC`, cards da aba GMV).
 
-### Nota de reconciliação
-Mesmo somando PCC+PE diretamente, o total por segmento não bate 100% com `gmv_vt` do
-Acompanhamento em todos os meses (diferença residual de até ~0,5%, ex.: Jun/26 R$ 5.021.844
-oficial vs. ~R$ 5.044.344 via PCC+PE direto) — o `gmv_vt` oficial aparenta incluir algum
-ajuste manual não totalmente redutível a PCC+PE isolado. Isso é uma limitação conhecida e não
-invalida a segmentação, que usa a mesma metodologia do restante do dashboard.
+### Nota de reconciliação (atualizado 07/Jul/2026)
+**Correção validada pelo usuário:** o PCC deve **excluir pedidos com `tipo_pedido = "Deposit"`**
+— esses não são recargas reais do cliente. Com essa exclusão, a reconciliação com `gmv_vt`
+do Acompanhamento passa a ser **exata** (diferença residual de centavos, arredondamento):
+
+| Mês | GMV via PCC(sem Deposit)+PE(Sem SK) | `gmv_vt` oficial | Diferença |
+|-----|--------------------------------------|--------------------|-----------|
+| Abr/26 | R$ 4.352.421,13 | R$ 4.352.421,00 | R$ 0,13 |
+| Mai/26 | R$ 4.570.791,19 | R$ 4.570.791,00 | R$ 0,19 |
+| Jun/26 | R$ 5.021.843,84 | R$ 5.021.844,00 | -R$ 0,16 |
+
+**Fórmula definitiva do GMV Rule:**
+```
+GMV = PCC.valor_recarga [tipo_pedido != "Deposit"]  (todos os demais tipos: Dealer, Broker, SecondCopy, FirstCopy)
+    + PE."Valor Recarga (I)" [BaseSK contém "Sem SK"]
+```
+
+Esta correção foi aplicada em `_GMVSEG` (card GMV VT por Segmento) e em `_CC` (Controle
+Cliente) no `update_vars.py`. **Pendente:** `_RD` (tabela "Detalhe por Empresa" da aba
+Receitas) ainda é um array estático no HTML, não gerado pelo pipeline — ainda não recebeu
+esta correção (ver §8 sobre limitações de geração automática).
 
 ---
 
