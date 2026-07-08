@@ -17269,7 +17269,7 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
       <h3>🗺️ Mapa de Calor — GMV VT por Estado</h3>
       <p class="chart-sub">Concentração de GMV no período selecionado · cor mais quente = maior GMV</p>
       <div style="position:relative;">
-        <svg id="ufMapSvg" viewBox="0 0 460 540" style="width:100%;height:420px;"></svg>
+        <svg id="ufMapSvg" viewBox="-35 -35 505 570" style="width:100%;height:420px;"></svg>
         <div id="ufTooltip" class="uf-tooltip"></div>
       </div>
     </div>
@@ -17328,7 +17328,16 @@ function renderUfMap(totals){
   const cell=42, gap=5;
   const realUfs=Object.keys(totals).filter(u=>u!=='NAO MAPEADO');
   const maxV=Math.max.apply(null, realUfs.map(u=>totals[u]||0).concat([1]));
-  let html='';
+  // Contorno do Brasil (silhueta aproximada, estilo globo) desenhado atrás da grade de estados
+  const BR_OUTLINE = 'M 87.5,16.0 Q 115.0,-18.0 162.0,-18.0 Q 209.0,-18.0 244.5,-4.0 Q 280.0,10.0 315.0,20.0 Q 350.0,30.0 396.5,45.0 Q 443.0,60.0 421.5,85.0 Q 400.0,110.0 400.0,150.0 Q 400.0,190.0 400.0,215.0 Q 400.0,240.0 375.0,255.0 Q 350.0,270.0 351.0,285.0 Q 352.0,300.0 331.0,322.5 Q 310.0,345.0 290.0,352.5 Q 270.0,360.0 250.0,375.0 Q 230.0,390.0 225.0,410.0 Q 220.0,430.0 210.0,462.5 Q 200.0,495.0 182.5,477.5 Q 165.0,460.0 155.0,435.0 Q 145.0,410.0 110.0,385.0 Q 75.0,360.0 65.0,330.0 Q 55.0,300.0 40.0,280.0 Q 25.0,260.0 2.5,250.0 Q -20.0,240.0 -15.0,215.0 Q -10.0,190.0 5.0,155.0 Q 20.0,120.0 40.0,85.0 Q 60.0,50.0 87.5,16.0 Z';
+  let html = `<defs>
+    <radialGradient id="ufGlobeGrad" cx="38%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#243155"/>
+      <stop offset="55%" stop-color="#1a2440"/>
+      <stop offset="100%" stop-color="#141b30"/>
+    </radialGradient>
+  </defs>
+  <path d="${BR_OUTLINE}" fill="url(#ufGlobeGrad)" stroke="#22d3ee" stroke-opacity="0.55" stroke-width="2"></path>`;
   Object.keys(UF_GRID).forEach(uf=>{
     const [row,col]=UF_GRID[uf];
     const x=col*(cell+gap), y=row*(cell+gap);
