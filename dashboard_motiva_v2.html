@@ -93,6 +93,27 @@
   .uf-tile-label{font-size:11px;font-weight:700;fill:#fff;pointer-events:none;text-anchor:middle;}
   .uf-tile-val{font-size:7.5px;fill:rgba(255,255,255,.85);pointer-events:none;text-anchor:middle;}
   .uf-tooltip{position:absolute;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,.4);display:none;}
+  .uf-row{cursor:pointer;}
+  .uf-row:hover td{background:rgba(91,106,240,.06);}
+  .uf-row-caret{display:inline-block;width:10px;font-size:10px;color:var(--muted);transition:transform .15s;}
+  .uf-row.expanded .uf-row-caret{transform:rotate(90deg);color:var(--accent2);}
+  .uf-op-row td{background:rgba(255,255,255,.02);font-size:12px;}
+  .uf-op-row td:first-child{padding-left:34px;color:var(--muted);}
+  .uf-zoom-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 4px;margin-left:6px;border-radius:4px;vertical-align:middle;}
+  .uf-zoom-btn:hover{color:var(--accent2);background:rgba(255,255,255,.06);}
+  .uf-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;}
+  .uf-modal-backdrop.open{display:flex;}
+  .uf-modal{background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:90vw;max-height:85vh;width:900px;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.5);}
+  .uf-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .uf-modal-head h3{margin:0;font-size:16px;}
+  .uf-modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;}
+  .uf-modal-close:hover{color:#fff;background:rgba(255,255,255,.08);}
+  .uf-modal-body{overflow:auto;padding:14px 20px 20px;}
+  .uf-modal-body table{width:100%;border-collapse:collapse;}
+  .uf-modal-body th{position:sticky;top:0;background:var(--card2);text-align:right;padding:6px 8px;font-size:11px;color:var(--muted);}
+  .uf-modal-body th:first-child{text-align:left;}
+  .uf-modal-body td{padding:6px 8px;font-size:12px;text-align:right;border-top:1px solid var(--border);}
+  .uf-modal-body td:first-child{text-align:left;}
   @media(max-width:768px){ .chart-grid,.chart-grid.thirds{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
   /* GMV por Cliente */
   .client-table-wrap { overflow-x:auto; max-height:620px; overflow-y:auto; }
@@ -17281,7 +17302,7 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
   </div>
   <div class="table-card">
     <h3>📋 GMV VT por Estado — Detalhe Mensal</h3>
-    <p class="chart-sub" style="padding:0 18px 12px;margin-top:-4px;">Linha <strong>TOTAL</strong> no topo com variação % mês a mês · cada célula mostra o valor do mês e a variação % vs. o mês anterior</p>
+    <p class="chart-sub" style="padding:0 18px 12px;margin-top:-4px;">Linha <strong>TOTAL</strong> no topo com variação % mês a mês · clique em um estado para ver as operadoras · cada célula mostra o valor do mês e a variação % vs. o mês anterior</p>
     <div class="table-scroll"><table>
       <thead><tr id="ufTheadRow"><th style="position:sticky;left:0;background:var(--card2);">Estado</th></tr></thead>
       <tbody id="ufTbody"></tbody>
@@ -17289,9 +17310,31 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
   </div>
 </div>
 
+<div class="uf-modal-backdrop" id="ufOpsModalBackdrop" onclick="if(event.target===this) closeUfOpsModal()">
+  <div class="uf-modal">
+    <div class="uf-modal-head">
+      <h3 id="ufOpsModalTitle">Operadoras</h3>
+      <button class="uf-modal-close" onclick="closeUfOpsModal()">✕</button>
+    </div>
+    <div class="uf-modal-body">
+      <table>
+        <thead><tr id="ufOpsModalThead"></tr></thead>
+        <tbody id="ufOpsModalTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===================== GMV POR ESTADO =====================
 const GMVUF_DATA={"AL":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,800.0,0.0,0.0,0.0,0.0,0.0,0.0],"BA":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,54775.6,0.0,0.0,0.0,0.0,0.0,0.0],"CE":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3034.8,0.0,0.0,0.0,0.0,0.0,0.0],"DF":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1596.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15411.32,15241.56,0.0,0.0,0.0,0.0,0.0,0.0],"ES":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,14308.0,17581.2,13063.4,9983.7,13367.2,16607.0,14974.8,14240.0,14933.8,17237.0,26081.4,0.0,0.0,0.0,0.0,0.0,0.0],"MG":[3705203.92,3799339.92,3726073.47,3696264.74,3813374.63,3877757.03,4041965.04,3937404.9,3973835.35,3494234.27,3638712.9,3525554.11,3628323.4,3592347.28,3419734.19,4274445.63,4361904.77,4717068.98,0.0,0.0,0.0,0.0,0.0,0.0],"NAO MAPEADO":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,28776.7,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PB":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1896.6,0.0,0.0,0.0,0.0,0.0,0.0],"PI":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,840.0,0.0,0.0,0.0,0.0,0.0,0.0],"RJ":[2430.61,2443.32,2714.8,2591.4,8265.06,10198.82,1604.2,64547.0,75064.13,62724.6,54098.8,4514.7,100157.1,76628.6,69967.0,61643.6,169168.5,191737.2,0.0,0.0,0.0,0.0,0.0,0.0],"RN":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,752.1,0.0,0.0,0.0,0.0,0.0,0.0],"RS":[667.35,744.0,893.3,863.1,863.1,945.1,534.3,287.7,0.0,532.8,238.5,238.5,190.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"SE":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1134.0,2542.0,0.0,0.0,0.0,0.0,0.0,0.0],"SP":[42006.81,46892.83,62014.62,59868.89,78079.61,85424.21,74690.24,61417.56,5498.94,54703.68,63592.08,66873.83,54544.06,53238.21,29096.08,1398.1,5935.6,7073.6,0.0,0.0,0.0,0.0,0.0,0.0]};
+const GMVUF_OPS_DATA_FLAT={};
+const GMVUF_OPS_DATA={};
+Object.keys(GMVUF_OPS_DATA_FLAT).forEach(k=>{
+  const sep=k.indexOf('|||'); const uf=k.slice(0,sep), name=k.slice(sep+3);
+  (GMVUF_OPS_DATA[uf]=GMVUF_OPS_DATA[uf]||{})[name]=GMVUF_OPS_DATA_FLAT[k];
+});
+
 const UF_NAMES = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',
   ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',
   PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',
@@ -17303,6 +17346,7 @@ const UF_GRID = {AC:[2,0],AM:[1,1],RR:[0,2],RO:[3,1],PA:[1,3],AP:[0,4],TO:[3,3],
   MG:[6,5],ES:[6,7],RJ:[7,6],SP:[7,5],PR:[8,4],SC:[9,4],RS:[10,4]};
 
 let euFrom=0, euTo=(typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1);
+let ufExpanded = new Set();
 
 function ufColor(t){
   if(t<=0) return '#20243a';
@@ -17374,6 +17418,15 @@ function renderUfBarChart(totals){
       scales:{x:{grid,ticks:{callback:v=>fmt(v,true)}},y:{grid:{display:false}}}}});
 }
 
+function ufOpsEntries(uf,from,to){
+  const ops=GMVUF_OPS_DATA[uf]||{};
+  return Object.keys(ops).map(name=>{
+    const arr=ops[name];
+    let s=0; for(let i=from;i<=to;i++) s+=(arr[i]||0);
+    return {name,arr,total:s};
+  }).filter(e=>e.total>0).sort((a,b)=>b.total-a.total);
+}
+
 function renderUfTable(from,to,totals){
   const thead=document.getElementById('ufTheadRow'), tbody=document.getElementById('ufTbody');
   if(!thead||!tbody) return;
@@ -17406,11 +17459,55 @@ function renderUfTable(from,to,totals){
     const arr=GMVUF_DATA[uf];
     const periodTotal=totals[uf]||0;
     const pct=grandTotal?((periodTotal/grandTotal)*100).toFixed(1):'0.0';
-    const label=(UF_NAMES[uf]||uf)+(uf!=='NAO MAPEADO'?` <span style="color:var(--muted);font-size:10px;">(${uf})</span>`:'');
-    bodyHtml+='<tr>'+rowCells(arr,label,false)+
+    const opsList=ufOpsEntries(uf,from,to);
+    const hasOps=opsList.length>0;
+    const isOpen=ufExpanded.has(uf);
+    const caret=hasOps?`<span class="uf-row-caret">▶</span>`:`<span class="uf-row-caret"></span>`;
+    const zoomBtn=hasOps?`<button class="uf-zoom-btn" title="Ver operadoras em janela grande" onclick="event.stopPropagation();openUfOpsModal('${uf}')">🔍</button>`:'';
+    const label=`${caret}${UF_NAMES[uf]||uf}${uf!=='NAO MAPEADO'?` <span style="color:var(--muted);font-size:10px;">(${uf})</span>`:''}${zoomBtn}`;
+    const clickAttr=hasOps?` onclick="toggleUfRow('${uf}')"`:'';
+    bodyHtml+=`<tr class="uf-row${isOpen?' expanded':''}"${clickAttr} data-uf="${uf}">`+rowCells(arr,label,false)+
       `<td style="text-align:right;">${fmt(periodTotal,true)}</td><td style="text-align:right;">${pct}%</td></tr>`;
+    if(hasOps && isOpen){
+      opsList.forEach(op=>{
+        const opPct=periodTotal?((op.total/periodTotal)*100).toFixed(1):'0.0';
+        bodyHtml+='<tr class="uf-op-row">'+rowCells(op.arr,op.name,false)+
+          `<td style="text-align:right;">${fmt(op.total,true)}</td><td style="text-align:right;">${opPct}%</td></tr>`;
+      });
+    }
   });
   tbody.innerHTML=bodyHtml;
+}
+
+function toggleUfRow(uf){
+  if(ufExpanded.has(uf)) ufExpanded.delete(uf); else ufExpanded.add(uf);
+  applyEstados();
+}
+
+function openUfOpsModal(uf){
+  const opsList=ufOpsEntries(uf,euFrom,euTo);
+  const grandTotal=opsList.reduce((a,o)=>a+o.total,0);
+  document.getElementById('ufOpsModalTitle').textContent=`🚌 Operadoras — ${UF_NAMES[uf]||uf} (${uf}) · ${months[euFrom]} a ${months[euTo]}`;
+  let theadHtml='<th style="text-align:left;">Operadora</th>';
+  for(let i=euFrom;i<=euTo;i++) theadHtml+=`<th>${months[i]}</th>`;
+  theadHtml+='<th>Total Período</th><th>% do Estado</th>';
+  document.getElementById('ufOpsModalThead').innerHTML=theadHtml;
+  let bodyHtml='';
+  opsList.forEach(op=>{
+    const pct=grandTotal?((op.total/grandTotal)*100).toFixed(1):'0.0';
+    let cells='';
+    for(let i=euFrom;i<=euTo;i++){
+      const v=op.arr[i]||0, prev=i>0?(op.arr[i-1]||0):null;
+      cells+=`<td>${v?fmt(v,true):'—'}${gmvArrow(v,prev)}</td>`;
+    }
+    bodyHtml+=`<tr><td>${op.name}</td>${cells}<td>${fmt(op.total,true)}</td><td>${pct}%</td></tr>`;
+  });
+  if(!opsList.length) bodyHtml='<tr><td colspan="99" style="text-align:center;color:var(--muted);padding:20px;">Nenhuma operadora com GMV no período selecionado.</td></tr>';
+  document.getElementById('ufOpsModalTbody').innerHTML=bodyHtml;
+  document.getElementById('ufOpsModalBackdrop').classList.add('open');
+}
+function closeUfOpsModal(){
+  document.getElementById('ufOpsModalBackdrop').classList.remove('open');
 }
 
 function applyEstados(){
