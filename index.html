@@ -88,6 +88,11 @@
   .table-scroll { overflow-x:auto; }
   .info-note { background:rgba(91,106,240,.08);border:1px solid rgba(91,106,240,.25);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:14px; }
   .info-note strong { color:var(--accent2); }
+  .uf-tile{cursor:pointer;stroke:var(--border);stroke-width:1;transition:stroke .15s;}
+  .uf-tile:hover{stroke:var(--accent2);stroke-width:2;}
+  .uf-tile-label{font-size:11px;font-weight:700;fill:#fff;pointer-events:none;text-anchor:middle;}
+  .uf-tile-val{font-size:7.5px;fill:rgba(255,255,255,.85);pointer-events:none;text-anchor:middle;}
+  .uf-tooltip{position:absolute;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,.4);display:none;}
   @media(max-width:768px){ .chart-grid,.chart-grid.thirds{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
   /* GMV por Cliente */
   .client-table-wrap { overflow-x:auto; max-height:620px; overflow-y:auto; }
@@ -280,6 +285,7 @@ function togglePwd(){
   <div class="tab" onclick="showTab('controle',event)">📋 Controle Cliente</div>
   <div class="tab" onclick="showTab('quinzena',event)">🔢 Quinzena</div>
   <div class="tab" onclick="showTab('resumo',event)">📊 Resumo</div>
+  <div class="tab" onclick="showTab('estados',event)">🗺️ GMV por Estado</div>
 </div>
 
 <!-- ===== GMV ===== -->
@@ -17223,4 +17229,232 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
     if(!tbody) return;
     if(rows.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
     empty.style.display='none';
-    tbody.inn
+    tbody.innerHTML = rows.map(function(r){
+      var padLabel = r[1]===1 ? '1ª Quinzena' : '2ª Quinzena';
+      var statusHtml = r[2]===0
+        ? '<span class="pill inativo">Não comprou</span>'
+        : '<span class="pill risco">Mudou p/ dia '+r[3]+'</span>';
+      var diaHtml = r[3] ? r[3] : '—';
+      var pctHtml = (r[4]!=null ? r[4]+'%' : '—');
+      return '<tr><td style="padding:8px 6px">'+r[0]+'</td>'+
+        '<td style="text-align:center;padding:8px 6px">'+padLabel+'</td>'+
+        '<td style="text-align:center;padding:8px 6px">'+statusHtml+'</td>'+
+        '<td style="text-align:center;padding:8px 6px">'+diaHtml+'</td>'+
+        '<td style="text-align:center;padding:8px 6px">'+pctHtml+'</td></tr>';
+    }).join('');
+  };
+
+  qzFilter('todos');
+})();
+</script>
+
+<!-- ===== GMV POR ESTADO ===== -->
+<div class="content" id="tab-estados">
+  <div class="filter-bar">
+    <label>📅 Período:</label>
+    <select id="euFrom" onchange="applyEstados()"></select>
+    <span style="color:var(--muted);font-size:12px;">até</span>
+    <select id="euTo" onchange="applyEstados()"></select>
+    <button class="filter-btn" onclick="resetEstados()">Limpar</button>
+  </div>
+  <div class="info-note">ℹ️ <strong>Nota:</strong> GMV VT por estado (UF), classificado pelo operador de transporte de cada pedido (aba "operadora"/"Operadora" de Pedido de Carga + Pedido Externo), cruzado com a planilha de operadoras enviada (CNPJ, Razão Social, Município, UF). Mesma regra de GMV VT do restante do dashboard (Pedido de Carga excluindo "Deposit" + Pedido Externo "Sem SK") — o total bate com o GMV VT oficial da aba <strong>GMV</strong>. Uma fração residual (~0,04% do período) sem operador identificável na planilha aparece como <strong>Não mapeado</strong>.</div>
+  <div class="kpi-grid">
+    <div class="kpi cyan"><div class="kpi-label">GMV VT no Período</div><div class="kpi-value" id="eu-tot-val">—</div><div class="kpi-sub">Soma de todos os estados</div><div class="kpi-delta" id="eu-tot-d"></div></div>
+    <div class="kpi"><div class="kpi-label">Estado Líder</div><div class="kpi-value" id="eu-lead-val">—</div><div class="kpi-sub" id="eu-lead-sub">—</div></div>
+    <div class="kpi amber"><div class="kpi-label">Concentração Top 1</div><div class="kpi-value" id="eu-conc-val">—</div><div class="kpi-sub">% do GMV no estado líder</div></div>
+    <div class="kpi purple"><div class="kpi-label">Estados com GMV</div><div class="kpi-value" id="eu-count-val">—</div><div class="kpi-sub">No período selecionado</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>🗺️ Mapa de Calor — GMV VT por Estado</h3>
+      <p class="chart-sub">Concentração de GMV no período selecionado · cor mais quente = maior GMV</p>
+      <div style="position:relative;">
+        <svg id="ufMapSvg" viewBox="0 0 460 540" style="width:100%;height:420px;"></svg>
+        <div id="ufTooltip" class="uf-tooltip"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>📊 Ranking de Estados</h3>
+      <p class="chart-sub">GMV VT total no período selecionado</p>
+      <div class="chart-wrap" style="height:420px;"><canvas id="ufBarChart"></canvas></div>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>📋 GMV VT por Estado — Detalhe Mensal</h3>
+    <p class="chart-sub" style="padding:0 18px 12px;margin-top:-4px;">Linha <strong>TOTAL</strong> no topo com variação % mês a mês · cada célula mostra o valor do mês e a variação % vs. o mês anterior</p>
+    <div class="table-scroll"><table>
+      <thead><tr id="ufTheadRow"><th style="position:sticky;left:0;background:var(--card2);">Estado</th></tr></thead>
+      <tbody id="ufTbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+// ===================== GMV POR ESTADO =====================
+const GMVUF_DATA={"AL":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,800.0,0.0,0.0,0.0,0.0,0.0,0.0],"BA":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,54775.6,0.0,0.0,0.0,0.0,0.0,0.0],"CE":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3034.8,0.0,0.0,0.0,0.0,0.0,0.0],"DF":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1596.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15411.32,15241.56,0.0,0.0,0.0,0.0,0.0,0.0],"ES":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,14308.0,17581.2,13063.4,9983.7,13367.2,16607.0,14974.8,14240.0,14933.8,17237.0,26081.4,0.0,0.0,0.0,0.0,0.0,0.0],"MG":[3705203.92,3799339.92,3726073.47,3696264.74,3813374.63,3877757.03,4041965.04,3937404.9,3973835.35,3494234.27,3638712.9,3525554.11,3628323.4,3592347.28,3419734.19,4274445.63,4361904.77,4717068.98,0.0,0.0,0.0,0.0,0.0,0.0],"NAO MAPEADO":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,28776.7,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PB":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1896.6,0.0,0.0,0.0,0.0,0.0,0.0],"PI":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,840.0,0.0,0.0,0.0,0.0,0.0,0.0],"RJ":[2430.61,2443.32,2714.8,2591.4,8265.06,10198.82,1604.2,64547.0,75064.13,62724.6,54098.8,4514.7,100157.1,76628.6,69967.0,61643.6,169168.5,191737.2,0.0,0.0,0.0,0.0,0.0,0.0],"RN":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,752.1,0.0,0.0,0.0,0.0,0.0,0.0],"RS":[667.35,744.0,893.3,863.1,863.1,945.1,534.3,287.7,0.0,532.8,238.5,238.5,190.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"SE":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1134.0,2542.0,0.0,0.0,0.0,0.0,0.0,0.0],"SP":[42006.81,46892.83,62014.62,59868.89,78079.61,85424.21,74690.24,61417.56,5498.94,54703.68,63592.08,66873.83,54544.06,53238.21,29096.08,1398.1,5935.6,7073.6,0.0,0.0,0.0,0.0,0.0,0.0]};
+const UF_NAMES = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',
+  ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',
+  PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',
+  RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins',
+  'NAO MAPEADO':'Não mapeado'};
+// posição aproximada (linha,coluna) de cada UF numa grade estilo "tile cartogram"
+const UF_GRID = {AC:[2,0],AM:[1,1],RR:[0,2],RO:[3,1],PA:[1,3],AP:[0,4],TO:[3,3],MA:[1,5],PI:[2,5],
+  CE:[1,7],RN:[1,8],PB:[2,8],PE:[3,8],AL:[4,8],SE:[5,8],BA:[4,6],MT:[4,2],MS:[5,2],GO:[5,4],DF:[5,5],
+  MG:[6,5],ES:[6,7],RJ:[7,6],SP:[7,5],PR:[8,4],SC:[9,4],RS:[10,4]};
+
+let euFrom=0, euTo=(typeof lastDataIdx!=='undefined'?lastDataIdx:months.length-1);
+
+function ufColor(t){
+  if(t<=0) return '#20243a';
+  const stops=[[0.12,0.14,0.23],[0.13,0.83,0.93],[0.96,0.62,0.04],[0.94,0.34,0.34]];
+  const pos=Math.min(t,1)*(stops.length-1);
+  let i=Math.floor(pos); if(i>=stops.length-1) i=stops.length-2;
+  const f=pos-i, a=stops[i], b=stops[i+1];
+  const r=Math.round((a[0]+(b[0]-a[0])*f)*255), g=Math.round((a[1]+(b[1]-a[1])*f)*255), bl=Math.round((a[2]+(b[2]-a[2])*f)*255);
+  return `rgb(${r},${g},${bl})`;
+}
+
+function ufPeriodTotals(from,to){
+  const totals={};
+  Object.keys(GMVUF_DATA).forEach(uf=>{
+    let s=0; for(let i=from;i<=to;i++) s+=(GMVUF_DATA[uf][i]||0);
+    totals[uf]=s;
+  });
+  return totals;
+}
+
+function renderUfMap(totals){
+  const svg=document.getElementById('ufMapSvg'); if(!svg) return;
+  const cell=42, gap=5;
+  const realUfs=Object.keys(totals).filter(u=>u!=='NAO MAPEADO');
+  const maxV=Math.max.apply(null, realUfs.map(u=>totals[u]||0).concat([1]));
+  let html='';
+  Object.keys(UF_GRID).forEach(uf=>{
+    const [row,col]=UF_GRID[uf];
+    const x=col*(cell+gap), y=row*(cell+gap);
+    const v=totals[uf]||0;
+    const t=v>0?Math.pow(v/maxV,0.4):0;
+    const color=ufColor(t);
+    html+=`<g class="uf-tile-g" data-uf="${uf}" data-val="${v}">`+
+      `<rect class="uf-tile" x="${x}" y="${y}" width="${cell}" height="${cell}" rx="6" fill="${color}"></rect>`+
+      `<text class="uf-tile-label" x="${x+cell/2}" y="${y+cell/2-6}">${uf}</text>`+
+      `<text class="uf-tile-val" x="${x+cell/2}" y="${y+cell/2+10}">${v>0?fmt(v,true):'—'}</text>`+
+      `</g>`;
+  });
+  svg.innerHTML=html;
+  const tooltip=document.getElementById('ufTooltip');
+  svg.querySelectorAll('.uf-tile-g').forEach(g=>{
+    g.addEventListener('mousemove',function(e){
+      const uf=this.getAttribute('data-uf'); const v=parseFloat(this.getAttribute('data-val'));
+      const total=realUfs.reduce((a,u)=>a+(totals[u]||0),0);
+      const pct=total?((v/total)*100).toFixed(1):'0.0';
+      tooltip.innerHTML=`<strong>${UF_NAMES[uf]||uf} (${uf})</strong><br>${fmt(v)}<br><span style="color:var(--muted)">${pct}% do GMV mapeado</span>`;
+      tooltip.style.display='block';
+      const wrap=svg.parentElement.getBoundingClientRect();
+      tooltip.style.left=(e.clientX-wrap.left+14)+'px';
+      tooltip.style.top=(e.clientY-wrap.top+10)+'px';
+    });
+    g.addEventListener('mouseleave',function(){ tooltip.style.display='none'; });
+  });
+}
+
+let cUfBar=null;
+function renderUfBarChart(totals){
+  const ctx=document.getElementById('ufBarChart'); if(!ctx) return;
+  const entries=Object.keys(totals).map(u=>[u,totals[u]||0]).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const labels=entries.map(e=>UF_NAMES[e[0]]||e[0]);
+  const vals=entries.map(e=>e[1]);
+  const colors=entries.map(e=>e[0]==='NAO MAPEADO'?'#64748b':C.cyan);
+  if(cUfBar) cUfBar.destroy();
+  cUfBar=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:noLegend,
+      tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.x)}}},
+      scales:{x:{grid,ticks:{callback:v=>fmt(v,true)}},y:{grid:{display:false}}}}});
+}
+
+function renderUfTable(from,to,totals){
+  const thead=document.getElementById('ufTheadRow'), tbody=document.getElementById('ufTbody');
+  if(!thead||!tbody) return;
+  let theadHtml='<th style="position:sticky;left:0;background:var(--card2);">Estado</th>';
+  for(let i=from;i<=to;i++) theadHtml+=`<th style="text-align:right;">${months[i]}</th>`;
+  theadHtml+='<th style="text-align:right;color:#60a5fa;">Total Período</th><th style="text-align:right;color:#60a5fa;">% do Total</th>';
+  thead.innerHTML=theadHtml;
+
+  const order=Object.keys(totals).filter(u=>u!=='NAO MAPEADO').sort((a,b)=>totals[b]-totals[a]);
+  if(totals['NAO MAPEADO']!==undefined) order.push('NAO MAPEADO');
+  const grandTotal=Object.keys(totals).reduce((a,u)=>a+(totals[u]||0),0);
+
+  function rowCells(arr,label,isBold){
+    let h=`<td style="position:sticky;left:0;background:var(--card);${isBold?'font-weight:700;':''}">${label}</td>`;
+    for(let i=from;i<=to;i++){
+      const v=arr[i]||0, prev=i>0?(arr[i-1]||0):null;
+      h+=`<td style="text-align:right;${isBold?'font-weight:700;':''}"><span class="gmv-val">${v?fmt(v,true):'—'}</span>${gmvArrow(v,prev)}</td>`;
+    }
+    return h;
+  }
+
+  let bodyHtml='';
+  // linha TOTAL
+  const totalArr=[]; for(let i=0;i<months.length;i++){ let s=0; Object.keys(GMVUF_DATA).forEach(u=>s+=(GMVUF_DATA[u][i]||0)); totalArr.push(s); }
+  const totalPeriodo=grandTotal;
+  bodyHtml+='<tr style="background:rgba(91,106,240,.10);">'+rowCells(totalArr,'TOTAL',true)+
+    `<td style="text-align:right;font-weight:700;">${fmt(totalPeriodo,true)}</td><td style="text-align:right;font-weight:700;">100%</td></tr>`;
+
+  order.forEach(uf=>{
+    const arr=GMVUF_DATA[uf];
+    const periodTotal=totals[uf]||0;
+    const pct=grandTotal?((periodTotal/grandTotal)*100).toFixed(1):'0.0';
+    const label=(UF_NAMES[uf]||uf)+(uf!=='NAO MAPEADO'?` <span style="color:var(--muted);font-size:10px;">(${uf})</span>`:'');
+    bodyHtml+='<tr>'+rowCells(arr,label,false)+
+      `<td style="text-align:right;">${fmt(periodTotal,true)}</td><td style="text-align:right;">${pct}%</td></tr>`;
+  });
+  tbody.innerHTML=bodyHtml;
+}
+
+function applyEstados(){
+  let f=parseInt(document.getElementById('euFrom')?.value||'0');
+  let t=parseInt(document.getElementById('euTo')?.value||String(lastDataIdx));
+  if(isNaN(f)) f=0;
+  if(isNaN(t)) t=lastDataIdx;
+  if(f>t){ t=f; document.getElementById('euTo').value=t; }
+  euFrom=f; euTo=t;
+  const totals=ufPeriodTotals(f,t);
+  const realTotals={}; Object.keys(totals).forEach(u=>{ if(u!=='NAO MAPEADO') realTotals[u]=totals[u]; });
+  const grandTotal=Object.keys(totals).reduce((a,u)=>a+totals[u],0);
+  const sortedReal=Object.keys(realTotals).sort((a,b)=>realTotals[b]-realTotals[a]);
+  const leadUf=sortedReal[0];
+
+  document.getElementById('eu-tot-val').textContent=fmt(grandTotal,true);
+  if(leadUf){
+    document.getElementById('eu-lead-val').textContent=UF_NAMES[leadUf]||leadUf;
+    document.getElementById('eu-lead-sub').textContent=fmt(realTotals[leadUf],true)+' no período';
+    document.getElementById('eu-conc-val').textContent=grandTotal?((realTotals[leadUf]/grandTotal)*100).toFixed(1)+'%':'—';
+  }
+  document.getElementById('eu-count-val').textContent=sortedReal.filter(u=>realTotals[u]>0).length;
+
+  // variação M/M do total (último mês do período vs mês anterior)
+  const totalArr=[]; for(let i=0;i<months.length;i++){ let s=0; Object.keys(GMVUF_DATA).forEach(u=>s+=(GMVUF_DATA[u][i]||0)); totalArr.push(s); }
+  if(t>0) document.getElementById('eu-tot-d').innerHTML=deltaMoM(totalArr[t],totalArr[t-1],months[t-1]);
+
+  renderUfMap(totals);
+  renderUfBarChart(totals);
+  renderUfTable(f,t,totals);
+}
+function resetEstados(){
+  document.getElementById('euFrom').value=0;
+  document.getElementById('euTo').value=lastDataIdx;
+  applyEstados();
+}
+(function initEstados(){
+  const sf=document.getElementById('euFrom'), st=document.getElementById('euTo');
+  if(!sf||!st||typeof GMVUF_DATA==='undefined') return;
+  let opts='';
+  for(let i=0;i<months.length;i++) opts+=`<option value="${i}">${months[i]}</option>`;
+  sf.innerHTML=opts; st.innerHTML=opts;
+  sf.value=0; st.value=lastDataIdx;
+  applyEstados();
+})();
+</script>
+
+</body>
+</html>
