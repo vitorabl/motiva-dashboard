@@ -21,6 +21,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Motiva Benefícios 2025–2026</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js" integrity="sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20243a; --border: #2a2f45;
@@ -114,6 +117,14 @@
   .uf-modal-body th:first-child{text-align:left;}
   .uf-modal-body td{padding:6px 8px;font-size:12px;text-align:right;border-top:1px solid var(--border);}
   .uf-modal-body td:first-child{text-align:left;}
+  .uf-mode-toggle{display:flex;background:var(--card2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .uf-mode-toggle label{position:relative;cursor:pointer;user-select:none;}
+  .uf-mode-toggle input{position:absolute;opacity:0;pointer-events:none;}
+  .uf-mode-toggle span{display:block;padding:7px 14px;font-size:12px;color:var(--muted);white-space:nowrap;transition:background .15s,color .15s;}
+  .uf-mode-toggle input:checked + span{background:var(--accent2);color:#0b0f1a;font-weight:700;}
+  .uf-export-btn{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:8px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,color .15s;white-space:nowrap;}
+  .uf-export-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .uf-export-btn:disabled{opacity:.5;cursor:wait;}
   @media(max-width:768px){ .chart-grid,.chart-grid.thirds{grid-template-columns:1fr;} .header,.content{padding:16px;} .tabs{padding:12px 16px 0;} .kpi-grid{grid-template-columns:1fr 1fr;} }
   /* GMV por Cliente */
   .client-table-wrap { overflow-x:auto; max-height:620px; overflow-y:auto; }
@@ -17418,6 +17429,14 @@ setTimeout(function(){ initCC(); initCCGrupo(); buildCCMonthList(); initRecGrupo
     <span style="color:var(--muted);font-size:12px;">até</span>
     <select id="euTo" onchange="applyEstados()"></select>
     <button class="filter-btn" onclick="resetEstados()">Limpar</button>
+    <span style="width:1px;height:22px;background:var(--border);"></span>
+    <label style="margin-right:-4px;">Detalhamento:</label>
+    <div class="uf-mode-toggle">
+      <label><input type="radio" name="euMode" value="sintetico" checked><span>Sintético (só total por UF)</span></label>
+      <label><input type="radio" name="euMode" value="analitico"><span>Analítico (mensal + operadoras)</span></label>
+    </div>
+    <button class="uf-export-btn" id="euBtnExcel" onclick="exportarExcelEstados()">⬇️ Exportar Excel</button>
+    <button class="uf-export-btn" id="euBtnPdf" onclick="gerarPdfEstados()">📄 Gerar PDF (Conselho)</button>
   </div>
   <div class="info-note">ℹ️ <strong>Nota:</strong> GMV VT por estado (UF), classificado pelo operador de transporte de cada pedido (aba "operadora"/"Operadora" de Pedido de Carga + Pedido Externo), cruzado com a planilha de operadoras enviada (CNPJ, Razão Social, Município, UF). Mesma regra de GMV VT do restante do dashboard (Pedido de Carga excluindo "Deposit" + Pedido Externo "Sem SK") — o total bate com o GMV VT oficial da aba <strong>GMV</strong>. Uma fração residual (~0,04% do período) sem operador identificável na planilha aparece como <strong>Não mapeado</strong>.</div>
   <div class="kpi-grid">
@@ -17649,6 +17668,216 @@ function openUfOpsModal(uf){
 }
 function closeUfOpsModal(){
   document.getElementById('ufOpsModalBackdrop').classList.remove('open');
+}
+
+// ===== Exportação (Excel / PDF) — GMV por Estado =====
+function round2(v){ return Math.round((v||0)*100)/100; }
+function getEuMode(){
+  const el = document.querySelector('input[name="euMode"]:checked');
+  return el ? el.value : 'sintetico';
+}
+function periodoFileTag(from,to){
+  return (months[from]+'_a_'+months[to]).replace(/\//g,'-');
+}
+
+function estadosSinteticoMatrix(from,to){
+  const totals = ufPeriodTotals(from,to);
+  const order = Object.keys(totals).filter(u=>u!=='NAO MAPEADO').sort((a,b)=>totals[b]-totals[a]);
+  if(totals['NAO MAPEADO']!==undefined) order.push('NAO MAPEADO');
+  const grandTotal = Object.keys(totals).reduce((a,u)=>a+(totals[u]||0),0);
+  const header = ['Estado','UF','GMV Total no Período (R$)','% do Total'];
+  const rows = [['TOTAL','', round2(grandTotal), 100]];
+  order.forEach(uf=>{
+    const v = totals[uf]||0;
+    const pct = grandTotal ? (v/grandTotal*100) : 0;
+    rows.push([UF_NAMES[uf]||uf, uf==='NAO MAPEADO'?'':uf, round2(v), round2(pct)]);
+  });
+  return {header, rows, grandTotal};
+}
+
+function estadosMonthlyMatrix(from,to){
+  const totals = ufPeriodTotals(from,to);
+  const order = Object.keys(totals).filter(u=>u!=='NAO MAPEADO').sort((a,b)=>totals[b]-totals[a]);
+  if(totals['NAO MAPEADO']!==undefined) order.push('NAO MAPEADO');
+  const grandTotal = Object.keys(totals).reduce((a,u)=>a+(totals[u]||0),0);
+  const header = ['Estado','UF'];
+  for(let i=from;i<=to;i++) header.push(months[i]);
+  header.push('Total Período (R$)','% do Total');
+  const totalArr=[]; for(let i=0;i<months.length;i++){ let s=0; Object.keys(GMVUF_DATA).forEach(u=>s+=(GMVUF_DATA[u][i]||0)); totalArr.push(s); }
+  const rows = [];
+  const totalRow = ['TOTAL',''];
+  for(let i=from;i<=to;i++) totalRow.push(round2(totalArr[i]||0));
+  totalRow.push(round2(grandTotal), 100);
+  rows.push(totalRow);
+  order.forEach(uf=>{
+    const arr = GMVUF_DATA[uf];
+    const periodTotal = totals[uf]||0;
+    const pct = grandTotal ? (periodTotal/grandTotal*100) : 0;
+    const row = [UF_NAMES[uf]||uf, uf==='NAO MAPEADO'?'':uf];
+    for(let i=from;i<=to;i++) row.push(round2(arr[i]||0));
+    row.push(round2(periodTotal), round2(pct));
+    rows.push(row);
+  });
+  return {header, rows, grandTotal};
+}
+
+function estadosOperadorasMatrix(from,to){
+  const totals = ufPeriodTotals(from,to);
+  const order = Object.keys(totals).filter(u=>u!=='NAO MAPEADO').sort((a,b)=>totals[b]-totals[a]);
+  if(totals['NAO MAPEADO']!==undefined) order.push('NAO MAPEADO');
+  const header = ['UF','Estado','Operadora'];
+  for(let i=from;i<=to;i++) header.push(months[i]);
+  header.push('Total Período (R$)','% do Estado');
+  const rows = [];
+  order.forEach(uf=>{
+    const opsList = ufOpsEntries(uf,from,to);
+    const ufTotal = totals[uf]||0;
+    opsList.forEach(op=>{
+      const pct = ufTotal ? (op.total/ufTotal*100) : 0;
+      const row = [uf==='NAO MAPEADO'?'':uf, UF_NAMES[uf]||uf, op.name];
+      for(let i=from;i<=to;i++) row.push(round2(op.arr[i]||0));
+      row.push(round2(op.total), round2(pct));
+      rows.push(row);
+    });
+  });
+  return {header, rows};
+}
+
+function exportarExcelEstados(){
+  const btn = document.getElementById('euBtnExcel');
+  const originalLabel = btn ? btn.textContent : '';
+  try{
+    if(typeof XLSX==='undefined'){ alert('A biblioteca de exportação para Excel ainda não carregou. Aguarde alguns segundos e tente novamente.'); return; }
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+    const mode = getEuMode();
+    const from = euFrom, to = euTo;
+    const wb = XLSX.utils.book_new();
+    if(mode==='sintetico'){
+      const {header, rows} = estadosSinteticoMatrix(from,to);
+      const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+      ws['!cols'] = [{wch:24},{wch:6},{wch:22},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws, 'GMV por Estado');
+    } else {
+      const m1 = estadosMonthlyMatrix(from,to);
+      const ws1 = XLSX.utils.aoa_to_sheet([m1.header, ...m1.rows]);
+      ws1['!cols'] = [{wch:24},{wch:6}].concat(m1.header.slice(2).map(()=>({wch:13})));
+      XLSX.utils.book_append_sheet(wb, ws1, 'GMV Mensal por Estado');
+      const m2 = estadosOperadorasMatrix(from,to);
+      const ws2 = XLSX.utils.aoa_to_sheet([m2.header, ...m2.rows]);
+      ws2['!cols'] = [{wch:6},{wch:20},{wch:32}].concat(m2.header.slice(3).map(()=>({wch:13})));
+      XLSX.utils.book_append_sheet(wb, ws2, 'Operadoras por Estado');
+    }
+    const fname = 'GMV_por_Estado_'+mode+'_'+periodoFileTag(from,to)+'.xlsx';
+    XLSX.writeFile(wb, fname);
+  } catch(e){
+    console.error(e);
+    alert('Erro ao gerar o Excel: '+e.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = originalLabel || '⬇️ Exportar Excel'; }
+  }
+}
+
+function gerarPdfEstados(){
+  const btn = document.getElementById('euBtnPdf');
+  const originalLabel = btn ? btn.textContent : '';
+  try{
+    if(typeof window.jspdf==='undefined'){ alert('A biblioteca de geração de PDF ainda não carregou. Aguarde alguns segundos e tente novamente.'); return; }
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+    const mode = getEuMode();
+    const from = euFrom, to = euTo;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: mode==='analitico' ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const marginX = 40;
+
+    const totals = ufPeriodTotals(from,to);
+    const realTotals = {}; Object.keys(totals).forEach(u=>{ if(u!=='NAO MAPEADO') realTotals[u]=totals[u]; });
+    const grandTotal = Object.keys(totals).reduce((a,u)=>a+totals[u],0);
+    const sortedReal = Object.keys(realTotals).sort((a,b)=>realTotals[b]-realTotals[a]);
+    const leadUf = sortedReal[0];
+    const concPct = (leadUf && grandTotal) ? (realTotals[leadUf]/grandTotal*100) : 0;
+    const countComGmv = sortedReal.filter(u=>realTotals[u]>0).length;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(20,25,40);
+    doc.text('GMV VT por Estado — Relatório para o Conselho', marginX, 46);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,95,110);
+    doc.text('Motiva Benefícios  ·  Período: '+months[from]+' a '+months[to]+'  ·  Gerado em '+new Date().toLocaleDateString('pt-BR')+'  ·  Modo: '+(mode==='analitico'?'Analítico':'Sintético'), marginX, 62);
+
+    let ky = 92;
+    const kpis = [
+      ['GMV VT no período', fmt(grandTotal,true)],
+      ['Estado líder', leadUf ? ((UF_NAMES[leadUf]||leadUf)+' — '+fmt(realTotals[leadUf],true)) : '—'],
+      ['Concentração Top 1', concPct.toFixed(1)+'%'],
+      ['Estados com GMV', String(countComGmv)],
+    ];
+    const kpiW = (pageW - marginX*2)/4;
+    kpis.forEach((k,i)=>{
+      const x = marginX + i*kpiW;
+      doc.setFillColor(245,247,250); doc.roundedRect(x, ky, kpiW-10, 46, 6, 6, 'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,115,130);
+      doc.text(k[0], x+10, ky+16, {maxWidth:kpiW-24});
+      doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(20,25,40);
+      doc.text(k[1], x+10, ky+34, {maxWidth:kpiW-24});
+    });
+
+    let curY = ky + 46 + 22;
+
+    const chartCanvas = document.getElementById('ufBarChart');
+    if(chartCanvas){
+      try{
+        const imgData = chartCanvas.toDataURL('image/png',1.0);
+        const imgW = pageW - marginX*2;
+        const imgH = imgW * (chartCanvas.height/chartCanvas.width);
+        const cappedH = Math.min(imgH, 230);
+        const cappedW = cappedH===imgH ? imgW : imgW*(cappedH/imgH);
+        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,25,40);
+        doc.text('Ranking de Estados', marginX, curY);
+        doc.addImage(imgData,'PNG', marginX, curY+8, cappedW, cappedH);
+        curY += cappedH + 28;
+      }catch(e){ console.warn('nao foi possivel capturar o grafico para o PDF', e); }
+    }
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,25,40);
+    doc.text(mode==='analitico' ? 'GMV Mensal por Estado' : 'GMV Total por Estado', marginX, curY);
+    curY += 8;
+
+    if(mode==='sintetico'){
+      const {header, rows} = estadosSinteticoMatrix(from,to);
+      const body = rows.map(r=>[r[0], r[1], fmt(r[2],true), (typeof r[3]==='number'?r[3].toFixed(1):r[3])+'%']);
+      doc.autoTable({ startY: curY, head:[header], body, styles:{fontSize:8.5, cellPadding:4}, headStyles:{fillColor:[26,32,64]}, margin:{left:marginX,right:marginX} });
+    } else {
+      const m1 = estadosMonthlyMatrix(from,to);
+      const body1 = m1.rows.map(r=>{
+        const out = [r[0], r[1]];
+        for(let i=2;i<r.length-2;i++) out.push(fmt(r[i],true));
+        out.push(fmt(r[r.length-2],true), r[r.length-1].toFixed(1)+'%');
+        return out;
+      });
+      doc.autoTable({ startY: curY, head:[m1.header], body: body1, styles:{fontSize:7, cellPadding:3}, headStyles:{fillColor:[26,32,64], fontSize:7}, margin:{left:marginX,right:marginX} });
+
+      doc.addPage();
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(20,25,40);
+      doc.text('Operadoras por Estado', marginX, 40);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90,95,110);
+      doc.text('Período: '+months[from]+' a '+months[to], marginX, 56);
+      const m2 = estadosOperadorasMatrix(from,to);
+      const body2 = m2.rows.map(r=>{
+        const out = [r[0], r[1], r[2]];
+        for(let i=3;i<r.length-2;i++) out.push(fmt(r[i],true));
+        out.push(fmt(r[r.length-2],true), r[r.length-1].toFixed(1)+'%');
+        return out;
+      });
+      doc.autoTable({ startY: 72, head:[m2.header], body: body2, styles:{fontSize:6.5, cellPadding:2.5}, headStyles:{fillColor:[26,32,64], fontSize:6.5}, margin:{left:marginX,right:marginX} });
+    }
+
+    const fname = 'GMV_por_Estado_'+mode+'_'+periodoFileTag(from,to)+'.pdf';
+    doc.save(fname);
+  } catch(e){
+    console.error(e);
+    alert('Erro ao gerar o PDF: '+e.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = originalLabel || '📄 Gerar PDF (Conselho)'; }
+  }
 }
 
 function applyEstados(){
