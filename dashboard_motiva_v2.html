@@ -456,6 +456,7 @@ function togglePwd(){
       <option value="Lysandra">Lysandra</option>
       <option value="Vanessa">Vanessa</option>
       <option value="Pedro">Pedro</option>
+      <option value="Heide">Heide</option>
     </select>
     <button class="filter-btn" onclick="resetComm()">Limpar</button>
   </div>
@@ -1178,6 +1179,7 @@ const commCarol   = [0,0,0,0,0,9.93,23.51,46.16,53.85,374.17,106.61,0,0,0,0,0,0,
 const commLysandra= [66.21,64.65,514.05,43.52,92.64,53.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 const commVanessa = [313.45,81.7,71.44,112.52,402.59,34.17,0,0,0,2.53,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 const commPedro   = [31.18,17.11,22.91,19.11,59.2,34.74,60.17,79.38,65.06,66.98,60.44,42.14,65.13,40.96,39.92,0,0,0,0,0,0,0,0,0];
+const commHeide  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 const commAndre   = [0,0,0,0,0,0,0,0,0,0,0,0,90.06,15.98,56.7,50.6,140.21,88.98,1.14,0,0,0,0,0];
 
 // Segmentação (snapshot atual Abr/26)
@@ -1825,6 +1827,7 @@ const commSellers={
   'Lysandra':{data:commLysandra,color:C.amber,  status:'Desligada'},
   'Vanessa': {data:commVanessa, color:C.orange, status:'Desligada'},
   'Pedro':   {data:commPedro,   color:C.slate,  status:'Desligado'},
+  'Heide':   {data:commHeide,   color:C.blue,   status:'Ativo'},
 };
 const commSellerNames=Object.keys(commSellers);
 let cFrom_c=0,cTo_c=lastDataIdx;
